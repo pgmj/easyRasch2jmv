@@ -1,0 +1,47 @@
+---
+name: locdepq3
+title: Q3 Residual Correlation Matrix
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Computes Yen's Q3 residual correlations between item pairs for local
+        dependence assessment in Rasch models (fitted via mirt). Optionally
+        runs a parametric bootstrap simulation to determine a simulation-based
+        cutoff value. Single-core sequential processing is used by default.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - nominal
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: computeCutoff
+      title: Compute simulation-based cutoff
+      type: Bool
+      default: false
+
+    - name: iterations
+      title: Number of simulation iterations
+      type: Integer
+      default: 200
+      min: 50
+      max: 5000
+
+    - name: seed
+      title: Random seed (0 = no seed)
+      type: Integer
+      default: 0
+      min: 0
+
+...

@@ -25,6 +25,17 @@ analyses:
       (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
       then reports observed vs. expected restscore correlations, absolute
       differences, adjusted p-values, and item locations.
+  - title: Q3 Residual Correlation Matrix
+    name: locdepq3
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Q3 Residual Correlation Matrix
+    category: analyses
+    description: |
+      Computes Yen's Q3 residual correlations between item pairs for local
+      dependence assessment in Rasch models (fitted via mirt). Optionally
+      runs a parametric bootstrap simulation to determine a simulation-based
+      cutoff value. Single-core sequential processing is used by default.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv
