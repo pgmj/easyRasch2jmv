@@ -1,0 +1,49 @@
+---
+name: itemrestscore
+title: Item-Restscore Correlations
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Computes observed and model-expected item-restscore correlations using
+        Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
+        (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
+        then reports observed vs. expected restscore correlations, absolute
+        differences, adjusted p-values, and item locations.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - nominal
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: sortByDiff
+      title: Sort by absolute difference
+      type: Bool
+      default: false
+
+    - name: pAdj
+      title: P-value adjustment method
+      type: List
+      options:
+          - title: Benjamini-Hochberg (BH)
+            name: BH
+          - title: Holm
+            name: holm
+          - title: Bonferroni
+            name: bonferroni
+          - title: None
+            name: none
+      default: BH
+
+...

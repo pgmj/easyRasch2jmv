@@ -1,0 +1,19 @@
+Package: easyRasch2jmv
+Type: Package
+Title: easyRasch2 for Jamovi
+Version: 0.1.0
+Date: 2026-04-02
+Author: Magnus Johansson
+Maintainer: Magnus Johansson <pgmj@pm.me>
+Description: Provides Rasch analysis functions for Jamovi, wrapping analysis
+    logic from the easyRasch2 R package. Includes item-restscore correlation
+    analysis (RMitemrestscore) using the iarm package.
+License: GPL (>= 3)
+Encoding: UTF-8
+Imports:
+    jmvcore (>= 0.8.5),
+    R6,
+    eRm,
+    iarm,
+    psychotools (>= 0.7-3),
+    stats
