@@ -15,5 +15,6 @@ Imports:
     R6,
     eRm,
     iarm,
+    mirt,
     psychotools (>= 0.7-3),
     stats

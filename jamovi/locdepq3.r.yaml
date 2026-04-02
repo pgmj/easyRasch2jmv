@@ -1,0 +1,34 @@
+---
+name: locdepq3
+title: Q3 Residual Correlation Matrix
+jrs: '1.1'
+
+items:
+    - name: q3Table
+      title: Q3 Residual Correlation Matrix
+      type: Table
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
+      columns: []
+
+    - name: cutoffTable
+      title: Simulation-Based Q3 Cutoff
+      type: Table
+      visible: (computeCutoff)
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
+      columns:
+          - name: parameter
+            title: Parameter
+            type: text
+          - name: value
+            title: Value
+            type: number
+
+...
