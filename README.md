@@ -7,10 +7,11 @@ Measurement Theory analysis.
 ## Analyses
 
 - **Conditional item infit MSQ** from R package `iarm` (Müller, 2020), with 
-  simulation-based cutoff values (Johansson, 2025).
+  simulation-based cutoff values (Johansson, 2025). Also uses package `eRm`.
 
-- **Yen's Q3 residuals** for assessing local dependencies, with simulation-based
-  cutoff values (Christensen, et al., 2017; [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)).
+- **Yen's Q3 residuals** for assessing local dependencies using R package `mirt`, 
+  with simulation-based cutoff values (Christensen, et al., 2017; 
+  [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)).
 
 - **Item-Restscore Correlations** — Computes observed and model-expected
   item-restscore correlations (Goodman-Kruskal's gamma; Kreiner, 2011) via the `iarm`
