@@ -36,6 +36,16 @@ analyses:
       dependence assessment in Rasch models (fitted via mirt). Optionally
       runs a parametric bootstrap simulation to determine a simulation-based
       cutoff value. Single-core sequential processing is used by default.
+  - title: Conditional Item Infit
+    name: iteminfit
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Conditional Item Infit
+    category: analyses
+    description: |
+      Computes conditional infit MSQ statistics for each item using
+      iarm::out_infit(). Optionally determines simulation-based cutoff
+      values via parametric bootstrap and visualises the results.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

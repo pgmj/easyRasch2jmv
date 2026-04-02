@@ -1,0 +1,73 @@
+---
+name: iteminfit
+title: Conditional Item Infit
+jrs: '1.1'
+
+items:
+    - name: infitTable
+      title: Conditional Item Infit MSQ
+      type: Table
+      rows: 0
+      clearWith:
+        - vars
+        - computeCutoff
+        - cutoffMethod
+        - hdciWidth
+        - iterations
+        - seed
+        - sortByInfit
+      columns:
+        - name: item
+          title: Item
+          type: text
+        - name: infitMSQ
+          title: Infit MSQ
+          type: number
+          format: zto,pvalue
+        - name: infitLow
+          title: Infit low
+          type: number
+          format: zto,pvalue
+          visible: (computeCutoff)
+        - name: infitHigh
+          title: Infit high
+          type: number
+          format: zto,pvalue
+          visible: (computeCutoff)
+        - name: flagged
+          title: Flagged
+          type: text
+          visible: (computeCutoff)
+        - name: relLocation
+          title: Relative location
+          type: number
+
+    - name: cutoffNote
+      title: ''
+      type: Html
+      visible: (computeCutoff)
+      clearWith:
+        - vars
+        - computeCutoff
+        - cutoffMethod
+        - hdciWidth
+        - iterations
+        - seed
+
+    - name: infitPlot
+      title: Simulated Infit MSQ Distribution
+      type: Image
+      width: 700
+      height: 500
+      renderFun: .infitPlot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+        - vars
+        - computeCutoff
+        - cutoffMethod
+        - hdciWidth
+        - iterations
+        - seed
+        - sortByInfit
+...

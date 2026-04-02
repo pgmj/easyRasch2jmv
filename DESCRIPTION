@@ -17,4 +17,8 @@ Imports:
     iarm,
     mirt,
     psychotools (>= 0.7-3),
-    stats
+    stats,
+    ggplot2,
+    ggdist,
+    scales,
+    rlang
