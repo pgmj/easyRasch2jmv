@@ -1,0 +1,41 @@
+---
+name: itemrestscore
+title: Item-Restscore Correlations
+jrs: '1.1'
+
+items:
+    - name: restscoreTable
+      title: Item-Restscore Correlations
+      type: Table
+      rows: (vars)
+      clearWith:
+          - vars
+          - sortByDiff
+          - pAdj
+      columns:
+          - name: item
+            title: Item
+            type: text
+          - name: observed
+            title: Observed value
+            type: number
+          - name: expected
+            title: Expected value
+            type: number
+          - name: absDiff
+            title: Abs. difference
+            type: number
+          - name: pAdjusted
+            title: Adj. p-value
+            type: number
+          - name: significance
+            title: p-value sign.
+            type: text
+          - name: location
+            title: Location
+            type: number
+          - name: relLocation
+            title: Rel. location
+            type: number
+
+...
