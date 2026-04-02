@@ -94,12 +94,12 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "seed"),
                 columns=list(
                     list(
-                        `name`="parameter",
-                        `title`="Parameter",
+                        `name`="parameter", 
+                        `title`="Parameter", 
                         `type`="text"),
                     list(
-                        `name`="value",
-                        `title`="Value",
+                        `name`="value", 
+                        `title`="Value", 
                         `type`="number"))))}))
 
 locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -129,7 +129,7 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' dependence assessment in Rasch models (fitted via mirt). Optionally
 #' runs a parametric bootstrap simulation to determine a simulation-based
 #' cutoff value. Single-core sequential processing is used by default.
-#'
+#' 
 #' @param data .
 #' @param vars .
 #' @param computeCutoff .
@@ -179,3 +179,4 @@ locdepq3 <- function(
 
     analysis$results
 }
+

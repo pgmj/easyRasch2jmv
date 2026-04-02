@@ -6,6 +6,9 @@ Measurement Theory analysis.
 
 ## Analyses
 
+- **Yen's Q3 residuals** for assessing local dependencies, with simulation-based
+  cutoff values.
+
 - **Item-Restscore Correlations** — Computes observed and model-expected
   item-restscore correlations (Goodman-Kruskal's gamma) via the `iarm`
   package. Supports dichotomous (Rasch model) and polytomous (Partial Credit
