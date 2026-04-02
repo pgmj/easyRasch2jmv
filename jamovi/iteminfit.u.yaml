@@ -34,7 +34,6 @@ children:
               - type: TextBox
                 name: hdciWidth
                 format: number
-                enable: (cutoffMethod:hdci)
               - type: TextBox
                 name: iterations
                 format: number
