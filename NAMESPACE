@@ -2,5 +2,7 @@
 
 export(itemrestscoreClass)
 export(locdepq3Class)
+export(iteminfitClass)
+export(iteminfit)
 
 importFrom(jmvcore, Analysis)
