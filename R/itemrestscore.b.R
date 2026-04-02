@@ -156,7 +156,7 @@ itemrestscoreClass <- R6::R6Class(
           # Populate the results table
           table <- self$results$restscoreTable
           for (i in seq_len(nrow(results))) {
-            table$setRow(rowNo = i, values = list(
+            table$setRow(rowNo = i, values = list( # should maybe be addRow(rowKey)?
               item        = results$Item[i],
               observed    = results$Observed[i],
               expected    = results$Expected[i],

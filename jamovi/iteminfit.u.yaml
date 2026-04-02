@@ -31,8 +31,6 @@ children:
           - type: LayoutBox
             margin: large
             children:
-              - type: ComboBox
-                name: cutoffMethod
               - type: TextBox
                 name: hdciWidth
                 format: number

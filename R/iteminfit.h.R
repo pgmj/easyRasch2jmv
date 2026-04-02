@@ -8,7 +8,6 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            cutoffMethod = "hdci",
             hdciWidth = 0.999,
             iterations = 250,
             seed = 42,
@@ -27,24 +26,18 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "continuous",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..computeCutoff <- jmvcore::OptionBool$new(
                 "computeCutoff",
                 computeCutoff,
                 default=FALSE)
-            private$..cutoffMethod <- jmvcore::OptionList$new(
-                "cutoffMethod",
-                cutoffMethod,
-                options=list(
-                    "hdci",
-                    "quantile"),
-                default="hdci")
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
                 default=0.999,
                 min=0.5,
-                max=1.0)
+                max=1)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
@@ -61,7 +54,6 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
             self$.addOption(private$..vars)
             self$.addOption(private$..computeCutoff)
-            self$.addOption(private$..cutoffMethod)
             self$.addOption(private$..hdciWidth)
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
@@ -70,7 +62,6 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     active = list(
         vars = function() private$..vars$value,
         computeCutoff = function() private$..computeCutoff$value,
-        cutoffMethod = function() private$..cutoffMethod$value,
         hdciWidth = function() private$..hdciWidth$value,
         iterations = function() private$..iterations$value,
         seed = function() private$..seed$value,
@@ -78,7 +69,6 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     private = list(
         ..vars = NA,
         ..computeCutoff = NA,
-        ..cutoffMethod = NA,
         ..hdciWidth = NA,
         ..iterations = NA,
         ..seed = NA,
@@ -114,34 +104,34 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "sortByInfit"),
                 columns=list(
                     list(
-                        `name`="item",
-                        `title`="Item",
+                        `name`="item", 
+                        `title`="Item", 
                         `type`="text"),
                     list(
-                        `name`="infitMSQ",
-                        `title`="Infit MSQ",
-                        `type`="number",
+                        `name`="infitMSQ", 
+                        `title`="Infit MSQ", 
+                        `type`="number", 
                         `format`="zto,pvalue"),
                     list(
-                        `name`="infitLow",
-                        `title`="Infit low",
-                        `type`="number",
-                        `format`="zto,pvalue",
+                        `name`="infitLow", 
+                        `title`="Infit low", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
                         `visible`="(computeCutoff)"),
                     list(
-                        `name`="infitHigh",
-                        `title`="Infit high",
-                        `type`="number",
-                        `format`="zto,pvalue",
+                        `name`="infitHigh", 
+                        `title`="Infit high", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
                         `visible`="(computeCutoff)"),
                     list(
-                        `name`="flagged",
-                        `title`="Flagged",
-                        `type`="text",
+                        `name`="flagged", 
+                        `title`="Flagged", 
+                        `type`="text", 
                         `visible`="(computeCutoff)"),
                     list(
-                        `name`="relLocation",
-                        `title`="Relative location",
+                        `name`="relLocation", 
+                        `title`="Relative location", 
                         `type`="number"))))
             self$add(jmvcore::Html$new(
                 options=options,
@@ -159,7 +149,7 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="infitPlot",
                 title="Simulated Infit MSQ Distribution",
-                width=700,
+                width=400,
                 height=500,
                 renderFun=".infitPlot",
                 visible="(computeCutoff)",
@@ -196,14 +186,10 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Conditional Item Infit
 #'
-#' Computes conditional infit MSQ statistics for each item using
-#' iarm::out_infit(). Optionally determines simulation-based cutoff
-#' values via parametric bootstrap and visualises the results.
-#'
+#' 
 #' @param data .
 #' @param vars .
 #' @param computeCutoff .
-#' @param cutoffMethod .
 #' @param hdciWidth .
 #' @param iterations .
 #' @param seed .
@@ -211,7 +197,7 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$infitTable} \tab \tab \tab \tab \tab a table \cr
-#'   \code{results$cutoffNote} \tab \tab \tab \tab \tab html \cr
+#'   \code{results$cutoffNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$infitPlot} \tab \tab \tab \tab \tab an image \cr
 #' }
 #'
@@ -226,7 +212,6 @@ iteminfit <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    cutoffMethod = "hdci",
     hdciWidth = 0.999,
     iterations = 250,
     seed = 42,
@@ -245,7 +230,6 @@ iteminfit <- function(
     options <- iteminfitOptions$new(
         vars = vars,
         computeCutoff = computeCutoff,
-        cutoffMethod = cutoffMethod,
         hdciWidth = hdciWidth,
         iterations = iterations,
         seed = seed,
@@ -259,3 +243,4 @@ iteminfit <- function(
 
     analysis$results
 }
+

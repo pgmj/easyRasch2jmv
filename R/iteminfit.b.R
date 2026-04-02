@@ -147,16 +147,12 @@ iteminfitClass <- R6::R6Class(
             vals$infitHigh <- results$Infit_high[i]
             vals$flagged <- ifelse(results$Flagged[i], "TRUE", "")
           }
-          table$setRow(rowNo = i, values = vals)
+          table$addRow(rowKey = i, values = vals)
         }
 
         # 7. Set cutoff note
-        if (!is.null(cutoff_res)) {
-          method_label <- if (cutoff_res$cutoff_method == "hdci") {
-            paste0(cutoff_res$hdci_width * 100, "% HDCI")
-          } else {
-            "2.5th/97.5th percentile"
-          }
+          method_label <- paste0(cutoff_res$hdci_width * 100, "% HDCI")
+
           note_html <- paste0(
             "<p>MSQ values based on conditional estimation (n = ", n_complete_used,
             " complete cases). Cutoff values based on ",
@@ -164,7 +160,7 @@ iteminfitClass <- R6::R6Class(
             method_label, ").</p>"
           )
           self$results$cutoffNote$setContent(note_html)
-        }
+
 
         # 8. Save state for plot
         if (!is.null(cutoff_res)) {
@@ -185,12 +181,11 @@ iteminfitClass <- R6::R6Class(
 
     .runCutoffSim = function(df) {
       # Implements RMinfitcutoff() logic (sequential only)
-      cutoff_method <- self$options$cutoffMethod
       hdci_width <- self$options$hdciWidth
       iterations <- self$options$iterations
       seed <- self$options$seed
 
-      if (cutoff_method == "hdci" && !requireNamespace("ggdist", quietly = TRUE)) {
+      if (!requireNamespace("ggdist", quietly = TRUE)) {
         stop("Package 'ggdist' is required for HDCI cutoff method. Install with: install.packages(\"ggdist\")")
       }
 
@@ -211,7 +206,7 @@ iteminfitClass <- R6::R6Class(
         pp <- eRm::person.parameter(pcm_fit)
         theta_table <- pp$theta.table[["Person Parameter"]]
         raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas <- as.numeric(stats::na.omit(theta_table[as.character(raw_scores)]))
+        thetas <- as.numeric(stats::na.omit(theta_table[raw_scores]))
         thresh_mat <- extract_item_thresholds(data_mat)
         deltaslist <- lapply(seq_len(nrow(thresh_mat)), function(i) {
           as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
@@ -225,7 +220,7 @@ iteminfitClass <- R6::R6Class(
         pp <- eRm::person.parameter(rm_fit)
         theta_table <- pp$theta.table[["Person Parameter"]]
         raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas <- as.numeric(stats::na.omit(theta_table[as.character(raw_scores)]))
+        thetas <- as.numeric(stats::na.omit(theta_table[raw_scores]))
         item_params <- -rm_fit$betapar
         sim_data_list <- list(
           type = "dichotomous", thetas = thetas, item_params = item_params,
@@ -252,20 +247,12 @@ iteminfitClass <- R6::R6Class(
       item_names <- unique(results_df$Item)
       item_cutoffs <- do.call(rbind, lapply(item_names, function(item) {
         sub <- results_df[results_df$Item == item, ]
-        if (cutoff_method == "hdci") {
+
           infit_interval <- ggdist::hdci(sub$InfitMSQ, .width = hdci_width)
           outfit_interval <- ggdist::hdci(sub$OutfitMSQ, .width = hdci_width)
           data.frame(Item = item, infit_low = infit_interval[1L, 1L], infit_high = infit_interval[1L, 2L],
                      outfit_low = outfit_interval[1L, 1L], outfit_high = outfit_interval[1L, 2L],
                      stringsAsFactors = FALSE, row.names = NULL)
-        } else {
-          data.frame(Item = item,
-                     infit_low = stats::quantile(sub$InfitMSQ, 0.025, na.rm = TRUE),
-                     infit_high = stats::quantile(sub$InfitMSQ, 0.975, na.rm = TRUE),
-                     outfit_low = stats::quantile(sub$OutfitMSQ, 0.025, na.rm = TRUE),
-                     outfit_high = stats::quantile(sub$OutfitMSQ, 0.975, na.rm = TRUE),
-                     stringsAsFactors = FALSE, row.names = NULL)
-        }
       }))
       rownames(item_cutoffs) <- NULL
 
@@ -273,7 +260,7 @@ iteminfitClass <- R6::R6Class(
         results = results_df, item_cutoffs = item_cutoffs,
         actual_iterations = actual_iterations, sample_n = sample_n,
         sample_summary = summary(thetas), item_names = item_names_vec,
-        cutoff_method = cutoff_method, hdci_width = hdci_width
+        hdci_width = hdci_width
       )
     },
 
@@ -357,7 +344,7 @@ iteminfitClass <- R6::R6Class(
           ggplot2::aes(x = .data$observed_infit),
           color = "sienna2", shape = 18,
           position = ggplot2::position_nudge(y = -0.1),
-          size = 4
+          size = 7
         ) +
         ggplot2::labs(x = "Conditional Infit MSQ", y = "Item", caption = caption_text) +
         ggplot2::scale_color_manual(

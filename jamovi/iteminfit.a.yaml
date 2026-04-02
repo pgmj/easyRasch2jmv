@@ -2,7 +2,7 @@
 name: iteminfit
 title: Conditional Item Infit
 menuGroup: easyRasch2jmv
-version: '1.0'
+version: '1.0.0'
 jas: '1.2'
 
 options:
@@ -23,16 +23,6 @@ options:
       title: Compute simulation-based cutoffs
       type: Bool
       default: false
-
-    - name: cutoffMethod
-      title: Cutoff method
-      type: List
-      options:
-        - name: hdci
-          title: HDCI
-        - name: quantile
-          title: Quantile (2.5th/97.5th)
-      default: hdci
 
     - name: hdciWidth
       title: HDCI width
