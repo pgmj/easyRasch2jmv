@@ -9,15 +9,22 @@ maintainer: Magnus Johansson <pgmj@pm.me>
 date: '2026-04-02'
 type: R
 description: >
-  Provides Rasch analysis functions for Jamovi, wrapping analysis logic from
-  the easyRasch2 R package. Includes item-restscore correlation analysis using
-  the iarm package.
+  Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
+  easyRasch2 R package. Includes item-restscore correlation analysis using the
+  iarm package.
 analyses:
   - title: Item-Restscore Correlations
     name: itemrestscore
     ns: easyRasch2jmv
     menuGroup: easyRasch2jmv
     menuTitle: Item-Restscore Correlations
+    category: analyses
+    description: |
+      Computes observed and model-expected item-restscore correlations using
+      Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
+      (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
+      then reports observed vs. expected restscore correlations, absolute
+      differences, adjusted p-values, and item locations.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

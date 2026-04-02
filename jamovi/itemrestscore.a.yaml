@@ -42,8 +42,6 @@ options:
             name: holm
           - title: Bonferroni
             name: bonferroni
-          - title: None
-            name: none
       default: BH
 
 ...

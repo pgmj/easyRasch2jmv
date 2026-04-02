@@ -1,0 +1,22 @@
+ICCplot                 Item Characteristic Curves
+amts                    Abbreviated Mental Test Score (AMTS)
+boot_fit                Computes Bootstrapping P Values for Outfit and
+                        Infit Statistics
+clr_tests               Conditional Likelihood Ratio Tests (CLR)
+desc2                   Depression Screening DESC-II
+iarm-package            iarm: A package for item analysis in Rasch
+                        models
+item_obsexp             Observed and Expected Item Mean Scores
+item_restscore          Item Restscore Association
+item_target             Computation of Item Targets for Polytomous
+                        Models
+out_infit               Item Outfit and Infit Statistics
+partgam                 Conditional and Partial Gamma Coefficients
+partgam_DIF             Partial Gamma to detect Differential Item
+                        Functioning (DIF)
+partgam_LD              Partial Gamma to detect Local Dependence (LD)
+person_estimates        Person Estimates with MLE and WLE
+print.bootfit           Print Method for the Output of boot_fit
+print.outfit            Print Method for the Output of out_infit
+score_groups            Generate two Score Groups
+test_prop               Properties of the Test

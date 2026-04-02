@@ -1,0 +1,82 @@
+bibentry(bibtype="Article",
+  title   = "Extended Rasch modeling: The eRm package for the application of IRT models in R",
+  author = c(person(given = "Patrick", family = "Mair", email = "mair@fas.harvard.edu", comment = c(ORCID = "0000-0003-0100-6511")),
+             person(given = "Reinhold", family = "Hatzinger")),
+  journal = "Journal of Statistical Software",
+  year    = "2007",
+  page    = "1--20",
+  volume  = "20",
+  issue   = "9",
+  doi = "10.18637/jss.v020.i09",
+  mheader = "The original JSS article:"
+)
+
+bibentry(bibtype="Article",
+  title   = "CML based estimation of extended Rasch models with the eRm package in R",
+  author = c(person(given = "Patrick", family = "Mair", email = "mair@fas.harvard.edu", comment = c(ORCID = "0000-0003-0100-6511")),
+             person(given = "Reinhold", family = "Hatzinger")),
+  journal = "Psychology Science",
+  year    = "2007",
+  page    = "26--43",
+  volume  = "49",
+  issue   = "1",
+  doi = "10.18637/jss.v020.i09",
+  mheader = "Article about CML Estimation in eRm:"
+)
+
+bibentry(bibtype="Article",
+  title   = "IRT models with relaxed assumptions in eRm: A manual-like instruction",
+  author = c(person(given = "Reinhold", family = "Hatzinger"),
+             person(given = "Thomas", family = "Rusch", email = "thomas.rusch@wu.ac.at")),
+  journal = "Psychology Science Quarterly",
+  year    = "2009",
+  page    = "87--120",
+  volume  = "51",
+  issue   = "1",
+  mheader = "Article about LLRAs in eRm:"
+)
+
+bibentry(bibtype="InProceedings",
+  title   = "Linear logistic models with relaxed assumptions in R",
+  author = c(person(given = "Thomas", family = "Rusch", email = "thomas.rusch@wu.ac.at"),
+             person(given = "Marco", family = "Maier"),
+             person(given = "Reinhold", family = "Hatzinger")),
+  booktitle = "Algorithms from and for Nature and Life",
+  editor  = c(person("Berthold", "Lausen"), person("Dirk", "van den Poel"), person("Alfred", "Ultsch")),
+  series  = "Studies in Classification, Data Analysis, and Knowledge Organization",
+  year    = 2013,
+  page    = "337--347",
+  address = "New York",
+  publisher = "Springer",
+  doi     = "10.1007/978-3-319-00035-0_34",
+  mheader = "Book Chapter about LLRAs:"
+)
+
+
+bibentry(bibtype="Article",
+  title   = "An empirical power analysis of quasi-exact tests for the Rasch model: Measurement invariance in small samples",
+  author = c(person(given = "Ingrid", family = "Koller"),
+             person(given = "Marco", family = "Maier"),
+             person(given = "Reinhold", family = "Hatzinger")),
+  journal = "Methodology",
+  year    = "2015",
+  page    = "45--54",
+  volume  = "11",
+  issue   = "2",
+  doi = "10.1027/1614-2241/a000090",
+  mheader = "Article about the performance of Quasi-Exact Tests in eRm:"
+)
+
+bibentry(bibtype="Article",
+  title   = "Testing the local independence assumption of the Rasch model with Q3-based nonparametric model tests",
+  author = c(person(given = "Rudolf", family = "Debelak"),
+             person(given = "Ingrid", family = "Koller")),
+  journal = "Applied Psychological Measurement",
+  year    = "2019",
+  page    = "103--117",
+  volume  = "44",
+  issue   = "2",
+  doi = "10.1177/0146621619835501",
+  mheader = "Article about the Performance of the nonparametric Q3 Tests in eRm:"
+)
+

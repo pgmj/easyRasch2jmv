@@ -1,0 +1,62 @@
+IC                      Information criteria
+LLRA                    Fit Linear Logistic Models with Relaxed
+                        Assumptions (LLRA)
+LLTM                    Estimation of linear logistic test models
+LPCM                    Estimation of linear partial credit models
+LRSM                    Estimation of linear rating scale models
+LRtest                  Computation of Andersen's LR-test.
+MLoef                   Martin-Löf's Likelihood-Ratio-Test
+NonparametricTests      A Function to Perform Nonparametric Rasch Model
+                        Tests
+PCM                     Estimation of partial credit models
+PersonMisfit            Person Misfit
+RM                      Estimation of Rasch Models
+RSM                     Estimation of rating scale models
+RSctr                   Control Object
+RSmpl                   Sample Objects
+RaschSampler            Rasch Sampler Package
+SepRel                  Person Separation Reliability
+Waldtest                Item-Specific Wald Test
+anova.eRm               Analysis of Deviances for Rasch Models
+anova.llra              Analysis of Deviance for Linear Logistic Models
+                        with Relaxed Assumptions
+build_W                 Automatized Construction of LLRA Design Matrix
+collapse_W              Convenient Collapsing of LLRA Design Matrix
+eRm.data                Data for Computing Extended Rasch Models
+gofIRT                  Various model tests and fit indices
+item_info               Calculate Item Information for 'eRm' objects
+itemfit.ppar            Residuals, Personfit and Itemfit Statistics
+llra.datprep            Prepare Data Set for LLRA Analysis
+llraDat1                An Artificial LLRA Data Set
+llraDat2                An Artificial LLRA Data Set
+llradat3                An Artificial LLRA Data Set
+person.parameter        Estimation of Person Parameters
+phi.range               Example User Function
+plotDIF                 Confidence intervals plot of item parameter
+                        estimates.
+plotGR                  Plot Treatment or Covariate Effects for LLRA
+plotICC                 ICC Plots
+plotINFO                Plot Information For "eRm" objects
+plotPImap               Person-Item Map
+plotPWmap               Pathway Map
+plotTR                  Plot Trend Effects for LLRA
+predict.ppar            Predict methods
+print.eRm               Methods for extended Rasch models
+rsampler                Sampling Binary Matrices
+rsctrl                  Controls for the Sampling Function
+rsextrmat               Extracting a Matrix
+rsextrobj               Extracting Encoded Sample Matrices
+rstats                  Calculating Statistics for the Sampled Matrices
+sim.2pl                 Simulation of 2-PL Data
+sim.locdep              Simulation locally dependent items
+sim.rasch               Simulation of Rasch homogeneous data
+sim.xdim                Simulation of multidimensional binary data
+stepwiseIt              Stepwise item elimination
+summary.RSctr           Summary Method for Control Objects
+summary.RSmpl           Summary Methods for Sample Objects
+summary.llra            Summarizing Linear Logistic Models with Relaxed
+                        Assumptions (LLRA)
+test_info               Calculate Test Information For 'eRm' objects
+thresholds              Computation of item-category treshold
+                        parameters.
+xmpl                    Example Data
