@@ -1,0 +1,59 @@
+---
+name: partgamdif
+title: Partial Gamma DIF
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: difVar
+      title: DIF Variable
+      type: Variable
+      suggested:
+        - nominal
+        - ordinal
+      permitted:
+        - factor
+        - numeric
+
+    - name: computeCutoff
+      title: Compute simulation-based cutoffs
+      type: Bool
+      default: false
+
+    - name: hdciWidth
+      title: HDCI width
+      type: Number
+      default: 0.99
+      min: 0.5
+      max: 1.0
+
+    - name: iterations
+      title: Number of simulation iterations
+      type: Integer
+      default: 250
+      min: 50
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+    - name: sortByGamma
+      title: Sort by |Partial gamma| (descending)
+      type: Bool
+      default: false
+...
