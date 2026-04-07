@@ -24,6 +24,15 @@ iccplotClass <- R6::R6Class(
         }
       }
 
+      # Strip jmvcore S4 column wrappers
+      col_names <- names(df)
+      df <- as.data.frame(
+        matrix(as.numeric(as.matrix(df)),
+               nrow = nrow(df),
+               ncol = ncol(df),
+               dimnames = list(NULL, col_names))
+      )
+
       # Check for all-NA columns
       all_na_cols <- sapply(df, function(x) all(is.na(x)))
       if (any(all_na_cols)) {
@@ -54,37 +63,47 @@ iccplotClass <- R6::R6Class(
         stop("Theta minimum must be less than Theta maximum.")
       }
 
-      # Save state for the plot render function
-      self$results$iccPlot$setState(list(
-        df = df,
-        theta_min = theta_min,
-        theta_max = theta_max
-      ))
+      # Fit PCM model in .run() with clean data
+      tryCatch({
+        pcm_model <- eRm::PCM(df)
+
+        self$results$iccPlot$setState(list(
+          pcm_model = pcm_model,
+          theta_min = theta_min,
+          theta_max = theta_max,
+          n_items = length(vars),
+          show_legend = self$options$showLegend
+        ))
+      }, error = function(e) {
+        stop(paste("Error fitting Partial Credit Model:", e$message))
+      })
     },
 
     .iccPlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
 
       state <- image$state
-      df <- state$df
+      pcm_model <- state$pcm_model
       theta_min <- state$theta_min
       theta_max <- state$theta_max
+      n_items <- state$n_items
+      show_legend <- state$show_legend
 
-      tryCatch({
-        mirt_model <- mirt::mirt(
-          df,
-          model = 1,
-          itemtype = "Rasch",
-          verbose = FALSE
-        )
+      # Set up a grid layout for all items
+      n_cols <- ceiling(sqrt(n_items))
+      n_rows <- ceiling(n_items / n_cols)
 
-        p <- plot(mirt_model, type = "trace", as.table = TRUE,
-                  theta_lim = c(theta_min, theta_max))
-        print(p)
-        TRUE
-      }, error = function(e) {
-        stop(paste("Error fitting Rasch model:", e$message))
-      })
+      old_par <- par(no.readonly = TRUE)
+      on.exit(par(old_par), add = TRUE)
+      par(mfrow = c(n_rows, n_cols), mar = c(4, 4, 2, 1), oma = c(0, 0, 0, 0))
+
+      legpos <- if (isTRUE(show_legend)) "topleft" else FALSE
+
+      eRm::plotICC(pcm_model, empICC = list("raw"),
+                   xlim = c(theta_min, theta_max),
+                   legpos = legpos, ylab = "Probability")
+
+      TRUE
     }
   )
 )

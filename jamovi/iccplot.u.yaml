@@ -25,4 +25,6 @@ children:
       - type: TextBox
         name: thetaMax
         format: number
+      - type: CheckBox
+        name: showLegend
 ...

@@ -8,17 +8,25 @@ Measurement Theory analysis.
 
 - **Conditional item infit MSQ** from R package `iarm` (Müller, 2020), with 
   simulation-based cutoff values (Johansson, 2025). Also uses package `eRm`.
+  
+- **Item-Restscore Correlations** — Computes observed and model-expected
+  item-restscore correlations (Goodman-Kruskal's gamma; Kreiner, 2011) via the `iarm`
+  package. Supports dichotomous and polytomous (Partial Credit
+  Model, PCM) data. Reports observed vs. expected correlations, absolute
+  differences, adjusted p-values, item locations, and item locations relative
+  to the sample mean person location.
 
 - **Yen's Q3 residuals** for assessing local dependencies using R package `mirt`, 
   with simulation-based cutoff values (Christensen, et al., 2017; 
   [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)).
+  
+- **Differential Item Functioning** (DIF), or invariance analysis. This also uses
+  GK gamma from the `iarm` package. Only works with categorical DIF variables.
+  
+- **Response category probabilities** - Uses `eRm::plotICC()` for response probability
+  curve plots for polytomous items only (PCM).
+  
 
-- **Item-Restscore Correlations** — Computes observed and model-expected
-  item-restscore correlations (Goodman-Kruskal's gamma; Kreiner, 2011) via the `iarm`
-  package. Supports dichotomous (Rasch model) and polytomous (Partial Credit
-  Model) data. Reports observed vs. expected correlations, absolute
-  differences, adjusted p-values, item locations, and item locations relative
-  to the sample mean person location.
 
 ## Installation
 

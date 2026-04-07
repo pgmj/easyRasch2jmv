@@ -8,7 +8,8 @@ iccplotOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             thetaMin = -5,
-            thetaMax = 5, ...) {
+            thetaMax = 5,
+            showLegend = TRUE, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -37,19 +38,26 @@ iccplotOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 default=5,
                 min=0,
                 max=10)
+            private$..showLegend <- jmvcore::OptionBool$new(
+                "showLegend",
+                showLegend,
+                default=TRUE)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..thetaMin)
             self$.addOption(private$..thetaMax)
+            self$.addOption(private$..showLegend)
         }),
     active = list(
         vars = function() private$..vars$value,
         thetaMin = function() private$..thetaMin$value,
-        thetaMax = function() private$..thetaMax$value),
+        thetaMax = function() private$..thetaMax$value,
+        showLegend = function() private$..showLegend$value),
     private = list(
         ..vars = NA,
         ..thetaMin = NA,
-        ..thetaMax = NA)
+        ..thetaMax = NA,
+        ..showLegend = NA)
 )
 
 iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -100,12 +108,12 @@ iccplotBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Item Probability Curves
 #'
-#' Fits a Rasch model via mirt and displays item trace (probability) curves.
-#'
+#' 
 #' @param data .
 #' @param vars .
 #' @param thetaMin .
 #' @param thetaMax .
+#' @param showLegend .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$iccPlot} \tab \tab \tab \tab \tab an image \cr
@@ -116,7 +124,8 @@ iccplot <- function(
     data,
     vars,
     thetaMin = -5,
-    thetaMax = 5) {
+    thetaMax = 5,
+    showLegend = TRUE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("iccplot requires jmvcore to be installed (restart may be required)")
@@ -131,7 +140,8 @@ iccplot <- function(
     options <- iccplotOptions$new(
         vars = vars,
         thetaMin = thetaMin,
-        thetaMax = thetaMax)
+        thetaMax = thetaMax,
+        showLegend = showLegend)
 
     analysis <- iccplotClass$new(
         options = options,
@@ -141,3 +151,4 @@ iccplot <- function(
 
     analysis$results
 }
+

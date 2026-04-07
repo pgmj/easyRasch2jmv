@@ -1,7 +1,7 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 0.1.0
+version: 0.2.0
 jms: '1.0'
 authors:
   - Magnus Johansson
@@ -73,6 +73,9 @@ datasets:
   - name: raschdat3
     path: eRm_raschdat3.csv
     description: Dichotomous dataset from eRm
+  - name: pcmdat2dif
+    path: eRm_pcmdat2dif.csv
+    description: Polytomous dataset from eRm with added DIF variable
 usesNative: false
 minApp: 1.0.8
 

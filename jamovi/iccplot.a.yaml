@@ -32,4 +32,8 @@ options:
       default: 5
       min: 0
       max: 10
+    - name: showLegend
+      title: Show legend
+      type: Bool
+      default: true
 ...
