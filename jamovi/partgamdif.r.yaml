@@ -1,0 +1,80 @@
+---
+name: partgamdif
+title: Partial Gamma DIF
+jrs: '1.1'
+
+items:
+    - name: pgdifTable
+      title: Partial Gamma DIF
+      type: Table
+      rows: 0
+      clearWith:
+        - vars
+        - difVar
+        - computeCutoff
+        - hdciWidth
+        - iterations
+        - seed
+        - sortByGamma
+      columns:
+        - name: item
+          title: Item
+          type: text
+        - name: gamma
+          title: Partial gamma
+          type: number
+        - name: se
+          title: SE
+          type: number
+        - name: lower
+          title: Lower CI
+          type: number
+        - name: upper
+          title: Upper CI
+          type: number
+        - name: padjBH
+          title: Adjusted p (BH)
+          type: number
+          format: zto,pvalue
+        - name: gammaLow
+          title: Gamma low
+          type: number
+          visible: (computeCutoff)
+        - name: gammaHigh
+          title: Gamma high
+          type: number
+          visible: (computeCutoff)
+        - name: flagged
+          title: Flagged
+          type: text
+          visible: (computeCutoff)
+
+    - name: cutoffNote
+      title: ''
+      type: Html
+      visible: (computeCutoff)
+      clearWith:
+        - vars
+        - difVar
+        - computeCutoff
+        - hdciWidth
+        - iterations
+        - seed
+
+    - name: pgdifPlot
+      title: Simulated Partial Gamma Distribution
+      type: Image
+      width: 400
+      height: 500
+      renderFun: .pgDIFplot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+        - vars
+        - difVar
+        - computeCutoff
+        - hdciWidth
+        - iterations
+        - seed
+        - sortByGamma
+...

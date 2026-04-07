@@ -46,6 +46,16 @@ analyses:
       Computes conditional infit MSQ statistics for each item using
       iarm::out_infit(). Optionally determines simulation-based cutoff
       values via parametric bootstrap and visualises the results.
+  - title: Partial Gamma DIF
+    name: partgamdif
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Partial Gamma DIF
+    category: analyses
+    description: |
+      Computes partial gamma coefficients for Differential Item Functioning
+      (DIF) using iarm::partgam_DIF(). Optionally determines simulation-based
+      cutoff values via parametric bootstrap and visualises the results.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

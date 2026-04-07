@@ -220,3 +220,98 @@ run_infit_sim_sequential <- function(iterations, sim_seeds, sim_data_list,
 
   results
 }
+
+#' Run a single partial gamma DIF simulation iteration
+#'
+#' @param seed Integer seed for reproducibility.
+#' @param data_list List produced inside the cutoff simulation.
+#' @return A data.frame with columns `Item` and `gamma`, or a character string
+#'   on failure.
+#' @noRd
+run_single_partgam_sim <- function(seed, data_list) {
+  set.seed(seed)
+
+  thetas_res <- sample(data_list$thetas, size = data_list$sample_n,
+                       replace = TRUE)
+
+  tryCatch({
+    if (data_list$type == "dichotomous") {
+      sim_mat <- psychotools::rrm(
+        theta = thetas_res,
+        beta = data_list$item_params
+      )
+      sim_df <- as.data.frame(sim_mat$data)
+      colnames(sim_df) <- data_list$item_names
+
+      pos_counts <- colSums(sim_df, na.rm = TRUE)
+      if (any(pos_counts < 8L)) {
+        return("validation_failed: fewer than 8 positive responses in at least one item")
+      }
+    } else {
+      sim_mat <- sim_partial_score(data_list$deltaslist, thetas_res)
+      sim_df <- as.data.frame(sim_mat)
+      colnames(sim_df) <- data_list$item_names
+
+      n_cats <- vapply(data_list$deltaslist, function(d) length(d) + 1L,
+                       integer(1L))
+      for (j in seq_len(ncol(sim_df))) {
+        tab <- tabulate(sim_df[[j]] + 1L, nbins = n_cats[j])
+        if (any(tab == 0L)) {
+          return("validation_failed: not all categories represented")
+        }
+      }
+    }
+
+    # Create a random DIF variable with the same group proportions
+    # but no actual relationship to item responses (no true DIF)
+    random_dif <- sample(
+      data_list$dif_levels,
+      size = data_list$sample_n,
+      replace = TRUE,
+      prob = data_list$dif_proportions
+    )
+
+    # Compute partial gamma DIF via iarm
+    pgam <- iarm::partgam_DIF(sim_df, random_dif)
+    pgam_df <- as.data.frame(pgam)
+
+    data.frame(
+      Item  = data_list$item_names,
+      gamma = as.numeric(pgam_df[seq_along(data_list$item_names), "gamma"]),
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+  }, error = function(e) {
+    as.character(conditionMessage(e))
+  })
+}
+
+#' Run partial gamma DIF simulations sequentially
+#'
+#' @param iterations Number of iterations.
+#' @param sim_seeds Integer vector of per-iteration seeds.
+#' @param sim_data_list List of data passed to each iteration.
+#' @param verbose Show progress bar.
+#' @return List of raw results (one element per iteration).
+#' @noRd
+run_partgam_sim_sequential <- function(iterations, sim_seeds, sim_data_list,
+                                       verbose = FALSE) {
+  if (verbose) {
+    pb <- utils::txtProgressBar(min = 0, max = iterations, style = 3)
+  }
+
+  results <- vector("list", iterations)
+  for (sim in seq_len(iterations)) {
+    results[[sim]] <- run_single_partgam_sim(sim_seeds[sim], sim_data_list)
+    if (verbose) {
+      utils::setTxtProgressBar(pb, sim)
+    }
+  }
+
+  if (verbose) {
+    close(pb)
+    message("")
+  }
+
+  results
+}

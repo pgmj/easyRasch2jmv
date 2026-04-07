@@ -4,5 +4,7 @@ export(itemrestscoreClass)
 export(locdepq3Class)
 export(iteminfitClass)
 export(iteminfit)
+export(partgamdifClass)
+export(partgamdif)
 
 importFrom(jmvcore, Analysis)
