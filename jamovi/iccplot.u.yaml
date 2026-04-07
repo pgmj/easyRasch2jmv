@@ -1,0 +1,28 @@
+---
+title: Item Probability Curves
+name: iccplot
+jus: '3.0'
+stage: 0
+compilerMode: tame
+children:
+  - type: VariableSupplier
+    persistentItems: false
+    stretchFactor: 1
+    children:
+      - type: TargetLayoutBox
+        label: Items
+        children:
+          - type: VariablesListBox
+            name: vars
+            isTarget: true
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: TextBox
+        name: thetaMin
+        format: number
+      - type: TextBox
+        name: thetaMax
+        format: number
+...
