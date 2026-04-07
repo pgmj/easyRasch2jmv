@@ -6,5 +6,7 @@ export(iteminfitClass)
 export(iteminfit)
 export(partgamdifClass)
 export(partgamdif)
+export(iccplotClass)
+export(iccplot)
 
 importFrom(jmvcore, Analysis)

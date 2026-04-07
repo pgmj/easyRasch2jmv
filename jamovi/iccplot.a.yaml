@@ -1,0 +1,35 @@
+---
+name: iccplot
+title: Item Probability Curves
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: thetaMin
+      title: Theta minimum
+      type: Number
+      default: -5
+      min: -10
+      max: 0
+
+    - name: thetaMax
+      title: Theta maximum
+      type: Number
+      default: 5
+      min: 0
+      max: 10
+...

@@ -1,0 +1,18 @@
+---
+name: iccplot
+title: Item Probability Curves
+jrs: '1.1'
+
+items:
+    - name: iccPlot
+      title: Item Probability Curves
+      type: Image
+      width: 700
+      height: 600
+      renderFun: .iccPlot
+      requiresData: true
+      clearWith:
+        - vars
+        - thetaMin
+        - thetaMax
+...

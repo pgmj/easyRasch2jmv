@@ -56,6 +56,16 @@ analyses:
       Computes partial gamma coefficients for Differential Item Functioning
       (DIF) using iarm::partgam_DIF(). Optionally determines simulation-based
       cutoff values via parametric bootstrap and visualises the results.
+  - title: Item Probability Curves
+    name: iccplot
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Item Probability Curves
+    category: analyses
+    description: |
+      Fits a Rasch model using mirt and displays item characteristic
+      curve (ICC) trace plots showing the probability of each response
+      category as a function of the latent trait (theta).
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv
