@@ -117,44 +117,44 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "sortByGamma"),
                 columns=list(
                     list(
-                        `name`="item",
-                        `title`="Item",
+                        `name`="item", 
+                        `title`="Item", 
                         `type`="text"),
                     list(
-                        `name`="gamma",
-                        `title`="Partial gamma",
+                        `name`="gamma", 
+                        `title`="Partial gamma", 
                         `type`="number"),
                     list(
-                        `name`="se",
-                        `title`="SE",
+                        `name`="se", 
+                        `title`="SE", 
                         `type`="number"),
                     list(
-                        `name`="lower",
-                        `title`="Lower CI",
+                        `name`="lower", 
+                        `title`="Lower CI", 
                         `type`="number"),
                     list(
-                        `name`="upper",
-                        `title`="Upper CI",
+                        `name`="upper", 
+                        `title`="Upper CI", 
                         `type`="number"),
                     list(
-                        `name`="padjBH",
-                        `title`="Adjusted p (BH)",
-                        `type`="number",
+                        `name`="padjBH", 
+                        `title`="Adjusted p (BH)", 
+                        `type`="number", 
                         `format`="zto,pvalue"),
                     list(
-                        `name`="gammaLow",
-                        `title`="Gamma low",
-                        `type`="number",
+                        `name`="gammaLow", 
+                        `title`="Gamma low", 
+                        `type`="number", 
                         `visible`="(computeCutoff)"),
                     list(
-                        `name`="gammaHigh",
-                        `title`="Gamma high",
-                        `type`="number",
+                        `name`="gammaHigh", 
+                        `title`="Gamma high", 
+                        `type`="number", 
                         `visible`="(computeCutoff)"),
                     list(
-                        `name`="flagged",
-                        `title`="Flagged",
-                        `type`="text",
+                        `name`="flagged", 
+                        `title`="Flagged", 
+                        `type`="text", 
                         `visible`="(computeCutoff)"))))
             self$add(jmvcore::Html$new(
                 options=options,
@@ -209,7 +209,7 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Partial Gamma DIF
 #'
-#'
+#' 
 #' @param data .
 #' @param vars .
 #' @param difVar .
@@ -271,3 +271,4 @@ partgamdif <- function(
 
     analysis$results
 }
+
