@@ -99,6 +99,8 @@ partgamdifClass <- R6::R6Class(
           gamma   = as.numeric(pgam_raw$gamma),
           se      = as.numeric(pgam_raw$se),
           pvalue  = as.numeric(pgam_raw$pvalue),
+          # Column 6 is the BH-adjusted p-value; iarm does not always give it
+          # a stable name, so positional access matches easyRasch2 source behaviour.
           padj_bh = as.numeric(pgam_raw[[6]]),
           sig     = as.character(pgam_raw$sig),
           lower   = as.numeric(pgam_raw$lower),
