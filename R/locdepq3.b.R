@@ -11,7 +11,7 @@ locdepq3Class <- R6::R6Class(
       }
 
       if (length(self$options$vars) < 2) {
-        stop("You need at least two variables to run an analysis.")
+        return()
       }
 
       data            <- self$data

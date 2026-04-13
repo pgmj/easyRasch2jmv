@@ -10,7 +10,7 @@ partgamdifClass <- R6::R6Class(
       if (is.null(self$options$difVar))
         return()
       if (length(self$options$vars) < 2)
-        stop("You need at least two variables to run an analysis.")
+        return()
 
       # 2. Extract and validate data
       data <- self$data
