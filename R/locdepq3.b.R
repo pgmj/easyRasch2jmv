@@ -4,13 +4,43 @@ locdepq3Class <- R6::R6Class(
   inherit = locdepq3Base,
   private = list(
 
-    .run = function() {
-      # Return early if no variables selected
-      if (is.null(self$options$vars) || length(self$options$vars) == 0) {
+    # .init() runs immediately when options change — sets up table structure
+    # so column headers appear instantly and don't flicker on re-run.
+    .init = function() {
+      vars <- self$options$vars
+      if (is.null(vars) || length(vars) == 0)
         return()
+
+      if (length(self$options$vars) < 2)
+        return()
+
+      q3_table <- self$results$q3Table
+
+      q3_table$addColumn(name = "item", title = "", type = "text")
+      for (v in vars) {
+        q3_table$addColumn(name = v, title = v, type = "number")
+      }
+      if (isTRUE(self$options$computeCutoff)) {
+        q3_table$addColumn(name = "above_cutoff", title = "Above cutoff", type = "text")
       }
 
-      if (length(self$options$vars) < 2) {
+      # Pre-populate rows with em dashes on the diagonal and blanks above
+      for (i in seq_along(vars)) {
+        row_vals <- list(item = vars[i])
+        for (j in seq_along(vars)) {
+          if (i == j) {
+            row_vals[[ vars[j] ]] <- "\u2014"
+          } else if (j > i) {
+            row_vals[[ vars[j] ]] <- ""
+          }
+        }
+        q3_table$addRow(rowKey = i, values = row_vals)
+      }
+    },
+
+    .run = function() {
+      # Return early if not enough variables
+      if (is.null(self$options$vars) || length(self$options$vars) < 2) {
         return()
       }
 
@@ -72,11 +102,6 @@ locdepq3Class <- R6::R6Class(
           diag(resid_mat) <- NA
           mean_resid <- mean(resid_mat, na.rm = TRUE)
 
-          resid_df <- as.data.frame(resid_mat)
-          resid_df[] <- lapply(resid_df, function(x) round(x, 2))
-          resid_df[upper.tri(resid_df)] <- NA
-          diag(resid_df)  <- NA
-
           # --- Step 2: Simulation-based cutoff (optional) -------------------------
           cutoff_val <- NULL
           dyn_cutoff <- NULL
@@ -86,12 +111,6 @@ locdepq3Class <- R6::R6Class(
             cutoff_res  <- private$.runCutoffSim(df, iterations, actual_seed)
             cutoff_val  <- cutoff_res$suggested_cutoff
             dyn_cutoff  <- mean_resid + cutoff_val
-
-            # Mark rows above the dynamic cutoff
-            resid_df$above_cutoff <- apply(
-              resid_df[, vars, drop = FALSE], 1,
-              function(row) any(row > dyn_cutoff, na.rm = TRUE)
-            )
 
             # Populate cutoff summary table
             ct <- self$results$cutoffTable
@@ -104,16 +123,23 @@ locdepq3Class <- R6::R6Class(
             ct$addRow(rowKey = "n",    values = list(parameter = "Sample N",          value = cutoff_res$sample_n))
           }
 
-          # --- Step 3: Build Q3 table with dynamic columns -----------------------
+          # --- Step 3: Determine above_cutoff flags using the lower triangle only
+          # (matching what is displayed in the table)
+          above_flags <- rep(FALSE, length(vars))
+          if (!is.null(dyn_cutoff)) {
+            for (i in seq_along(vars)) {
+              if (i > 1) {
+                above_flags[i] <- any(resid_mat[i, 1:(i - 1)] > dyn_cutoff, na.rm = TRUE)
+              }
+              # Row 1 has no lower-triangle cells, so it stays FALSE
+            }
+          }
+
+          # --- Step 4: Populate the Q3 table (structure set up in .init()) --------
           q3_table <- self$results$q3Table
 
-          q3_table$addColumn(name = "item", title = "Item", type = "text")
-          for (v in vars) {
-            q3_table$addColumn(name = v, title = v, type = "number")
-          }
-          if (compute_cutoff) {
-            q3_table$addColumn(name = "above_cutoff", title = "Above cutoff", type = "text")
-          }
+          # Round for display
+          resid_rounded <- round(resid_mat, 2)
 
           # Add note when cutoff is applied
           if (!is.null(dyn_cutoff)) {
@@ -122,22 +148,30 @@ locdepq3Class <- R6::R6Class(
               paste0(
                 "Dynamic cut-off: ", round(dyn_cutoff, 3),
                 " (mean Q3 = ", round(mean_resid, 3),
-                " + ", round(cutoff_val, 3), " [p99 from simulation]). ",
+                " + ", round(cutoff_val, 3),
+                " (p99 from simulation)). ",
                 "Rows marked * contain at least one value above the cut-off."
               )
             )
           }
 
-          # Populate rows
-          for (i in seq_len(nrow(resid_df))) {
-            row_vals <- list(item = rownames(resid_df)[i])
-            for (v in vars) {
-              row_vals[[v]] <- resid_df[i, v]
+          # Populate rows — diagonal gets em dash, upper triangle gets blank,
+          # lower triangle gets the Q3 value
+          for (i in seq_along(vars)) {
+            row_vals <- list(item = vars[i])
+            for (j in seq_along(vars)) {
+              if (i == j) {
+                row_vals[[ vars[j] ]] <- "\u2014"
+              } else if (j > i) {
+                row_vals[[ vars[j] ]] <- ""
+              } else {
+                row_vals[[ vars[j] ]] <- resid_rounded[i, j]
+              }
             }
-            if (compute_cutoff && "above_cutoff" %in% names(resid_df)) {
-              row_vals[["above_cutoff"]] <- if (isTRUE(resid_df$above_cutoff[i])) "*" else ""
+            if (compute_cutoff) {
+              row_vals[["above_cutoff"]] <- if (isTRUE(above_flags[i])) "*" else ""
             }
-            q3_table$addRow(rowKey = i, values = row_vals)
+            q3_table$setRow(rowNo = i, values = row_vals)
           }
         },
         error = function(e) {
@@ -146,8 +180,6 @@ locdepq3Class <- R6::R6Class(
       )
     },
 
-    # Run Q3 cutoff simulation sequentially (single-core).
-    # Adapted from easyRasch2::RMlocdepQ3cutoff (parallel = FALSE path).
     .runCutoffSim = function(df, iterations, seed) {
       if (!is.null(seed)) set.seed(seed)
 
