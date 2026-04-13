@@ -114,16 +114,18 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `format`="zto,pvalue"),
                     list(
                         `name`="infitLow", 
-                        `title`="Infit low", 
+                        `title`="Lower", 
                         `type`="number", 
                         `format`="zto,pvalue", 
-                        `visible`="(computeCutoff)"),
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
                     list(
                         `name`="infitHigh", 
-                        `title`="Infit high", 
+                        `title`="Upper", 
                         `type`="number", 
                         `format`="zto,pvalue", 
-                        `visible`="(computeCutoff)"),
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
@@ -132,7 +134,8 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="relLocation", 
                         `title`="Relative location", 
-                        `type`="number"))))
+                        `type`="number", 
+                        `format`="zto,pvalue"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="cutoffNote",

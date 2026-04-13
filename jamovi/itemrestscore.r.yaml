@@ -19,23 +19,29 @@ items:
           - name: observed
             title: Observed value
             type: number
+            format: zto,pvalue
           - name: expected
             title: Expected value
             type: number
+            format: zto,pvalue
           - name: absDiff
             title: Abs. difference
             type: number
+            format: zto,pvalue
           - name: pAdjusted
             title: Adj. p-value
             type: number
+            format: zto,pvalue
           - name: significance
             title: p-value sign.
             type: text
           - name: location
             title: Location
             type: number
+            format: zto,pvalue
           - name: relLocation
             title: Rel. location
             type: number
+            format: zto,pvalue
 
 ...

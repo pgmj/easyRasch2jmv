@@ -25,15 +25,17 @@ items:
           type: number
           format: zto,pvalue
         - name: infitLow
-          title: Infit low
+          title: Lower
           type: number
           format: zto,pvalue
           visible: (computeCutoff)
+          superTitle: Expected range
         - name: infitHigh
-          title: Infit high
+          title: Upper
           type: number
           format: zto,pvalue
           visible: (computeCutoff)
+          superTitle: Expected range
         - name: flagged
           title: Flagged
           type: text
@@ -41,6 +43,7 @@ items:
         - name: relLocation
           title: Relative location
           type: number
+          format: zto,pvalue
 
     - name: cutoffNote
       title: ''

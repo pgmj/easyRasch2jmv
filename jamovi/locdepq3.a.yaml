@@ -27,7 +27,7 @@ options:
           - numeric
 
     - name: computeCutoff
-      title: Compute simulation-based cutoff
+      title: Compute simulation-based cutoff (takes some time)
       type: Bool
       default: false
 
