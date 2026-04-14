@@ -82,17 +82,17 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `name`="observed", 
                         `title`="Observed value", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto"),
                     list(
                         `name`="expected", 
                         `title`="Expected value", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto"),
                     list(
                         `name`="absDiff", 
                         `title`="Abs. difference", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto"),
                     list(
                         `name`="pAdjusted", 
                         `title`="Adj. p-value", 
@@ -105,13 +105,11 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     list(
                         `name`="location", 
                         `title`="Location", 
-                        `type`="number", 
-                        `format`="zto,pvalue"),
+                        `type`="number"),
                     list(
                         `name`="relLocation", 
                         `title`="Rel. location", 
-                        `type`="number", 
-                        `format`="zto,pvalue"))))}))
+                        `type`="number"))))}))
 
 itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "itemrestscoreBase",

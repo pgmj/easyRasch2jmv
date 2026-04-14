@@ -23,15 +23,19 @@ items:
         - name: gamma
           title: Partial gamma
           type: number
+          format: zto
         - name: se
           title: SE
           type: number
+          format: zto
         - name: lower
           title: Lower CI
           type: number
+          format: zto
         - name: upper
           title: Upper CI
           type: number
+          format: zto
         - name: padjBH
           title: Adjusted p (BH)
           type: number
@@ -39,10 +43,12 @@ items:
         - name: gammaLow
           title: Gamma low
           type: number
+          format: zto
           visible: (computeCutoff)
         - name: gammaHigh
           title: Gamma high
           type: number
+          format: zto
           visible: (computeCutoff)
         - name: flagged
           title: Flagged

@@ -23,17 +23,15 @@ items:
         - name: infitMSQ
           title: Infit MSQ
           type: number
-          format: zto,pvalue
         - name: infitLow
           title: Lower
           type: number
-          format: zto,pvalue
+          format: zto
           visible: (computeCutoff)
           superTitle: Expected range
         - name: infitHigh
           title: Upper
           type: number
-          format: zto,pvalue
           visible: (computeCutoff)
           superTitle: Expected range
         - name: flagged
@@ -43,7 +41,6 @@ items:
         - name: relLocation
           title: Relative location
           type: number
-          format: zto,pvalue
 
     - name: cutoffNote
       title: ''

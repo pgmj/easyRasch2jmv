@@ -1,12 +1,12 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 0.2.1
+version: 0.2.2
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-04-02'
+date: '2026-04-14'
 type: R
 description: >
   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
@@ -63,7 +63,7 @@ analyses:
     menuTitle: Item Probability Curves
     category: analyses
     description: |
-      Fits a Rasch model using mirt and displays item characteristic
+      Fits a Rasch model using eRm (CML) and displays item characteristic
       curve (ICC) trace plots showing the probability of each response
       category as a function of the latent trait (theta).
 datasets:

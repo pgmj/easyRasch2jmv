@@ -34,7 +34,7 @@ options:
     - name: iterations
       title: Number of simulation iterations
       type: Integer
-      default: 250
+      default: 200
       min: 50
 
     - name: seed

@@ -9,7 +9,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             computeCutoff = FALSE,
             hdciWidth = 0.999,
-            iterations = 250,
+            iterations = 200,
             seed = 42,
             sortByInfit = FALSE, ...) {
 
@@ -41,7 +41,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=250,
+                default=200,
                 min=50)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
@@ -110,20 +110,18 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="infitMSQ", 
                         `title`="Infit MSQ", 
-                        `type`="number", 
-                        `format`="zto,pvalue"),
+                        `type`="number"),
                     list(
                         `name`="infitLow", 
                         `title`="Lower", 
                         `type`="number", 
-                        `format`="zto,pvalue", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
                     list(
                         `name`="infitHigh", 
                         `title`="Upper", 
                         `type`="number", 
-                        `format`="zto,pvalue", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
                     list(
@@ -134,8 +132,7 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="relLocation", 
                         `title`="Relative location", 
-                        `type`="number", 
-                        `format`="zto,pvalue"))))
+                        `type`="number"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="cutoffNote",
@@ -216,7 +213,7 @@ iteminfit <- function(
     vars,
     computeCutoff = FALSE,
     hdciWidth = 0.999,
-    iterations = 250,
+    iterations = 200,
     seed = 42,
     sortByInfit = FALSE) {
 

@@ -34,14 +34,14 @@ options:
     - name: iterations
       title: Number of simulation iterations
       type: Integer
-      default: 200
+      default: 100
       min: 50
       max: 5000
 
     - name: seed
-      title: Random seed (0 = no seed)
+      title: Random seed
       type: Integer
-      default: 0
+      default: 42
       min: 0
 
 ...

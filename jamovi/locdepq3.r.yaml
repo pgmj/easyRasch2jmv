@@ -30,5 +30,6 @@ items:
           - name: value
             title: Value
             type: number
+            format: zto
 
 ...

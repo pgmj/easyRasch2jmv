@@ -8,8 +8,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            iterations = 200,
-            seed = 0, ...) {
+            iterations = 100,
+            seed = 42, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -33,13 +33,13 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=200,
+                default=100,
                 min=50,
                 max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,
-                default=0,
+                default=42,
                 min=0)
 
             self$.addOption(private$..vars)
@@ -100,7 +100,8 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="value", 
                         `title`="Value", 
-                        `type`="number"))))}))
+                        `type`="number", 
+                        `format`="zto"))))}))
 
 locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "locdepq3Base",
@@ -152,8 +153,8 @@ locdepq3 <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    iterations = 200,
-    seed = 0) {
+    iterations = 100,
+    seed = 42) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("locdepq3 requires jmvcore to be installed (restart may be required)")

@@ -123,19 +123,23 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="gamma", 
                         `title`="Partial gamma", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="se", 
                         `title`="SE", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="lower", 
                         `title`="Lower CI", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="upper", 
                         `title`="Upper CI", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="padjBH", 
                         `title`="Adjusted p (BH)", 
@@ -145,11 +149,13 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `name`="gammaLow", 
                         `title`="Gamma low", 
                         `type`="number", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)"),
                     list(
                         `name`="gammaHigh", 
                         `title`="Gamma high", 
                         `type`="number", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)"),
                     list(
                         `name`="flagged", 
