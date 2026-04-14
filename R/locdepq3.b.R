@@ -139,7 +139,7 @@ locdepq3Class <- R6::R6Class(
           q3_table <- self$results$q3Table
 
           # Round for display
-          resid_rounded <- round(resid_mat, 2)
+          resid_rounded <- round(resid_mat, 3)
 
           # Add note when cutoff is applied
           if (!is.null(dyn_cutoff)) {
