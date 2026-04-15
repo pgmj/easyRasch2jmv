@@ -7,7 +7,7 @@ items:
     - name: pgdifTable
       title: Partial Gamma DIF
       type: Table
-      rows: 0
+      rows: (vars)
       clearWith:
         - vars
         - difVar
@@ -15,7 +15,6 @@ items:
         - hdciWidth
         - iterations
         - seed
-        - sortByGamma
       columns:
         - name: item
           title: Item
@@ -82,5 +81,4 @@ items:
         - hdciWidth
         - iterations
         - seed
-        - sortByGamma
 ...

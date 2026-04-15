@@ -148,7 +148,7 @@ partgamdifClass <- R6::R6Class(
             vals$gammaHigh <- pgam_df$gamma_high[i]
             vals$flagged   <- ifelse(pgam_df$Flagged[i], "TRUE", "")
           }
-          table$addRow(rowKey = i, values = vals)
+          table$setRow(rowNo = i, values = vals)
         }
 
         # Set cutoff note
@@ -183,7 +183,7 @@ partgamdifClass <- R6::R6Class(
 
     .runCutoffSim = function(df, dif_vec) {
       # Implements RMpgDIFcutoff() logic (sequential only)
-      hdci_width  <- self$options$hdciWidth
+      hdci_width  <- self$options$hdciWidth / 100
       iterations  <- self$options$iterations
       seed        <- self$options$seed
 
@@ -327,7 +327,7 @@ partgamdifClass <- R6::R6Class(
       caption_text <- paste0(
         "Note: Results from ", actual_iterations,
         " simulated datasets with ", sample_n, " respondents.\n",
-        "Orange dots indicate observed partial gamma. ",
+        "Orange dots indicate observed partial gamma.\n",
         "Black dots indicate median gamma from simulations."
       )
 
@@ -368,8 +368,9 @@ partgamdifClass <- R6::R6Class(
           values = scales::brewer_pal()(3)[-1],
           aesthetics = "slab_fill", guide = "none"
         ) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"))
+        ggplot2::theme_minimal(base_size = 15) +
+        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"),
+                       plot.caption = ggplot2::element_text(size = 11))
 
       print(p)
       TRUE

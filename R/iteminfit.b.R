@@ -147,7 +147,7 @@ iteminfitClass <- R6::R6Class(
             vals$infitHigh <- results$Infit_high[i]
             vals$flagged <- ifelse(results$Flagged[i], "TRUE", "")
           }
-          table$addRow(rowKey = i, values = vals)
+          table$setRow(rowNo = i, values = vals)
         }
 
         # 7. Set cutoff note
@@ -181,7 +181,7 @@ iteminfitClass <- R6::R6Class(
 
     .runCutoffSim = function(df) {
       # Implements RMinfitcutoff() logic (sequential only)
-      hdci_width <- self$options$hdciWidth
+      hdci_width <- self$options$hdciWidth / 100
       iterations <- self$options$iterations
       seed <- self$options$seed
 
@@ -313,7 +313,7 @@ iteminfitClass <- R6::R6Class(
       caption_text <- paste0(
         "Note: Results from ", actual_iterations,
         " simulated datasets with ", sample_n, " respondents.\n",
-        "Orange dots indicate observed conditional item fit. ",
+        "Orange dots indicate observed conditional item fit.\n",
         "Black dots indicate median fit from simulations."
       )
 
@@ -353,8 +353,9 @@ iteminfitClass <- R6::R6Class(
           aesthetics = "slab_fill", guide = "none"
         ) +
         ggplot2::scale_x_continuous(breaks = seq(0.5, 1.5, 0.1), minor_breaks = NULL) +
-        ggplot2::theme_minimal() +
-        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"))
+        ggplot2::theme_minimal(base_size = 15) +
+        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"),
+                       plot.caption = ggplot2::element_text(size = 11))
 
       print(p)
       TRUE

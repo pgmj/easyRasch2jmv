@@ -7,15 +7,13 @@ items:
     - name: infitTable
       title: Conditional Item Infit MSQ
       type: Table
-      rows: 0
+      rows: (vars)
       clearWith:
         - vars
         - computeCutoff
-        - cutoffMethod
         - hdciWidth
         - iterations
         - seed
-        - sortByInfit
       columns:
         - name: item
           title: Item
@@ -49,7 +47,6 @@ items:
       clearWith:
         - vars
         - computeCutoff
-        - cutoffMethod
         - hdciWidth
         - iterations
         - seed
@@ -65,9 +62,7 @@ items:
       clearWith:
         - vars
         - computeCutoff
-        - cutoffMethod
         - hdciWidth
         - iterations
         - seed
-        - sortByInfit
 ...

@@ -8,7 +8,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            hdciWidth = 0.999,
+            hdciWidth = 99.9,
             iterations = 200,
             seed = 42,
             sortByInfit = FALSE, ...) {
@@ -35,9 +35,9 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=0.999,
-                min=0.5,
-                max=1)
+                default=99.9,
+                min=50,
+                max=100)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
@@ -93,15 +93,13 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="infitTable",
                 title="Conditional Item Infit MSQ",
-                rows=0,
+                rows="(vars)",
                 clearWith=list(
                     "vars",
                     "computeCutoff",
-                    "cutoffMethod",
                     "hdciWidth",
                     "iterations",
-                    "seed",
-                    "sortByInfit"),
+                    "seed"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -141,7 +139,6 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 clearWith=list(
                     "vars",
                     "computeCutoff",
-                    "cutoffMethod",
                     "hdciWidth",
                     "iterations",
                     "seed")))
@@ -157,11 +154,9 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 clearWith=list(
                     "vars",
                     "computeCutoff",
-                    "cutoffMethod",
                     "hdciWidth",
                     "iterations",
-                    "seed",
-                    "sortByInfit")))}))
+                    "seed")))}))
 
 iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "iteminfitBase",
@@ -212,7 +207,7 @@ iteminfit <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    hdciWidth = 0.999,
+    hdciWidth = 99.9,
     iterations = 200,
     seed = 42,
     sortByInfit = FALSE) {

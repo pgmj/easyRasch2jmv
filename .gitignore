@@ -4,3 +4,4 @@
 .Ruserdata
 build/*
 inst/*
+*.jmo

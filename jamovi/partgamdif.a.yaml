@@ -37,9 +37,9 @@ options:
     - name: hdciWidth
       title: HDCI width
       type: Number
-      default: 0.99
-      min: 0.5
-      max: 1.0
+      default: 99
+      min: 50
+      max: 100
 
     - name: iterations
       title: Number of simulation iterations

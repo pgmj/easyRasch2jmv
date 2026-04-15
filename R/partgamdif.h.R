@@ -9,7 +9,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             difVar = NULL,
             computeCutoff = FALSE,
-            hdciWidth = 0.99,
+            hdciWidth = 99,
             iterations = 250,
             seed = 42,
             sortByGamma = FALSE, ...) {
@@ -45,9 +45,9 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=0.99,
-                min=0.5,
-                max=1)
+                default=99,
+                min=50,
+                max=100)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
@@ -106,15 +106,14 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="pgdifTable",
                 title="Partial Gamma DIF",
-                rows=0,
+                rows="(vars)",
                 clearWith=list(
                     "vars",
                     "difVar",
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed",
-                    "sortByGamma"),
+                    "seed"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -189,8 +188,7 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed",
-                    "sortByGamma")))}))
+                    "seed")))}))
 
 partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "partgamdifBase",
@@ -243,7 +241,7 @@ partgamdif <- function(
     vars,
     difVar,
     computeCutoff = FALSE,
-    hdciWidth = 0.99,
+    hdciWidth = 99,
     iterations = 250,
     seed = 42,
     sortByGamma = FALSE) {

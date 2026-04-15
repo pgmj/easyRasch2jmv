@@ -42,6 +42,7 @@ children:
               - type: TextBox
                 name: hdciWidth
                 format: number
+                suffix: "%"
               - type: TextBox
                 name: iterations
                 format: number
