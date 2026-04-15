@@ -151,6 +151,7 @@ iteminfitClass <- R6::R6Class(
         }
 
         # 7. Set cutoff note
+        if (!is.null(cutoff_res)) {
           method_label <- paste0(cutoff_res$hdci_width * 100, "% HDCI")
 
           note_html <- paste0(
@@ -160,6 +161,7 @@ iteminfitClass <- R6::R6Class(
             method_label, ").</p>"
           )
           self$results$cutoffNote$setContent(note_html)
+        }
 
 
         # 8. Save state for plot

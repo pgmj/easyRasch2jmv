@@ -91,6 +91,7 @@ partgamdifClass <- R6::R6Class(
         # Compute partial gamma DIF
         nullfile_path <- nullfile()
         sink(nullfile_path)
+        on.exit(sink(), add = TRUE)
         pgam_raw <- iarm::partgam_DIF(as.data.frame(df), dif_vec)
         sink()
 
