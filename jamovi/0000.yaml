@@ -6,12 +6,13 @@ jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-04-14'
+date: '2026-04-15'
 type: R
 description: >
   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
-  easyRasch2 R package. Includes item-restscore correlation analysis using the
-  iarm package.
+  easyRasch2 R package. Includes conditional item infit, item-restscore, and
+  partial gamma DIF from the iarm package, Yen's Q3 residuals from package mirt,
+  and item probability curves (PCM) from eRm.
 analyses:
   - title: Item-Restscore Correlations
     name: itemrestscore

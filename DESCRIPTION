@@ -6,9 +6,9 @@ Date: 2026-04-15
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description: Provides Rasch analysis functions for Jamovi, wrapping analysis
-    logic from the easyRasch2 R package. Core model estimationg uses eRm and 
-    psychotools packages. Includes item infit, item-restscore, and partial gamma 
-    DIF from the iarm package, and Yen's Q3 residuals from package mirt.
+  logic from the easyRasch2 R package. Includes conditional item infit, 
+  item-restscore, and partial gamma DIF from the iarm package, Yen's Q3 
+  residuals from package mirt, and item probability curves (PCM) from eRm.
 License: GPL (>= 3)
 Encoding: UTF-8
 Imports:
