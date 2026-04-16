@@ -83,7 +83,8 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 clearWith=list(
                     "vars",
                     "thetaMin",
-                    "thetaMax")))}))
+                    "thetaMax",
+                    "showLegend")))}))
 
 iccplotBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "iccplotBase",

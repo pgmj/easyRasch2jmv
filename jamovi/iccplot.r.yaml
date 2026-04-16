@@ -15,4 +15,5 @@ items:
         - vars
         - thetaMin
         - thetaMax
+        - showLegend
 ...
