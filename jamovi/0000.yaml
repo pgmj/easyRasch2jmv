@@ -12,7 +12,8 @@ description: >
   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
   easyRasch2 R package. Includes conditional item infit, item-restscore, and
   partial gamma DIF from the iarm package, Yen's Q3 residuals from package mirt,
-  and item probability curves (PCM) from eRm.
+  and item probability curves (PCM) from eRm. Uses CML estimation from eRm,
+  except for the analysis of Q3 residuals, which use MML estimation.
 analyses:
   - title: Item-Restscore Correlations
     name: itemrestscore

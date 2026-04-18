@@ -5,10 +5,11 @@ Version: 0.2.3.2
 Date: 2026-04-18
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
-Description: Provides Rasch analysis functions for Jamovi, wrapping analysis
-  logic from the easyRasch2 R package. Includes conditional item infit, 
-  item-restscore, and partial gamma DIF from the iarm package, Yen's Q3 
-  residuals from package mirt, and item probability curves (PCM) from eRm.
+Description:   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
+  easyRasch2 R package. Includes conditional item infit, item-restscore, and
+  partial gamma DIF from the iarm package, Yen's Q3 residuals from package mirt,
+  and item probability curves (PCM) from eRm. Uses CML estimation from eRm,
+  except for the analysis of Q3 residuals, which use MML estimation.
 License: GPL (>= 3)
 Encoding: UTF-8
 Imports:
