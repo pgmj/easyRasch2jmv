@@ -69,6 +69,11 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 name="restscoreTable",
                 title="Item-Restscore Correlations",
                 rows="(vars)",
+                refs=list(
+                    "easyRasch2jmv",
+                    "kreiner2011",
+                    "mueller2022",
+                    "mair2007"),
                 clearWith=list(
                     "vars",
                     "sortByDiff",

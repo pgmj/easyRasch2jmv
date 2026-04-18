@@ -8,6 +8,7 @@ items:
       title: Conditional Item Infit MSQ
       type: Table
       rows: (vars)
+      refs: [easyRasch2jmv, mueller2020, johansson2025_detecting, mair2007]
       clearWith:
         - vars
         - computeCutoff

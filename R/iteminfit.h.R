@@ -94,6 +94,11 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 name="infitTable",
                 title="Conditional Item Infit MSQ",
                 rows="(vars)",
+                refs=list(
+                    "easyRasch2jmv",
+                    "mueller2020",
+                    "johansson2025_detecting",
+                    "mair2007"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",

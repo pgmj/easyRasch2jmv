@@ -1,0 +1,105 @@
+---
+refs:
+
+    kreiner2011:
+        type: article
+        author: Kreiner, S.
+        year: 2011
+        title: 'A Note on Item–Restscore Association in Rasch Models'
+        publisher: 'Applied Psychological Measurement, 35(7), 557–561'
+        url: https://doi.org/10.1177/0146621611410227
+
+    mueller2020:
+        type: article
+        author: Müller, M.
+        year: 2020
+        title: 'Item fit statistics for Rasch analysis: Can we trust them?'
+        publisher: 'Journal of Statistical Distributions and Applications, 7(5)'
+        url: https://doi.org/10.1186/s40488-020-00108-7
+
+    yen1984:
+        type: article
+        author: Yen, W. M.
+        year: 1984
+        title: 'Effects of local item dependence on the fit and equating performance of the three-parameter logistic model'
+        publisher: 'Applied Psychological Measurement, 8(2), 125–145'
+        url: https://doi.org/10.1177/014662168400800201
+
+    christensen2017:
+        type: article
+        author: Christensen, K. B., Makransky, G., & Horton, M.
+        year: 2017
+        title: 'Critical values for Yen''s Q3: Identification of local dependence in the Rasch model'
+        publisher: 'Applied Psychological Measurement, 41(3), 178–194'
+        url: https://doi.org/10.1177/0146621616677520
+
+    bjorner1998:
+        type: article
+        author: Bjorner, J. B., Kreiner, S., Ware, J. E., Damsgaard, M. T., & Bech, P.
+        year: 1998
+        title: 'Differential item functioning in the Danish translation of the SF-36'
+        publisher: 'Journal of Clinical Epidemiology, 51(11), 1189–1202'
+        url: https://doi.org/10.1016/S0895-4356(98)00108-6
+
+    henninger2024:
+        type: article
+        author: Henninger, M., Radek, J., Sengewald, M.-A., & Strobl, C.
+        year: 2024
+        title: 'Partial credit trees meet the partial gamma coefficient for quantifying DIF and DSF in polytomous items'
+        publisher: 'OSF Preprints'
+        url: https://doi.org/10.31234/osf.io/47sah
+
+    christensen2013:
+        type: book
+        author: Christensen, K. B., Kreiner, S., & Mesbah, M. (Eds.)
+        year: 2013
+        title: 'Rasch Models in Health'
+        publisher: 'Iste and Wiley, pp. 133–135'
+
+    easyRasch2jmv:
+        type: software
+        author: Johansson, M.
+        year: 2026
+        title: 'easyRasch2jmv: Rasch Analysis for jamovi'
+        publisher: '[jamovi module]'
+        url: https://github.com/pgmj/easyRasch2jmv
+
+    johansson2024_simcutoffs:
+        type: website
+        author: Johansson, M.
+        year: 2024
+        title: 'Simulation based cutoff values for Rasch item fit and residual correlations'
+        url: https://pgmj.github.io/simcutoffs.html
+
+    johansson2025_detecting:
+        type: article
+        author: Johansson, M.
+        year: 2025
+        title: 'Detecting Item Misfit in Rasch Models'
+        publisher: 'Educational Methods & Psychometrics'
+        url: https://doi.org/10.61186/emp.2025.5
+
+    mair2007:
+        type: article
+        author: Mair, P., & Hatzinger, R.
+        year: 2007
+        title: 'Extended Rasch Modeling: The eRm Package for the Application of IRT Models in R'
+        publisher: 'Journal of Statistical Software'
+        url: https://doi.org/10.18637/jss.v020.i09
+
+    chalmers2012:
+        type: article
+        author: Chalmers, R. P.
+        year: 2012
+        title: 'mirt: A Multidimensional Item Response Theory Package for the R Environment'
+        publisher: 'Journal of Statistical Software'
+        url: https://doi.org/10.18637/jss.v048.i06
+
+    mueller2022:
+        type: software
+        author: Mueller, M., & Santiago, P. H. R.
+        year: 2022
+        title: 'iarm: Item Analysis in Rasch Models (Version 0.4.3)'
+        url: https://cran.r-project.org/web/packages/iarm/index.html
+
+...

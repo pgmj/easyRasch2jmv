@@ -1,7 +1,8 @@
-# easyRasch2jmv 0.2.3.1
+# easyRasch2jmv 0.2.3.2
 
 - Updated description of module
 - Fix for clearWith showLegend in item threshold probability figures.
+- Added references
 
 # easyRasch2jmv 0.2.3
 

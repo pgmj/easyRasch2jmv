@@ -76,6 +76,9 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="iccPlot",
                 title="Item Probability Curves",
+                refs=list(
+                    "easyRasch2jmv",
+                    "mair2007"),
                 width=700,
                 height=600,
                 renderFun=".iccPlot",

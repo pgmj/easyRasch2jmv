@@ -8,6 +8,7 @@ items:
       title: Partial Gamma DIF
       type: Table
       rows: (vars)
+      refs: [easyRasch2jmv, bjorner1998, henninger2024, mueller2022]
       clearWith:
         - vars
         - difVar

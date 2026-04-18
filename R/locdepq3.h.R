@@ -76,6 +76,11 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="q3Table",
                 title="Q3 Residual Correlation Matrix",
+                refs=list(
+                    "easyRasch2jmv",
+                    "yen1984",
+                    "christensen2017",
+                    "chalmers2012"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",
