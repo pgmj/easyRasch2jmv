@@ -98,7 +98,9 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "easyRasch2jmv",
                     "mueller2020",
                     "johansson2025_detecting",
-                    "mair2007"),
+                    "mair2007",
+                    "zeileis2026",
+                    "kay2025"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",

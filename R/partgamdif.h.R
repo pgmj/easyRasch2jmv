@@ -107,6 +107,13 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 name="pgdifTable",
                 title="Partial Gamma DIF",
                 rows="(vars)",
+                refs=list(
+                    "easyRasch2jmv",
+                    "bjorner1998",
+                    "henninger2024",
+                    "mueller2022",
+                    "zeileis2026",
+                    "kay2025"),
                 clearWith=list(
                     "vars",
                     "difVar",

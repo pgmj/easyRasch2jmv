@@ -80,7 +80,8 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "easyRasch2jmv",
                     "yen1984",
                     "christensen2017",
-                    "chalmers2012"),
+                    "chalmers2012",
+                    "zeileis2026"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",

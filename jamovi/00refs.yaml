@@ -102,4 +102,19 @@ refs:
         title: 'iarm: Item Analysis in Rasch Models (Version 0.4.3)'
         url: https://cran.r-project.org/web/packages/iarm/index.html
 
+    zeileis2026:
+        type: software
+        author: Zeileis, A., Strobl, C., Wickelmaier, F., Komboz, B., Kopf, J., Schneider, L., & Debelak, R.
+        year: 2026
+        title: 'psychotools: Infrastructure for Psychometric Modeling'
+        url: https://CRAN.R-project.org/package=psychotools
+
+    kay2025:
+        type: software
+        author: Kay, M.
+        year: 2025
+        title: 'ggdist: Visualizations of Distributions and Uncertainty'
+        url: https://mjskay.github.io/ggdist/
+        doi: https://doi.org/10.5281/zenodo.3879620
+
 ...
