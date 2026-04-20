@@ -1,3 +1,7 @@
+# easyRasch2jmv 0.2.4
+
+- Targeting (Wright map) figure added.
+
 # easyRasch2jmv 0.2.3.2
 
 - Updated description of module
