@@ -7,17 +7,17 @@ Measurement Theory analysis.
 ## Analyses
 
 - **Conditional item infit MSQ** from R package `iarm` (Müller, 2020), with 
-  simulation-based cutoff values (Johansson, 2025). Also uses package `eRm`.
+  simulation-based cutoff values (Johansson, 2025). Also uses package `eRm` (Mair & Hatzinger, 2007).
   
 - **Item-Restscore Correlations** — Computes observed and model-expected
-  item-restscore correlations (Goodman-Kruskal's gamma; Kreiner, 2011) via the `iarm`
+  item-restscore correlations using Goodman-Kruskal's gamma (Kreiner, 2011) via the `iarm`
   package. Supports dichotomous and polytomous (Partial Credit
   Model, PCM) data. Reports observed vs. expected correlations, absolute
   differences, adjusted p-values, item locations, and item locations relative
-  to the sample mean person location.
+  to the sample mean person location. Item locations estimated with CML from `eRm`.
 
-- **Yen's Q3 residuals** for assessing local dependencies using R package `mirt`, 
-  with simulation-based cutoff values (Christensen, et al., 2017; 
+- **Yen's Q3 residuals** for assessing local dependencies using R package `mirt` with MML estimation.
+  Simulation-based cutoff values are available (Christensen, et al., 2017; 
   [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)).
   
 - **Differential Item Functioning** (DIF), or invariance analysis. This also uses
@@ -26,9 +26,15 @@ Measurement Theory analysis.
 - **Response category probabilities** - Uses `eRm::plotICC()` for response probability
   curve plots for polytomous items only (PCM).
   
-
+- **Targeting plot** generates a Wright map using functions from `eRm`, `ggplot2`, and `patchwork`. 
+  CML is used for item parameters, and MLE is used for person parameters. A table with item threshold
+  locations is also included.
 
 ## Installation
+
+In Jamovi, click on **Modules** (far top right) and choose **"Jamovi Library"**. Search for *easyRasch* and install from there.
+
+For development version (see NEWS.md for changelog):
 
 1. Download the latest `.jmo` file from the [Releases](https://github.com/pgmj/easyRasch2jmv/releases) page.
 2. In Jamovi, go to the **Modules** menu (⊞) → **Sideload**.
@@ -48,15 +54,17 @@ the module.
 ## References
 
 - Christensen, K. B., Makransky, G., & Horton, M. (2017). Critical Values for Yen’s Q3: 
-Identification of Local Dependence in the Rasch Model Using Residual Correlations. 
-*Applied Psychological Measurement, 41*(3), 178–194. <https://doi.org/10.1177/0146621616677520>
+  Identification of Local Dependence in the Rasch Model Using Residual Correlations. 
+  *Applied Psychological Measurement, 41*(3), 178–194. <https://doi.org/10.1177/0146621616677520>
 - Johansson, M. (2025). Detecting Item Misfit in Rasch Models. 
-*Educational Methods & Psychometrics, 3*(18). <https://doi.org/10.61186/emp.2025.5>
+  *Educational Methods & Psychometrics, 3*(18). <https://doi.org/10.61186/emp.2025.5>
 - Kreiner, S. (2011). A Note on Item–Restscore Association in Rasch Models. 
-*Applied Psychological Measurement, 35*(7), 557–561. <https://doi.org/10.1177/0146621611410227>
+  *Applied Psychological Measurement, 35*(7), 557–561. <https://doi.org/10.1177/0146621611410227>
+- Mair P., Hatzinger R. (2007). Extended Rasch modeling: The eRm package for the application of IRT models in R. 
+  *Journal of Statistical Software, 20*. doi:10.18637/jss.v020.i09 <https://doi.org/10.18637/jss.v020.i09>.
 - Müller, M. (2020). Item fit statistics for Rasch analysis: Can we trust them? 
-*Journal of Statistical Distributions and Applications, 7*(1), 5. 
-<https://doi.org/10.1186/s40488-020-00108-7>
+  *Journal of Statistical Distributions and Applications, 7*(1), 5. 
+  <https://doi.org/10.1186/s40488-020-00108-7>
 
 
 ## Credits
