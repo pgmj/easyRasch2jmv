@@ -102,4 +102,10 @@
         `year`=2025, 
         `title`="ggdist: Visualizations of Distributions and Uncertainty", 
         `url`="https://mjskay.github.io/ggdist/", 
-        `doi`="https://doi.org/10.5281/zenodo.3879620"))
+        `doi`="https://doi.org/10.5281/zenodo.3879620"), 
+    `wright1979`=list(
+        `type`="book", 
+        `author`="Wright, B. D. & Stone, M. H.", 
+        `year`=1979, 
+        `title`="Best Test Design", 
+        `publisher`="MESA Press"))

@@ -68,6 +68,16 @@ analyses:
       Fits a Rasch model using eRm (CML) and displays item characteristic
       curve (ICC) trace plots showing the probability of each response
       category as a function of the latent trait (theta).
+  - title: Targeting Plot
+    name: targeting
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Targeting Plot
+    category: analyses
+    description: |
+      Person-item targeting plot (Wright Map) showing back-to-back histograms
+      of person and item threshold locations, plus a dot plot of individual
+      item thresholds. Uses CML estimation via eRm.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv
