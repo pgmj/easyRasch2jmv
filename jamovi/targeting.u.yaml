@@ -1,0 +1,39 @@
+---
+title: Targeting Plot
+name: targeting
+jus: '3.0'
+stage: 0
+compilerMode: tame
+children:
+  - type: VariableSupplier
+    persistentItems: false
+    stretchFactor: 1
+    children:
+      - type: TargetLayoutBox
+        label: Items
+        children:
+          - type: VariablesListBox
+            name: vars
+            isTarget: true
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: robust
+      - type: ComboBox
+        name: sortItems
+      - type: TextBox
+        name: bins
+        format: number
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: TextBox
+        name: xlimLow
+        format: number
+      - type: TextBox
+        name: xlimHigh
+        format: number
+...

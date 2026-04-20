@@ -1,0 +1,40 @@
+---
+name: targeting
+title: Targeting Plot
+jrs: '1.1'
+
+items:
+    - name: targetingPlot
+      title: Person-Item Targeting Plot
+      type: Image
+      refs: [easyRasch2jmv, wright1979]
+      width: 700
+      height: 700
+      renderFun: .targetingPlot
+      requiresData: true
+      clearWith:
+        - vars
+        - robust
+        - sortItems
+        - bins
+        - xlimLow
+        - xlimHigh
+
+    - name: thresholdTable
+      title: Item Threshold Locations
+      type: Table
+      rows: 0
+      clearWith:
+        - vars
+      columns:
+        - name: item
+          title: Item
+          type: text
+        - name: threshold
+          title: Threshold
+          type: text
+        - name: location
+          title: Location
+          type: number
+          format: zto,pvalue
+...

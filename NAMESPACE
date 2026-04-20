@@ -8,5 +8,7 @@ export(partgamdifClass)
 export(partgamdif)
 export(iccplotClass)
 export(iccplot)
+export(targetingClass)
+export(targeting)
 
 importFrom(jmvcore, Analysis)

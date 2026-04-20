@@ -1,0 +1,216 @@
+
+# This file is a manually maintained scaffold for the targeting analysis.
+# It follows the same structure as auto-generated .h.R files from jmvtools::prepare().
+
+targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
+    "targetingOptions",
+    inherit = jmvcore::Options,
+    public = list(
+        initialize = function(
+            vars = NULL,
+            robust = FALSE,
+            sortItems = "data",
+            bins = 15,
+            xlimLow = -4,
+            xlimHigh = 4, ...) {
+
+            super$initialize(
+                package="easyRasch2jmv",
+                name="targeting",
+                requiresData=TRUE,
+                ...)
+
+            private$..vars <- jmvcore::OptionVariables$new(
+                "vars",
+                vars,
+                suggested=list(
+                    "continuous",
+                    "ordinal"),
+                permitted=list(
+                    "numeric"),
+                rejectInf=TRUE)
+            private$..robust <- jmvcore::OptionBool$new(
+                "robust",
+                robust,
+                default=FALSE)
+            private$..sortItems <- jmvcore::OptionList$new(
+                "sortItems",
+                sortItems,
+                options=list(
+                    "data",
+                    "location"),
+                default="data")
+            private$..bins <- jmvcore::OptionInteger$new(
+                "bins",
+                bins,
+                default=15,
+                min=5)
+            private$..xlimLow <- jmvcore::OptionNumber$new(
+                "xlimLow",
+                xlimLow,
+                default=-4,
+                min=-10,
+                max=0)
+            private$..xlimHigh <- jmvcore::OptionNumber$new(
+                "xlimHigh",
+                xlimHigh,
+                default=4,
+                min=0,
+                max=10)
+
+            self$.addOption(private$..vars)
+            self$.addOption(private$..robust)
+            self$.addOption(private$..sortItems)
+            self$.addOption(private$..bins)
+            self$.addOption(private$..xlimLow)
+            self$.addOption(private$..xlimHigh)
+        }),
+    active = list(
+        vars = function() private$..vars$value,
+        robust = function() private$..robust$value,
+        sortItems = function() private$..sortItems$value,
+        bins = function() private$..bins$value,
+        xlimLow = function() private$..xlimLow$value,
+        xlimHigh = function() private$..xlimHigh$value),
+    private = list(
+        ..vars = NA,
+        ..robust = NA,
+        ..sortItems = NA,
+        ..bins = NA,
+        ..xlimLow = NA,
+        ..xlimHigh = NA)
+)
+
+targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
+    "targetingResults",
+    inherit = jmvcore::Group,
+    active = list(
+        targetingPlot = function() private$.items[["targetingPlot"]],
+        thresholdTable = function() private$.items[["thresholdTable"]]),
+    private = list(),
+    public=list(
+        initialize=function(options) {
+            super$initialize(
+                options=options,
+                name="",
+                title="Targeting Plot")
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="targetingPlot",
+                title="Person-Item Targeting Plot",
+                refs=list(
+                    "easyRasch2jmv",
+                    "wright1979"),
+                width=700,
+                height=700,
+                renderFun=".targetingPlot",
+                requiresData=TRUE,
+                clearWith=list(
+                    "vars",
+                    "robust",
+                    "sortItems",
+                    "bins",
+                    "xlimLow",
+                    "xlimHigh")))
+            self$add(jmvcore::Table$new(
+                options=options,
+                name="thresholdTable",
+                title="Item Threshold Locations",
+                rows=0,
+                clearWith=list(
+                    "vars"),
+                columns=list(
+                    list(
+                        `name`="item",
+                        `title`="Item",
+                        `type`="text"),
+                    list(
+                        `name`="threshold",
+                        `title`="Threshold",
+                        `type`="text"),
+                    list(
+                        `name`="location",
+                        `title`="Location",
+                        `type`="number",
+                        `format`="zto,pvalue"))))}))
+
+targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
+    "targetingBase",
+    inherit = jmvcore::Analysis,
+    public = list(
+        initialize = function(options, data=NULL, datasetId="", analysisId="", revision=0) {
+            super$initialize(
+                package = "easyRasch2jmv",
+                name = "targeting",
+                version = c(1,0,0),
+                options = options,
+                results = targetingResults$new(options=options),
+                data = data,
+                datasetId = datasetId,
+                analysisId = analysisId,
+                revision = revision,
+                pause = NULL,
+                completeWhenFilled = FALSE,
+                requiresMissings = FALSE,
+                weightsSupport = 'auto')
+        }))
+
+#' Targeting Plot
+#'
+#' 
+#' @param data .
+#' @param vars .
+#' @param robust .
+#' @param sortItems .
+#' @param bins .
+#' @param xlimLow .
+#' @param xlimHigh .
+#' @return A results object containing:
+#' \tabular{llllll}{
+#'   \code{results$targetingPlot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$thresholdTable} \tab \tab \tab \tab \tab a table \cr
+#' }
+#'
+#' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
+#'
+#' \code{results$thresholdTable$asDF}
+#'
+#' \code{as.data.frame(results$thresholdTable)}
+#'
+#' @export
+targeting <- function(
+    data,
+    vars,
+    robust = FALSE,
+    sortItems = "data",
+    bins = 15,
+    xlimLow = -4,
+    xlimHigh = 4) {
+
+    if ( ! requireNamespace("jmvcore", quietly=TRUE))
+        stop("targeting requires jmvcore to be installed (restart may be required)")
+
+    if ( ! missing(vars)) vars <- jmvcore::resolveQuo(jmvcore::enquo(vars))
+    if (missing(data))
+        data <- jmvcore::marshalData(
+            parent.frame(),
+            `if`( ! missing(vars), vars, NULL))
+
+
+    options <- targetingOptions$new(
+        vars = vars,
+        robust = robust,
+        sortItems = sortItems,
+        bins = bins,
+        xlimLow = xlimLow,
+        xlimHigh = xlimHigh)
+
+    analysis <- targetingClass$new(
+        options = options,
+        data = data)
+
+    analysis$run()
+
+    analysis$results
+}
+
