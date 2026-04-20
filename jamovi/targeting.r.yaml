@@ -8,7 +8,7 @@ items:
       title: Person-Item Targeting Plot
       type: Image
       refs: [easyRasch2jmv, wright1979, mair2007]
-      width: 500
+      width: 700
       height: 700
       renderFun: .targetingPlot
       requiresData: true

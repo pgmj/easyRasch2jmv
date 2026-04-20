@@ -101,7 +101,7 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "easyRasch2jmv",
                     "wright1979",
                     "mair2007"),
-                width=500,
+                width=700,
                 height=700,
                 renderFun=".targetingPlot",
                 requiresData=TRUE,

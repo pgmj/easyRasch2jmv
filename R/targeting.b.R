@@ -231,7 +231,7 @@ targetingClass <- R6::R6Class(
             center_label, " = ", round(p_center, 2),
             ", ", spread_label, " = ", round(p_spread, 2)
           ),
-          size = 3.2, colour = "grey20"
+          size = 4, colour = "grey20"
         ) +
         ggplot2::scale_y_continuous(
           breaks = function(lim) {
@@ -240,7 +240,7 @@ targetingClass <- R6::R6Class(
         ) +
         ggplot2::coord_cartesian(xlim = xlim, clip = "off") +
         ggplot2::labs(x = NULL, y = "Persons") +
-        ggplot2::theme_bw() +
+        ggplot2::theme_bw(base_size = 15) +
         ggplot2::theme(
           axis.text.x  = ggplot2::element_blank(),
           axis.ticks.x = ggplot2::element_blank(),
@@ -271,7 +271,7 @@ targetingClass <- R6::R6Class(
             center_label, " = ", round(t_center, 2),
             ", ", spread_label, " = ", round(t_spread, 2)
           ),
-          size = 3.2, colour = "grey20"
+          size = 4, colour = "grey20"
         ) +
         ggplot2::scale_y_reverse(
           breaks = function(lim) {
@@ -281,7 +281,7 @@ targetingClass <- R6::R6Class(
         ) +
         ggplot2::coord_cartesian(xlim = xlim, clip = "off") +
         ggplot2::labs(x = NULL, y = "Thresholds") +
-        ggplot2::theme_bw() +
+        ggplot2::theme_bw(base_size = 15) +
         ggplot2::theme(
           axis.text.x  = ggplot2::element_blank(),
           axis.ticks.x = ggplot2::element_blank(),
@@ -308,14 +308,15 @@ targetingClass <- R6::R6Class(
         ) +
           ggplot2::geom_point(size = 3, colour = threshold_fill) +
           ggplot2::coord_cartesian(xlim = xlim) +
+          ggplot2::scale_x_continuous(breaks = scales::breaks_pretty(8)) +
           ggplot2::labs(
             x       = "Location (logit scale)",
             y       = NULL,
             caption = caption_text
           ) +
-          ggplot2::theme_bw() +
+          ggplot2::theme_bw(base_size = 15) +
           ggplot2::theme(
-            plot.caption = ggplot2::element_text(hjust = 0, face = "italic"),
+            plot.caption = ggplot2::element_text(hjust = 0),
             plot.margin  = ggplot2::margin(0, 5, 5, 5)
           )
       } else {
@@ -333,16 +334,17 @@ targetingClass <- R6::R6Class(
           ) +
           ggplot2::scale_colour_viridis_d(end = 0.9) +
           ggplot2::coord_cartesian(xlim = xlim) +
+          ggplot2::scale_x_continuous(breaks = scales::breaks_pretty(8)) +
           ggplot2::labs(
             x       = "Location (logit scale)",
             y       = NULL,
             colour  = "Threshold",
             caption = caption_text
           ) +
-          ggplot2::theme_bw() +
+          ggplot2::theme_bw(base_size = 15) +
           ggplot2::theme(
             legend.position = "bottom",
-            plot.caption    = ggplot2::element_text(hjust = 0, face = "italic"),
+            plot.caption    = ggplot2::element_text(hjust = 0),
             plot.margin     = ggplot2::margin(0, 5, 5, 5)
           )
       }
