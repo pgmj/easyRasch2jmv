@@ -231,7 +231,7 @@ targetingClass <- R6::R6Class(
             center_label, " = ", round(p_center, 2),
             ", ", spread_label, " = ", round(p_spread, 2)
           ),
-          size = 4, colour = "grey20"
+          size = 3.5, colour = "grey20"
         ) +
         ggplot2::scale_y_continuous(
           breaks = function(lim) {
@@ -274,6 +274,7 @@ targetingClass <- R6::R6Class(
           size = 4, colour = "grey20"
         ) +
         ggplot2::scale_y_reverse(
+          minor_breaks = NULL,
           breaks = function(lim) {
             max_val <- abs(floor(lim[1]))
             seq(0, max_val, by = max(1, round(max_val / 4)))
@@ -306,7 +307,7 @@ targetingClass <- R6::R6Class(
           item_thresholds,
           ggplot2::aes(x = .data$Location, y = .data$Item)
         ) +
-          ggplot2::geom_point(size = 3, colour = threshold_fill) +
+          ggplot2::geom_point(size = 9, colour = threshold_fill, shape = 18) +
           ggplot2::coord_cartesian(xlim = xlim) +
           ggplot2::scale_x_continuous(breaks = scales::breaks_pretty(8)) +
           ggplot2::labs(
@@ -329,7 +330,7 @@ targetingClass <- R6::R6Class(
           )
         ) +
           ggplot2::geom_point(
-            size     = 2.5,
+            size     = 6.5, shape = 18,
             position = ggplot2::position_dodge(width = 0.4)
           ) +
           ggplot2::scale_colour_viridis_d(end = 0.9) +
