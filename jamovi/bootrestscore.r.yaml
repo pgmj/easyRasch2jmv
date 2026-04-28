@@ -1,0 +1,66 @@
+---
+name: bootrestscore
+title: Bootstrap Item-Restscore
+jrs: '1.1'
+
+items:
+    - name: bootstrapTable
+      title: Bootstrap Item-Restscore Misfit
+      type: Table
+      rows: (vars)
+      refs: [easyRasch2jmv, kreiner2011, mueller2022, mair2007, zeileis2026, johansson2025_detecting]
+      clearWith:
+          - vars
+          - iterations
+          - samplesize
+          - seed
+          - cutoff
+      columns:
+          - name: item
+            title: Item
+            type: text
+          - name: pctOverfit
+            title: '% Overfit'
+            type: number
+          - name: pctUnderfit
+            title: '% Underfit'
+            type: number
+          - name: pctNoMisfit
+            title: '% No misfit'
+            type: number
+          - name: infitMSQ
+            title: Cond. infit MSQ
+            type: number
+          - name: relLocation
+            title: Rel. location
+            type: number
+          - name: flagged
+            title: Flagged
+            type: text
+
+    - name: bootstrapNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - iterations
+          - samplesize
+          - seed
+          - cutoff
+
+    - name: bootstrapPlot
+      title: Bootstrap Classification Percentages
+      type: Image
+      width: 700
+      height: 600
+      renderFun: .bootstrapPlot
+      visible: (showPlot)
+      requiresData: true
+      clearWith:
+          - vars
+          - iterations
+          - samplesize
+          - seed
+          - cutoff
+
+...

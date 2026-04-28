@@ -1,0 +1,62 @@
+---
+name: bootrestscore
+title: Bootstrap Item-Restscore
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Non-parametric bootstrap of item-restscore fit using iarm::item_restscore().
+        For each iteration a sample of size `samplesize` is drawn from the data
+        with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
+        psychotools::pcmodel for polytomous) is refitted, and items are classified
+        as overfit, underfit, or no misfit based on the BH-adjusted p-value
+        (< .05) and the sign of (expected - observed). Useful with large samples
+        where the asymptotic test can flag items that are not practically
+        misfitting.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - nominal
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: iterations
+      title: Number of bootstrap iterations
+      type: Integer
+      default: 200
+      min: 50
+
+    - name: samplesize
+      title: Bootstrap sample size
+      type: Integer
+      default: 600
+      min: 30
+
+    - name: cutoff
+      title: Display cutoff (% of iterations)
+      type: Number
+      default: 67
+      min: 0
+      max: 100
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+    - name: showPlot
+      title: Show classification plot
+      type: Bool
+      default: false
+
+...

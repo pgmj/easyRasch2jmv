@@ -36,8 +36,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "nominal",
                     "ordinal"),
                 permitted=list(
-                    "factor",
-                    "numeric"))
+                    "factor"))
             private$..computeCutoff <- jmvcore::OptionBool$new(
                 "computeCutoff",
                 computeCutoff,
@@ -264,6 +263,7 @@ partgamdif <- function(
             `if`( ! missing(vars), vars, NULL),
             `if`( ! missing(difVar), difVar, NULL))
 
+    for (v in difVar) if (v %in% names(data)) data[[v]] <- as.factor(data[[v]])
 
     options <- partgamdifOptions$new(
         vars = vars,

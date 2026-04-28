@@ -5,3 +5,5 @@
 build/*
 inst/*
 *.jmo
+.positai
+.DS_Store

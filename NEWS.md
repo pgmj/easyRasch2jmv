@@ -1,3 +1,10 @@
+# easyRasch2jmv 0.2.5 (dev)
+
+- New function for non-parametric bootstrap of item-restscore associations,
+  recommended for use with large sample sizes (n > 800). 
+  See <https://pgmj.github.io/rasch_itemfit/> for more details.
+- Partial gamma DIF bug fix, should not allow numeric type variable as DIF variable.
+
 # easyRasch2jmv 0.2.4
 
 - Targeting (Wright map) figure added.

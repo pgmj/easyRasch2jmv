@@ -1,0 +1,39 @@
+title: Bootstrap Item-Restscore
+name: bootrestscore
+jus: '3.0'
+stage: 0
+compilerMode: tame
+children:
+  - type: VariableSupplier
+    persistentItems: false
+    stretchFactor: 1
+    children:
+      - type: TargetLayoutBox
+        label: Items
+        children:
+          - type: VariablesListBox
+            name: vars
+            isTarget: true
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: TextBox
+        name: iterations
+        format: number
+      - type: TextBox
+        name: samplesize
+        format: number
+      - type: TextBox
+        name: cutoff
+        format: number
+        suffix: "%"
+      - type: TextBox
+        name: seed
+        format: number
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: showPlot

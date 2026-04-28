@@ -27,7 +27,6 @@ options:
         - ordinal
       permitted:
         - factor
-        - numeric
 
     - name: computeCutoff
       title: Compute simulation-based cutoffs

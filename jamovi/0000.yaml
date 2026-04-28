@@ -1,7 +1,7 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 0.2.4
+version: 0.2.5
 jms: '1.0'
 authors:
   - Magnus Johansson
@@ -78,6 +78,29 @@ analyses:
       Person-item targeting plot (Wright Map) showing back-to-back histograms
       of person and item threshold locations, plus a dot plot of individual
       item thresholds. Uses CML estimation via eRm.
+  - title: Bootstrap Item-Restscore
+    name: bootrestscore
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Bootstrap Item-Restscore
+    category: analyses
+    description: >
+      Non-parametric bootstrap of item-restscore fit using
+      iarm::item_restscore().
+
+      For each iteration a sample of size `samplesize` is drawn from the data
+
+      with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
+
+      psychotools::pcmodel for polytomous) is refitted, and items are classified
+
+      as overfit, underfit, or no misfit based on the BH-adjusted p-value
+
+      (< .05) and the sign of (expected - observed). Useful with large samples
+
+      where the asymptotic test can flag items that are not practically
+
+      misfitting.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv
