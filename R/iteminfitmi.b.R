@@ -29,13 +29,10 @@ iteminfitmiClass <- R6::R6Class(
       aux_vars  <- setdiff(aux_vars, vars)
 
       df_items <- data[, vars, drop = FALSE]
-      for (col in names(df_items)) {
-        if (is.factor(df_items[[col]])) {
-          df_items[[col]] <- as.numeric(as.character(df_items[[col]]))
-        } else {
-          df_items[[col]] <- as.numeric(df_items[[col]])
-        }
-      }
+
+      # Robust conversion: handles factors with text labels (SPSS),
+      # haven_labelled vectors, and numerics.
+      df_items <- to_numeric_responses_df(df_items)
 
       # Identical-item check
       n_vars <- ncol(df_items)
@@ -69,6 +66,23 @@ iteminfitmiClass <- R6::R6Class(
         bad_vars <- names(df_items)[all_na_cols]
         stop(paste("The following items contain no valid numeric data:",
                    paste(bad_vars, collapse = ", ")))
+      }
+
+      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
+      max_obs <- max(as.matrix(df_items), na.rm = TRUE)
+      if (is.finite(max_obs) && max_obs > 20) {
+        bad_cols <- names(df_items)[
+          vapply(df_items, function(x) {
+            mx <- suppressWarnings(max(x, na.rm = TRUE))
+            is.finite(mx) && mx > 20
+          }, logical(1L))
+        ]
+        stop(paste0(
+          "Item(s) ", paste(bad_cols, collapse = ", "),
+          " contain values > 20, which look like missing-value codes ",
+          "(e.g., 999, 8888) rather than ordinal responses. ",
+          "Mark these codes as missing in the data editor, or recode your data."
+        ))
       }
 
       validate_response_data(df_items)

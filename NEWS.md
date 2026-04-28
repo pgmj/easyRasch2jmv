@@ -9,6 +9,7 @@
   all datasets and pools the results using Rubin's rules. Optionally also uses
   simulation to determine appropriate cutoff for interpreting infit.
 - Partial gamma DIF bug fix, should not allow numeric type variable as DIF variable.
+- New data validation to better handle labelled ordinal data from SPSS, etc.
 
 # easyRasch2jmv 0.2.4
 

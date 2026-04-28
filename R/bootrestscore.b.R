@@ -20,13 +20,9 @@ bootrestscoreClass <- R6::R6Class(
       vars <- self$options$vars
       df <- data[, vars, drop = FALSE]
 
-      for (col in names(df)) {
-        if (is.factor(df[[col]])) {
-          df[[col]] <- as.numeric(as.character(df[[col]]))
-        } else {
-          df[[col]] <- as.numeric(df[[col]])
-        }
-      }
+      # Robust conversion: handles factors with text labels (SPSS),
+      # haven_labelled vectors, and numerics.
+      df <- to_numeric_responses_df(df)
 
       # Identical-item check (same pattern as itemrestscore.b.R)
       n_vars <- ncol(df)
@@ -62,6 +58,23 @@ bootrestscoreClass <- R6::R6Class(
         stop(paste(
           "The following variables contain no valid numeric data:",
           paste(bad_vars, collapse = ", ")
+        ))
+      }
+
+      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
+      max_obs <- max(as.matrix(df), na.rm = TRUE)
+      if (is.finite(max_obs) && max_obs > 20) {
+        bad_cols <- names(df)[
+          vapply(df, function(x) {
+            mx <- suppressWarnings(max(x, na.rm = TRUE))
+            is.finite(mx) && mx > 20
+          }, logical(1L))
+        ]
+        stop(paste0(
+          "Item(s) ", paste(bad_cols, collapse = ", "),
+          " contain values > 20, which look like missing-value codes ",
+          "(e.g., 999, 8888) rather than ordinal responses. ",
+          "Mark these codes as missing in the data editor, or recode your data."
         ))
       }
 
@@ -279,7 +292,7 @@ bootrestscoreClass <- R6::R6Class(
           y = "Expected − observed restscore correlation",
           caption = caption_text
         ) +
-        ggplot2::theme_minimal(base_size = 15) +
+        ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
           axis.text.x  = ggplot2::element_text(angle = 45, hjust = 1),
           plot.caption = ggplot2::element_text(size = 10)
