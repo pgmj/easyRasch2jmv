@@ -1,4 +1,4 @@
-# easyRasch2jmv 0.2.5 (dev)
+# easyRasch2jmv 0.2.5 
 
 - New function for non-parametric bootstrap of item-restscore associations,
   recommended for use with large sample sizes (n > 800). 
