@@ -9,7 +9,6 @@ itemrestscoreClass <- R6::R6Class(
         return()
       }
 
-      # Check minimum number of variables
       if (length(self$options$vars) < 2) {
         return()
       }
@@ -19,17 +18,13 @@ itemrestscoreClass <- R6::R6Class(
       p_adj <- self$options$pAdj
       sort_by_diff <- self$options$sortByDiff
 
-      # Select only the specified variables (drop = FALSE keeps it as dataframe)
+      # Select the specified variables (drop = FALSE keeps it as data.frame)
       df <- data[, vars, drop = FALSE]
 
-      # Convert to numeric - handle factors properly
-      for (col in names(df)) {
-        if (is.factor(df[[col]])) {
-          df[[col]] <- as.numeric(as.character(df[[col]]))
-        } else {
-          df[[col]] <- as.numeric(df[[col]])
-        }
-      }
+      # Robust conversion: handles factors with text labels (SPSS-imported
+      # ordinal variables), haven_labelled vectors, and numerics. See
+      # to_numeric_responses() in utils-validation.R.
+      df <- to_numeric_responses_df(df)
 
       # Check for duplicate/identical variables using correlation
       n_vars <- ncol(df)
@@ -68,10 +63,30 @@ itemrestscoreClass <- R6::R6Class(
         ))
       }
 
-      # Validate data using shared helper (checks non-negative integers, starts at 0)
+      # Detect implausibly large response codes that look like SPSS-style
+      # missing sentinels (e.g., 99, 999, 8888) but weren't flagged as missing.
+      # We define "implausibly large" as > 20, which is far above any realistic
+      # ordinal response category and well below typical sentinels.
+      max_obs <- max(as.matrix(df), na.rm = TRUE)
+      if (is.finite(max_obs) && max_obs > 20) {
+        bad_cols <- names(df)[
+          vapply(df, function(x) {
+            mx <- suppressWarnings(max(x, na.rm = TRUE))
+            is.finite(mx) && mx > 20
+          }, logical(1L))
+        ]
+        stop(paste0(
+          "Item(s) ", paste(bad_cols, collapse = ", "),
+          " contain values > 20, which look like missing-value codes ",
+          "(e.g., 999, 8888) rather than ordinal responses. ",
+          "Mark these codes as missing in the data editor, or recode your data."
+        ))
+      }
+
+      # Validate (non-negative integers, starts at 0)
       validate_response_data(df)
 
-      # Check for sufficient complete cases
+      # Sufficient complete cases?
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0) {
         stop("No complete cases found in the data. Each row must have responses for all selected items.")
@@ -83,7 +98,7 @@ itemrestscoreClass <- R6::R6Class(
         )
       }
 
-      # Check for sufficient response variation per item
+      # Sufficient response variation per item?
       for (col in names(df)) {
         unique_vals <- length(unique(stats::na.omit(df[[col]])))
         if (unique_vals < 2) {
@@ -156,7 +171,7 @@ itemrestscoreClass <- R6::R6Class(
           # Populate the results table
           table <- self$results$restscoreTable
           for (i in seq_len(nrow(results))) {
-            table$setRow(rowNo = i, values = list( # should maybe be addRow(rowKey)?
+            table$setRow(rowNo = i, values = list(
               item        = results$Item[i],
               observed    = results$Observed[i],
               expected    = results$Expected[i],

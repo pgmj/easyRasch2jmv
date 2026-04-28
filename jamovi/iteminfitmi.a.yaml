@@ -1,0 +1,107 @@
+---
+name: iteminfitmi
+title: Conditional Item Infit (Multiple Imputation)
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Computes pooled conditional infit MSQ statistics for items with missing
+        responses. Internally runs mice::mice() to generate `m` imputed datasets,
+        fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
+        each, computes conditional infit MSQ via iarm::out_infit(), and pools
+        per-item estimates and standard errors using Rubin's rules.
+
+        Imputation method defaults to 'polr' (proportional-odds logistic
+        regression — appropriate for ordinal Likert data). 'pmm' (predictive
+        mean matching) and 'cart' (classification and regression trees) are
+        available as alternatives if 'polr' fails to converge. Auxiliary
+        variables (covariates not part of the scale) can be added as predictors
+        in the imputation model to improve plausibility of the MAR assumption.
+
+        Optionally computes simulation-based per-item cutoffs by running a
+        parametric bootstrap on each imputed dataset and stacking the
+        distributions, so the resulting HDCI bounds reflect both sampling and
+        imputation uncertainty.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: auxVars
+      title: Auxiliary variables (optional)
+      type: Variables
+      default: null
+      suggested:
+          - continuous
+          - ordinal
+          - nominal
+      permitted:
+          - numeric
+          - factor
+
+    - name: method
+      title: Imputation method
+      type: List
+      options:
+          - title: Proportional-odds logistic regression (polr)
+            name: polr
+          - title: Predictive mean matching (pmm)
+            name: pmm
+          - title: Classification & regression trees (cart)
+            name: cart
+      default: polr
+
+    - name: m
+      title: Number of imputed datasets
+      type: Integer
+      default: 5
+      min: 2
+      max: 50
+
+    - name: maxit
+      title: Iterations per imputation
+      type: Integer
+      default: 15
+      min: 5
+      max: 100
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+    - name: sortByInfit
+      title: Sort by Infit MSQ (descending)
+      type: Bool
+      default: false
+
+    - name: computeCutoff
+      title: Compute simulation-based cutoffs
+      type: Bool
+      default: false
+
+    - name: hdciWidth
+      title: HDCI width
+      type: Number
+      default: 99.9
+      min: 50
+      max: 100
+
+    - name: iterations
+      title: Total simulation iterations
+      type: Integer
+      default: 500
+      min: 50
+
+...

@@ -3,6 +3,11 @@
 - New function for non-parametric bootstrap of item-restscore associations,
   recommended for use with large sample sizes (n > 800). 
   See <https://pgmj.github.io/rasch_itemfit/> for more details.
+- New function for imputing missing data with conditional item infit. Since conditional 
+  item infit needs complete data, incomplete responses are discarded. This function
+  uses `mice` to impute n datasets with complete responses, then calculates infit from
+  all datasets and pools the results using Rubin's rules. Optionally also uses
+  simulation to determine appropriate cutoff for interpreting infit.
 - Partial gamma DIF bug fix, should not allow numeric type variable as DIF variable.
 
 # easyRasch2jmv 0.2.4

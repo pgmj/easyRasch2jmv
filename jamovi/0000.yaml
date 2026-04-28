@@ -101,6 +101,18 @@ analyses:
       where the asymptotic test can flag items that are not practically
 
       misfitting.
+  - title: Conditional Item Infit (Multiple Imputation)
+    name: iteminfitmi
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Conditional Item Infit (Multiple Imputation)
+    description: |-
+      Computes pooled conditional infit MSQ statistics for items with missing
+      responses. Internally runs mice::mice() to generate `m` imputed datasets,
+      fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
+      each, computes conditional infit MSQ via iarm::out_infit(), and pools
+      per-item estimates and standard errors using Rubin's rules.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

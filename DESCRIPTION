@@ -24,4 +24,5 @@ Imports:
     ggdist,
     scales,
     rlang,
-    patchwork
+    patchwork,
+    mice

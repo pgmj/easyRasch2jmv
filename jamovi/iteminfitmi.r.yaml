@@ -1,0 +1,81 @@
+---
+name: iteminfitmi
+title: Conditional Item Infit (Multiple Imputation)
+jrs: '1.1'
+
+items:
+    - name: infitTable
+      title: Pooled Conditional Item Infit MSQ
+      type: Table
+      rows: (vars)
+      refs: [easyRasch2jmv, mueller2020, johansson2025_detecting, mair2007, mueller2022, vanbuuren2011, kay2025]
+      clearWith:
+          - vars
+          - auxVars
+          - method
+          - m
+          - maxit
+          - seed
+          - computeCutoff
+          - hdciWidth
+          - iterations
+      columns:
+          - name: item
+            title: Item
+            type: text
+          - name: infitMSQ
+            title: Infit MSQ
+            type: number
+          - name: infitSE
+            title: Pooled SE
+            type: number
+          - name: infitLow
+            title: Lower
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: infitHigh
+            title: Upper
+            type: number
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: flagged
+            title: Flagged
+            type: text
+            visible: (computeCutoff)
+
+    - name: imputationNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - auxVars
+          - method
+          - m
+          - maxit
+          - seed
+          - computeCutoff
+          - hdciWidth
+          - iterations
+
+    - name: infitPlot
+      title: Simulated Infit MSQ Distribution
+      type: Image
+      width: 400
+      height: 500
+      renderFun: .infitPlot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+          - vars
+          - auxVars
+          - method
+          - m
+          - maxit
+          - seed
+          - computeCutoff
+          - hdciWidth
+          - iterations
+
+...

@@ -108,4 +108,11 @@
         `author`="Wright, B. D. & Stone, M. H.", 
         `year`=1979, 
         `title`="Best Test Design", 
-        `publisher`="MESA Press"))
+        `publisher`="MESA Press"), 
+    `vanbuuren2011`=list(
+        `type`="article", 
+        `author`="van Buuren, S., & Groothuis-Oudshoorn, K.", 
+        `year`=2011, 
+        `title`="mice: Multivariate Imputation by Chained Equations in R", 
+        `publisher`="Journal of Statistical Software, 45(3), 1-67", 
+        `url`="https://doi.org/10.18637/jss.v045.i03"))
