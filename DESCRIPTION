@@ -1,8 +1,8 @@
 Package: easyRasch2jmv
 Type: Package
 Title: easyRasch2 for Jamovi
-Version: 0.2.5
-Date: 2026-04-28
+Version: 0.3.0
+Date: 2026-04-29
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description:   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the

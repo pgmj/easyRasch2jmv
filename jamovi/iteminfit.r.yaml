@@ -55,8 +55,8 @@ items:
     - name: infitPlot
       title: Simulated Infit MSQ Distribution
       type: Image
-      width: 400
-      height: 500
+      width: 500
+      height: 600
       renderFun: .infitPlot
       visible: (computeCutoff)
       requiresData: true

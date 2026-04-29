@@ -1,4 +1,6 @@
-# easyRasch2jmv 0.2.5 
+# easyRasch2jmv 0.3.0 
+
+New things:
 
 - New function for non-parametric bootstrap of item-restscore associations,
   recommended for use with large sample sizes (n > 800). 
@@ -8,8 +10,13 @@
   uses `mice` to impute n datasets with complete responses, then calculates infit from
   all datasets and pools the results using Rubin's rules. Optionally also uses
   simulation to determine appropriate cutoff for interpreting infit.
+
+Fixes/modifications:
+
 - Partial gamma DIF bug fix, should not allow numeric type variable as DIF variable.
 - New data validation to better handle labelled ordinal data from SPSS, etc.
+- Conditional item infit now clearly states it only uses complete response data,
+  and also notes the complete response sample size in the table footnote.
 
 # easyRasch2jmv 0.2.4
 

@@ -10,7 +10,7 @@ iteminfitClass <- R6::R6Class(
       if (length(self$options$vars) < 2)
         return()
 
-      # 2. Extract and validate data (same pattern as itemrestscore.b.R)
+      # 2. Extract and validate data
       data <- self$data
       vars <- self$options$vars
       df <- data[, vars, drop = FALSE]
@@ -19,7 +19,7 @@ iteminfitClass <- R6::R6Class(
       # haven_labelled vectors, and numerics.
       df <- to_numeric_responses_df(df)
 
-      # Check for identical items (correlation = 1)
+      # Identical-item check
       n_vars <- ncol(df)
       identical_pairs <- list()
       for (i in 1:(n_vars - 1)) {
@@ -40,7 +40,7 @@ iteminfitClass <- R6::R6Class(
         }
       }
 
-      # Check for all-NA columns
+      # All-NA columns
       all_na_cols <- sapply(df, function(x) all(is.na(x)))
       if (any(all_na_cols)) {
         bad_vars <- names(df)[all_na_cols]
@@ -67,8 +67,11 @@ iteminfitClass <- R6::R6Class(
       validate_response_data(df)
 
       n_complete <- sum(complete.cases(df))
+      n_total    <- nrow(df)
+      n_excluded <- n_total - n_complete
+
       if (n_complete == 0)
-        stop("No complete cases found in the data.")
+        stop("No complete cases found in the data. Conditional infit requires at least one row with responses to all selected items.")
       if (n_complete < 30)
         jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
 
@@ -108,7 +111,6 @@ iteminfitClass <- R6::R6Class(
 
         relative_item_avg_locations <- item_avg_locations - person_avg_location
         cfit <- iarm::out_infit(erm_out)
-        n_complete_used <- nrow(stats::na.omit(df))
 
         # Build results data.frame
         results <- data.frame(
@@ -162,27 +164,46 @@ iteminfitClass <- R6::R6Class(
           table$setRow(rowNo = i, values = vals)
         }
 
-        # 7. Set cutoff note
+        # 7. Always-visible footnote on the table itself: complete-case basis
+        excluded_clause <- if (n_excluded > 0L) {
+          paste0(
+            " ", n_excluded, " of ", n_total,
+            " row(s) had a missing response on at least one selected item ",
+            "and were excluded."
+          )
+        } else {
+          ""
+        }
+        table$setNote(
+          "ncomplete",
+          paste0(
+            "Conditional infit MSQ is computed from complete responses only ",
+            "(n = ", n_complete, " row(s) with no missing values across the ",
+            "selected items).", excluded_clause
+          )
+        )
+
+        # 8. Set cutoff note (HTML element below the table)
         if (!is.null(cutoff_res)) {
           method_label <- paste0(cutoff_res$hdci_width * 100, "% HDCI")
 
           note_html <- paste0(
-            "<p>MSQ values based on conditional estimation (n = ", n_complete_used,
-            " complete cases). Cutoff values based on ",
+            "<p>Cutoff values based on ",
             cutoff_res$actual_iterations, " simulation iterations (",
-            method_label, ").</p>"
+            method_label, ") drawn from the same n = ", n_complete,
+            " complete cases.</p>"
           )
           self$results$cutoffNote$setContent(note_html)
         }
 
-
-        # 8. Save state for plot
+        # 9. Save state for plot
         if (!is.null(cutoff_res)) {
           self$results$infitPlot$setState(list(
             results_df = cutoff_res$results,
             item_names = cutoff_res$item_names,
             actual_iterations = cutoff_res$actual_iterations,
             sample_n = cutoff_res$sample_n,
+            n_complete = n_complete,
             observed_infit = cfit$Infit,
             item_names_data = names(df)
           ))
@@ -289,12 +310,12 @@ iteminfitClass <- R6::R6Class(
       item_names <- state$item_names
       actual_iterations <- state$actual_iterations
       sample_n <- state$sample_n
+      n_complete <- state$n_complete
       observed_infit <- state$observed_infit
       item_names_data <- state$item_names_data
 
       item_levels <- rev(item_names)
 
-      # Compute per-item summary intervals
       lo_hi <- do.call(rbind, lapply(item_names, function(item) {
         sub <- results_df[results_df$Item == item, ]
         data.frame(
@@ -325,10 +346,12 @@ iteminfitClass <- R6::R6Class(
       lo_hi$Item_f <- factor(lo_hi$Item, levels = item_levels)
 
       caption_text <- paste0(
-        "Note: Results from ", actual_iterations,
-        " simulated datasets with ", sample_n, " respondents.\n",
-        "Orange dots indicate observed conditional item fit.\n",
-        "Black dots indicate median fit from simulations."
+        "Note: Observed and simulated infit are based on n = ",
+        if (!is.null(n_complete)) n_complete else sample_n,
+        " complete responses.\n",
+        "Simulated distributions: ", actual_iterations,
+        " parametric-bootstrap datasets using the same n.\n",
+        "Orange dots: observed conditional infit. Black dots: simulation median."
       )
 
       p <- ggplot2::ggplot(infit_sim, ggplot2::aes(x = .data$Value, y = .data$Item)) +
@@ -362,14 +385,15 @@ iteminfitClass <- R6::R6Class(
         ) +
         ggplot2::labs(x = "Conditional Infit MSQ", y = "Item", caption = caption_text) +
         ggplot2::scale_color_manual(
-          # Request 3 colors from Brewer palette, drop the first (lightest) one
           values = scales::brewer_pal()(3)[-1],
           aesthetics = "slab_fill", guide = "none"
         ) +
         ggplot2::scale_x_continuous(breaks = seq(0.5, 1.5, 0.1), minor_breaks = NULL) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"),
-                       plot.caption = ggplot2::element_text(size = 11))
+                       plot.caption = ggplot2::element_text(size = 11),
+                       axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
+                       axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)))
 
       print(p)
       TRUE
