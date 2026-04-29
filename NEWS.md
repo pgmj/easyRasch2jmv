@@ -10,6 +10,7 @@ New things:
   uses `mice` to impute n datasets with complete responses, then calculates infit from
   all datasets and pools the results using Rubin's rules. Optionally also uses
   simulation to determine appropriate cutoff for interpreting infit.
+- New function for transformation of ordinal sum scores to interval logit scores.
 
 Fixes/modifications:
 

@@ -1,0 +1,73 @@
+---
+name: scorese
+title: Sum Score to Logit Transformation
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Maps each possible raw sum score to a person-location estimate (in
+        logits) and its standard error. Useful when reporting a scale's
+        measurement properties or converting raw totals to interval-scaled
+        scores.
+
+        Two estimation methods are available. WLE (default) fits the model
+        with eRm (CML) and applies Warm's Weighted Likelihood correction for
+        boundary-score bias. EAP fits the model with mirt (MML) and uses
+        sum-score-based Expected A Posteriori estimates with their posterior
+        SDs as standard errors. EAP estimates are finite at all score
+        boundaries (the prior shrinks them inward); WLE may yield Inf at
+        extremes when the boundary score cannot be solved within the
+        configured theta range.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: method
+      title: Estimation method
+      type: List
+      options:
+          - title: Weighted Likelihood (WLE, CML via eRm)
+            name: WLE
+          - title: Expected A Posteriori (EAPsum, MML via mirt)
+            name: EAP
+      default: WLE
+
+    - name: thetaMin
+      title: Theta range (lower)
+      type: Number
+      default: -10
+      min: -20
+      max: 0
+
+    - name: thetaMax
+      title: Theta range (upper)
+      type: Number
+      default: 10
+      min: 0
+      max: 20
+
+    - name: showFigure
+      title: Show figure
+      type: Bool
+      default: false
+
+    - name: ciMultiplier
+      title: CI multiplier (figure)
+      type: Number
+      default: 1.96
+      min: 0.1
+      max: 5
+
+...

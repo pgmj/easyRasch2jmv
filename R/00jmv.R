@@ -115,4 +115,11 @@
         `year`=2011, 
         `title`="mice: Multivariate Imputation by Chained Equations in R", 
         `publisher`="Journal of Statistical Software, 45(3), 1-67", 
-        `url`="https://doi.org/10.18637/jss.v045.i03"))
+        `url`="https://doi.org/10.18637/jss.v045.i03"), 
+    `warm1989`=list(
+        `type`="article", 
+        `author`="Warm, T. A.", 
+        `year`=1989, 
+        `title`="Weighted likelihood estimation of ability in item response theory", 
+        `publisher`="Psychometrika, 54(3), 427-450", 
+        `url`="https://doi.org/10.1007/BF02294627"))

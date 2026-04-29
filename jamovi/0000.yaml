@@ -113,6 +113,17 @@ analyses:
       fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
       each, computes conditional infit MSQ via iarm::out_infit(), and pools
       per-item estimates and standard errors using Rubin's rules.
+  - title: Sum Score to Logit Transformation
+    name: scorese
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Sum Score to Logit Transformation
+    category: analyses
+    description: |-
+      Maps each possible raw sum score to a person-location estimate (in
+      logits) and its standard error. Useful when reporting a scale's
+      measurement properties or converting raw totals to interval-scaled
+      scores.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

@@ -1,0 +1,52 @@
+---
+name: scorese
+title: Sum Score to Logit Transformation
+jrs: '1.1'
+
+items:
+    - name: scoreTable
+      title: Score-to-Theta Lookup
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, warm1989, mair2007, chalmers2012, mueller2022]
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+      columns:
+          - name: rawScore
+            title: Ordinal sum score
+            type: integer
+          - name: logitScore
+            title: Logit score
+            type: number
+          - name: logitSE
+            title: Logit std.error
+            type: number
+
+    - name: scoreNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: scorePlot
+      title: Score Conversion
+      type: Image
+      width: 450
+      height: 600
+      renderFun: .scorePlot
+      visible: (showFigure)
+      requiresData: true
+      clearWith:
+          - vars
+          - method
+          - ciMultiplier
+          - thetaMin
+          - thetaMax
+
+...
