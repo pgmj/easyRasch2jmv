@@ -140,4 +140,20 @@ refs:
         publisher: 'Psychometrika, 54(3), 427-450'
         url: https://doi.org/10.1007/BF02294627
 
+    bignardi2025:
+        type: article
+        author: Bignardi, G., Kievit, R., & Bürkner, P. C.
+        year: 2025
+        title: 'A general method for estimating reliability using Bayesian Measurement Uncertainty'
+        publisher: 'PsyArXiv'
+        url: https://doi.org/10.31234/osf.io/h54k8
+
+    mislevy1991:
+        type: article
+        author: Mislevy, R. J.
+        year: 1991
+        title: 'Randomization-Based Inference about Latent Variables from Complex Samples'
+        publisher: 'Psychometrika, 56(2), 177-196'
+        url: https://doi.org/10.1007/BF02294457
+
 ...

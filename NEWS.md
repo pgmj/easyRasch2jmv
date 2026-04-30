@@ -1,11 +1,19 @@
 # easyRasch2jmv 0.3.0 
 
-New things:
+New functions:
 
-- New function for non-parametric bootstrap of item-restscore associations,
+- Four reliability metrics: Person Separation Index (PSI) via
+  eRm::SepRel(); empirical reliability via mirt::empirical_rxx(); Cronbach's 
+  alpha (including bootstrap confidence intervals); and
+  Relative Measurement Uncertainty (RMU) computed from mirt plausible
+  values using the Bignardi, Kievit & Bürkner (2025) split-half
+  correlation method.
+- Transformation table from ordinal sum score to logit score, with either WLE or
+  EAP scores.
+- Non-parametric bootstrap of item-restscore associations,
   recommended for use with large sample sizes (n > 800). 
   See <https://pgmj.github.io/rasch_itemfit/> for more details.
-- New function for imputing missing data with conditional item infit. Since conditional 
+- Conditional item infit with missing data, using multiple imputation. Since conditional 
   item infit needs complete data, incomplete responses are discarded. This function
   uses `mice` to impute n datasets with complete responses, then calculates infit from
   all datasets and pools the results using Rubin's rules. Optionally also uses
@@ -14,10 +22,10 @@ New things:
 
 Fixes/modifications:
 
-- Partial gamma DIF bug fix, should not allow numeric type variable as DIF variable.
+- Partial gamma DIF bug fix: no longer allows numeric type variable as DIF variable.
 - New data validation to better handle labelled ordinal data from SPSS, etc.
 - Conditional item infit now clearly states it only uses complete response data,
-  and also notes the complete response sample size in the table footnote.
+  and also notes the complete response sample size in the table/figure footnote/caption.
 
 # easyRasch2jmv 0.2.4
 

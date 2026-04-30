@@ -113,6 +113,19 @@ analyses:
       fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
       each, computes conditional infit MSQ via iarm::out_infit(), and pools
       per-item estimates and standard errors using Rubin's rules.
+  - title: Reliability
+    name: reliability
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Reliability
+    category: analyses
+    description: |-
+      Reports four reliability indices for a Rasch / partial credit model:
+      Cronbach's alpha (closed-form), the Person Separation Index (PSI) via
+      eRm::SepRel(), empirical reliability via mirt::empirical_rxx(), and
+      Relative Measurement Uncertainty (RMU) computed from mirt plausible
+      values using the Bignardi, Kievit & Bürkner (2025) split-half
+      correlation method.
   - title: Sum Score to Logit Transformation
     name: scorese
     ns: easyRasch2jmv

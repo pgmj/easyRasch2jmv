@@ -1,0 +1,99 @@
+---
+name: reliability
+title: Reliability
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Reports four reliability indices for a Rasch / partial credit model:
+        Cronbach's alpha (closed-form), the Person Separation Index (PSI) via
+        eRm::SepRel(), empirical reliability via mirt::empirical_rxx(), and
+        Relative Measurement Uncertainty (RMU) computed from mirt plausible
+        values using the Bignardi, Kievit & Bürkner (2025) split-half
+        correlation method.
+
+        A non-parametric bootstrap CI can optionally be added for Cronbach's
+        alpha; bootstrapping is intentionally not offered for PSI / Empirical
+        in this Jamovi version because each iteration would require refitting
+        eRm and mirt and the cost makes it impractical inside the Jamovi UI
+        thread. Use the CLI function easyRasch2::RMreliability() for that.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: estim
+      title: Theta estimator (Empirical & RMU)
+      type: List
+      options:
+          - title: Weighted Likelihood (WLE)
+            name: WLE
+          - title: Expected A Posteriori (EAP)
+            name: EAP
+          - title: Maximum A Posteriori (MAP)
+            name: MAP
+          - title: Maximum Likelihood (ML)
+            name: ML
+      default: WLE
+
+    - name: draws
+      title: Plausible-value draws (RMU)
+      type: Integer
+      default: 1000
+      min: 100
+
+    - name: rmuIter
+      title: RMU iterations
+      type: Integer
+      default: 50
+      min: 5
+
+    - name: confInt
+      title: HDCI width
+      type: Number
+      default: 95
+      min: 50
+      max: 99.9
+
+    - name: thetaMin
+      title: Theta range (lower)
+      type: Number
+      default: -10
+      min: -20
+      max: 0
+
+    - name: thetaMax
+      title: Theta range (upper)
+      type: Number
+      default: 10
+      min: 0
+      max: 20
+
+    - name: bootAlpha
+      title: Bootstrap CI for Cronbach's alpha
+      type: Bool
+      default: false
+
+    - name: bootIter
+      title: Bootstrap iterations
+      type: Integer
+      default: 1000
+      min: 100
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+...

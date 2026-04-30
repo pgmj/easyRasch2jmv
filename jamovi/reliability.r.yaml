@@ -1,0 +1,57 @@
+---
+name: reliability
+title: Reliability
+jrs: '1.1'
+
+items:
+    - name: relTable
+      title: Reliability Estimates
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, mair2007, chalmers2012, bignardi2025, mislevy1991, kay2025]
+      clearWith:
+          - vars
+          - estim
+          - draws
+          - rmuIter
+          - confInt
+          - thetaMin
+          - thetaMax
+          - bootAlpha
+          - bootIter
+          - seed
+      columns:
+          - name: metric
+            title: Metric
+            type: text
+          - name: estimate
+            title: Estimate
+            type: number
+          - name: lower
+            title: Lower
+            type: number
+            superTitle: HDCI
+          - name: upper
+            title: Upper
+            type: number
+            superTitle: HDCI
+          - name: notes
+            title: Notes
+            type: text
+
+    - name: relNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - estim
+          - draws
+          - rmuIter
+          - confInt
+          - thetaMin
+          - thetaMax
+          - bootAlpha
+          - bootIter
+          - seed
+
+...
