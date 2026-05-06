@@ -49,4 +49,19 @@ children:
               - type: TextBox
                 name: seed
                 format: number
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: showTileplot
+        children:
+          - type: LayoutBox
+            margin: large
+            children:
+              - type: TextBox
+                name: tileCutoff
+                format: number
+              - type: CheckBox
+                name: tilePercent
 ...

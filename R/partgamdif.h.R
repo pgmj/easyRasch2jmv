@@ -12,7 +12,10 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             hdciWidth = 99,
             iterations = 250,
             seed = 42,
-            sortByGamma = FALSE, ...) {
+            sortByGamma = FALSE,
+            showTileplot = FALSE,
+            tileCutoff = 10,
+            tilePercent = FALSE, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -60,6 +63,19 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 "sortByGamma",
                 sortByGamma,
                 default=FALSE)
+            private$..showTileplot <- jmvcore::OptionBool$new(
+                "showTileplot",
+                showTileplot,
+                default=FALSE)
+            private$..tileCutoff <- jmvcore::OptionInteger$new(
+                "tileCutoff",
+                tileCutoff,
+                default=10,
+                min=1)
+            private$..tilePercent <- jmvcore::OptionBool$new(
+                "tilePercent",
+                tilePercent,
+                default=FALSE)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..difVar)
@@ -68,6 +84,9 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
             self$.addOption(private$..sortByGamma)
+            self$.addOption(private$..showTileplot)
+            self$.addOption(private$..tileCutoff)
+            self$.addOption(private$..tilePercent)
         }),
     active = list(
         vars = function() private$..vars$value,
@@ -76,7 +95,10 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         hdciWidth = function() private$..hdciWidth$value,
         iterations = function() private$..iterations$value,
         seed = function() private$..seed$value,
-        sortByGamma = function() private$..sortByGamma$value),
+        sortByGamma = function() private$..sortByGamma$value,
+        showTileplot = function() private$..showTileplot$value,
+        tileCutoff = function() private$..tileCutoff$value,
+        tilePercent = function() private$..tilePercent$value),
     private = list(
         ..vars = NA,
         ..difVar = NA,
@@ -84,7 +106,10 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..hdciWidth = NA,
         ..iterations = NA,
         ..seed = NA,
-        ..sortByGamma = NA)
+        ..sortByGamma = NA,
+        ..showTileplot = NA,
+        ..tileCutoff = NA,
+        ..tilePercent = NA)
 )
 
 partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -93,7 +118,8 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     active = list(
         pgdifTable = function() private$.items[["pgdifTable"]],
         cutoffNote = function() private$.items[["cutoffNote"]],
-        pgdifPlot = function() private$.items[["pgdifPlot"]]),
+        pgdifPlot = function() private$.items[["pgdifPlot"]],
+        tileplot = function() private$.items[["tileplot"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -194,7 +220,22 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed")))}))
+                    "seed")))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="tileplot",
+                title="Response Distribution by DIF Group",
+                width=600,
+                height=600,
+                renderFun=".tileplot",
+                visible="(showTileplot)",
+                requiresData=TRUE,
+                clearWith=list(
+                    "vars",
+                    "difVar",
+                    "showTileplot",
+                    "tileCutoff",
+                    "tilePercent")))}))
 
 partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "partgamdifBase",
@@ -228,11 +269,15 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param iterations .
 #' @param seed .
 #' @param sortByGamma .
+#' @param showTileplot .
+#' @param tileCutoff .
+#' @param tilePercent .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$pgdifTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$cutoffNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$pgdifPlot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$tileplot} \tab \tab \tab \tab \tab an image \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -250,7 +295,10 @@ partgamdif <- function(
     hdciWidth = 99,
     iterations = 250,
     seed = 42,
-    sortByGamma = FALSE) {
+    sortByGamma = FALSE,
+    showTileplot = FALSE,
+    tileCutoff = 10,
+    tilePercent = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("partgamdif requires jmvcore to be installed (restart may be required)")
@@ -272,7 +320,10 @@ partgamdif <- function(
         hdciWidth = hdciWidth,
         iterations = iterations,
         seed = seed,
-        sortByGamma = sortByGamma)
+        sortByGamma = sortByGamma,
+        showTileplot = showTileplot,
+        tileCutoff = tileCutoff,
+        tilePercent = tilePercent)
 
     analysis <- partgamdifClass$new(
         options = options,

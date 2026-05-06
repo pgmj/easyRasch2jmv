@@ -189,9 +189,77 @@ partgamdifClass <- R6::R6Class(
           ))
         }
 
+        # Tileplot: per-item × category × DIF-group response counts
+        if (isTRUE(self$options$showTileplot)) {
+          tile_state <- private$.computeTileCounts(df, dif_vec)
+          tile_state$cutoff   <- self$options$tileCutoff
+          tile_state$percent  <- isTRUE(self$options$tilePercent)
+          self$results$tileplot$setState(tile_state)
+        }
+
       }, error = function(e) {
         stop(paste("Error in partial gamma DIF analysis:", e$message))
       })
+    },
+
+    # ------------------------------------------------------------------
+    # Build per-(item × category × group) counts for the tileplot.
+    # `df` is numeric, complete-cases item data; `dif_vec` is the
+    # corresponding DIF variable values (length = nrow(df)).
+    # ------------------------------------------------------------------
+    .computeTileCounts = function(df, dif_vec) {
+      item_names <- names(df)
+
+      all_vals       <- unlist(df, use.names = FALSE)
+      all_vals       <- all_vals[!is.na(all_vals)]
+      min_val        <- min(all_vals)
+      max_val        <- max(all_vals)
+      all_categories <- seq(min_val, max_val)
+
+      dif_factor <- if (is.factor(dif_vec)) {
+        droplevels(dif_vec)
+      } else {
+        as.factor(dif_vec)
+      }
+
+      parts <- lapply(levels(dif_factor), function(g) {
+        mask <- !is.na(dif_factor) & dif_factor == g
+        sub  <- df[mask, , drop = FALSE]
+        rows <- lapply(item_names, function(it) {
+          vals <- sub[[it]]
+          vals <- vals[!is.na(vals)]
+          tab  <- table(factor(vals, levels = all_categories))
+          data.frame(
+            item     = it,
+            category = as.integer(names(tab)),
+            n        = as.integer(tab),
+            group    = g,
+            stringsAsFactors = FALSE
+          )
+        })
+        do.call(rbind, rows)
+      })
+      count_df <- do.call(rbind, parts)
+      rownames(count_df) <- NULL
+      count_df$group <- factor(count_df$group, levels = levels(dif_factor))
+
+      totals <- stats::aggregate(
+        count_df$n,
+        by  = count_df[, c("item", "group"), drop = FALSE],
+        FUN = sum
+      )
+      colnames(totals)[ncol(totals)] <- "total"
+      count_df <- merge(count_df, totals, by = c("item", "group"), sort = FALSE)
+      count_df$percentage <- round(count_df$n / count_df$total * 100, 1)
+
+      # Item ordering: top of y-axis = first column of df
+      count_df$item_label <- factor(count_df$item, levels = rev(item_names))
+
+      list(
+        count_df       = count_df,
+        all_categories = all_categories,
+        item_names     = item_names
+      )
     },
 
     .runCutoffSim = function(df, dif_vec) {
@@ -382,8 +450,74 @@ partgamdifClass <- R6::R6Class(
           aesthetics = "slab_fill", guide = "none"
         ) +
         ggplot2::theme_minimal(base_size = 15) +
-        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"),
-                       plot.caption = ggplot2::element_text(size = 11))
+        ggplot2::theme(
+          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
+          panel.spacing = ggplot2::unit(0.7, "cm"),
+          plot.caption  = ggplot2::element_text(size = 11)
+        )
+
+      print(p)
+      TRUE
+    },
+
+    # ------------------------------------------------------------------
+    # Faceted tileplot of item × category response counts, faceted by
+    # the DIF grouping variable. Diagnostic to inspect subgroup
+    # response distributions before / alongside the DIF analysis.
+    # Mirrors easyRasch2::RMtileplot logic.
+    # ------------------------------------------------------------------
+    .tileplot = function(image, ggtheme, theme, ...) {
+      if (is.null(image$state)) return(FALSE)
+      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
+
+      state          <- image$state
+      count_df       <- state$count_df
+      all_categories <- state$all_categories
+      cutoff         <- state$cutoff
+      use_pct        <- isTRUE(state$percent)
+
+      p <- ggplot2::ggplot(
+        count_df,
+        ggplot2::aes(x = .data$category,
+                     y = .data$item_label,
+                     fill = .data$n)
+      ) +
+        ggplot2::geom_tile() +
+        ggplot2::scale_fill_viridis_c(
+          expression(italic(n)),
+          limits = c(0, NA)
+        ) +
+        ggplot2::scale_x_continuous(
+          "Response category",
+          expand = c(0, 0),
+          breaks = all_categories
+        )
+
+      # Cell labels (counts or percentages) with low-count highlighting
+      label_aes <- if (use_pct) {
+        ggplot2::aes(label = paste0(.data$percentage, "%"),
+                     color = ifelse(.data$n < cutoff, "red", "orange"))
+      } else {
+        ggplot2::aes(label = .data$n,
+                     color = ifelse(.data$n < cutoff, "red", "orange"))
+      }
+      p <- p +
+        ggplot2::geom_text(label_aes) +
+        ggplot2::guides(color = "none") +
+        ggplot2::scale_color_identity()
+
+      p <- p +
+        ggplot2::facet_wrap(~ group) +
+        ggplot2::labs(y = "Items") +
+        ggplot2::theme_minimal(base_size = 13) +
+        ggplot2::theme(
+          axis.text.x   = ggplot2::element_text(size = 8),
+          panel.grid    = ggplot2::element_blank(),
+          axis.title.x  = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
+          axis.title.y  = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
+          panel.spacing = ggplot2::unit(0.7, "cm")
+        )
 
       print(p)
       TRUE

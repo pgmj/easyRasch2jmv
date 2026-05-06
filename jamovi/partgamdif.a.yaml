@@ -55,4 +55,20 @@ options:
       title: Sort by |Partial gamma| (descending)
       type: Bool
       default: false
+
+    - name: showTileplot
+      title: Show response distribution by DIF group
+      type: Bool
+      default: false
+
+    - name: tileCutoff
+      title: Highlight cells with count below
+      type: Integer
+      default: 10
+      min: 1
+
+    - name: tilePercent
+      title: Show percentages instead of counts
+      type: Bool
+      default: false
 ...

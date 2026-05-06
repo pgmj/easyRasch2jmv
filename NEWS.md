@@ -1,3 +1,8 @@
+# easyRasch2jmv 0.3.1 (development)
+
+- Partial Gamma DIF has an added option for a tileplot of response data grouped
+  by the DIF variable.
+
 # easyRasch2jmv 0.3.0 
 
 New functions:

@@ -82,4 +82,19 @@ items:
         - hdciWidth
         - iterations
         - seed
+
+    - name: tileplot
+      title: Response Distribution by DIF Group
+      type: Image
+      width: 600
+      height: 600
+      renderFun: .tileplot
+      visible: (showTileplot)
+      requiresData: true
+      clearWith:
+        - vars
+        - difVar
+        - showTileplot
+        - tileCutoff
+        - tilePercent
 ...
