@@ -156,4 +156,12 @@ refs:
         publisher: 'Psychometrika, 56(2), 177-196'
         url: https://doi.org/10.1007/BF02294457
 
+    chou2010:
+        type: article
+        author: Chou, Y.-T., & Wang, W.-C.
+        year: 2010
+        title: 'Checking Dimensionality in Item Response Models With Principal Component Analysis on Standardized Residuals'
+        publisher: 'Educational and Psychological Measurement, 70(5), 717–731'
+        url: https://doi.org/10.1177/0013164410379322
+
 ...

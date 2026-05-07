@@ -137,6 +137,19 @@ analyses:
       logits) and its standard error. Useful when reporting a scale's
       measurement properties or converting raw totals to interval-scaled
       scores.
+  - title: PCA of Standardized Rasch Residuals
+    name: residualpca
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: PCA of Standardized Rasch Residuals
+    description: |-
+      Fits a Rasch model (RM for dichotomous data, PCM for polytomous --
+      chosen automatically) and runs an unrotated principal-component
+      analysis on the standardized residuals via `eRm::itemfit()` and
+      `stats::prcomp()`. Reports the largest eigenvalues, the proportion of
+      unexplained variance, and a loadings-vs-location plot for inspecting
+      the first residual contrast.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

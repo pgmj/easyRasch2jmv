@@ -1,0 +1,58 @@
+---
+name: residualpca
+title: PCA of Standardized Rasch Residuals
+jrs: '1.1'
+
+items:
+    - name: pcaTable
+      title: Eigenvalues of Residual PCA
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, chou2010, mair2007]
+      clearWith:
+          - vars
+          - nComponents
+          - computeCutoff
+          - iterations
+          - seed
+      columns:
+          - name: component
+            title: Component
+            type: text
+          - name: eigenvalue
+            title: Eigenvalue
+            type: number
+          - name: propVar
+            title: Prop. of unexplained var.
+            type: number
+          - name: cutoff
+            title: Cutoff (99th percentile)
+            type: number
+            visible: (computeCutoff)
+          - name: flagged
+            title: Flagged
+            type: text
+            visible: (computeCutoff)
+
+    - name: pcaNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - nComponents
+          - computeCutoff
+          - iterations
+          - seed
+
+    - name: pcaPlot
+      title: PC1 Loadings vs Item Location
+      type: Image
+      width: 550
+      height: 500
+      renderFun: .pcaPlot
+      requiresData: true
+      clearWith:
+          - vars
+          - coordFlip
+
+...

@@ -1,5 +1,8 @@
 # easyRasch2jmv 0.3.1 (development)
 
+- New function for PCA (principal component analysis) of standardized Rasch model
+  residuals with (experimental) simulation based cutoff value for the largest 
+  PCA eigenvalue.
 - Partial Gamma DIF has an added option for a tileplot of response data grouped
   by the DIF variable.
 

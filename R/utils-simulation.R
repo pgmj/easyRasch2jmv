@@ -317,3 +317,138 @@ run_partgam_sim_sequential <- function(iterations, sim_seeds, sim_data_list,
 
   results
 }
+
+#' Run a single residual-PCA simulation iteration
+#'
+#' Simulates a dataset of size `data_list$sample_n` from the fitted Rasch
+#' or partial-credit model, fits the same model to the simulated data,
+#' and returns the largest eigenvalue of the unrotated PCA on the
+#' standardised residuals (Chou & Wang, 2010).
+#'
+#' @param seed Integer seed for reproducibility.
+#' @param data_list List produced inside `.runCutoffSim()`.
+#' @return A numeric scalar (the first eigenvalue), or a character string
+#'   on failure.
+#' @noRd
+run_single_pca_sim <- function(seed, data_list) {
+  set.seed(seed)
+
+  thetas_res <- sample(data_list$thetas, size = data_list$sample_n,
+                       replace = TRUE)
+
+  tryCatch({
+    if (data_list$type == "dichotomous") {
+      sim_mat <- psychotools::rrm(
+        theta = thetas_res,
+        beta  = data_list$item_params
+      )
+      sim_df <- as.data.frame(sim_mat$data)
+      colnames(sim_df) <- data_list$item_names
+
+      pos_counts <- colSums(sim_df, na.rm = TRUE)
+      if (any(pos_counts < 8L)) {
+        return("validation_failed: fewer than 8 positive responses in at least one item")
+      }
+      neg_counts <- nrow(sim_df) - pos_counts
+      if (any(neg_counts < 8L)) {
+        return("validation_failed: fewer than 8 negative responses in at least one item")
+      }
+
+      model_fit <- eRm::RM(sim_df, se = FALSE)
+    } else {
+      sim_mat <- sim_partial_score(data_list$deltaslist, thetas_res)
+      sim_df  <- as.data.frame(sim_mat)
+      colnames(sim_df) <- data_list$item_names
+
+      n_cats <- vapply(data_list$deltaslist, function(d) length(d) + 1L,
+                       integer(1L))
+      for (j in seq_len(ncol(sim_df))) {
+        tab <- tabulate(sim_df[[j]] + 1L, nbins = n_cats[j])
+        if (any(tab == 0L)) {
+          return("validation_failed: not all categories represented")
+        }
+      }
+
+      model_fit <- eRm::PCM(sim_df, se = FALSE)
+    }
+
+    pp        <- eRm::person.parameter(model_fit)
+    ifit      <- eRm::itemfit(pp)
+    st_resids <- ifit$st.res
+
+    if (anyNA(st_resids)) {
+      keep <- stats::complete.cases(st_resids)
+      st_resids <- st_resids[keep, , drop = FALSE]
+    }
+    if (nrow(st_resids) < ncol(st_resids)) {
+      return("validation_failed: too few rows in residual matrix for PCA")
+    }
+
+    pca_fit <- stats::prcomp(st_resids)
+    as.numeric(pca_fit$sdev[1L]^2)
+  }, error = function(e) {
+    as.character(conditionMessage(e))
+  })
+}
+
+#' Run residual-PCA simulations sequentially
+#'
+#' @param iterations Number of iterations.
+#' @param sim_seeds Integer vector of per-iteration seeds.
+#' @param sim_data_list List of data passed to each iteration.
+#' @param verbose Show progress bar.
+#' @return List of raw results (one element per iteration); each element
+#'   is either a numeric scalar (the first eigenvalue) or a character
+#'   string describing the failure.
+#' @noRd
+run_pca_sim_sequential <- function(iterations, sim_seeds, sim_data_list,
+                                   verbose = FALSE) {
+  if (verbose) {
+    pb <- utils::txtProgressBar(min = 0, max = iterations, style = 3)
+  }
+
+  results <- vector("list", iterations)
+  for (sim in seq_len(iterations)) {
+    results[[sim]] <- run_single_pca_sim(sim_seeds[sim], sim_data_list)
+    if (verbose) {
+      utils::setTxtProgressBar(pb, sim)
+    }
+  }
+
+  if (verbose) {
+    close(pb)
+    message("")
+  }
+
+  results
+}
+
+#' Compute PCM expected-score matrix
+#'
+#' Used by the variance-partition computation in the residualpca module.
+#' Returns an n_persons x n_items matrix of model-expected scores under
+#' the partial-credit model.
+#'
+#' @param thetas Numeric vector of person locations.
+#' @param thresh_mat Numeric matrix of thresholds (rows = items, cols =
+#'   thresholds; pad shorter rows with NA).
+#' @return Numeric matrix of expected scores.
+#' @noRd
+pcm_expected_scores <- function(thetas, thresh_mat) {
+  n        <- length(thetas)
+  n_items  <- nrow(thresh_mat)
+  expected <- matrix(NA_real_, nrow = n, ncol = n_items)
+
+  for (j in seq_len(n_items)) {
+    taus <- thresh_mat[j, !is.na(thresh_mat[j, ])]
+    K_j  <- length(taus)
+    cumsum_taus <- c(0, cumsum(taus))
+    log_num <- outer(thetas, 0:K_j) -
+      matrix(cumsum_taus, nrow = n, ncol = K_j + 1L, byrow = TRUE)
+    log_num <- log_num - apply(log_num, 1L, max)
+    probs   <- exp(log_num)
+    probs   <- probs / rowSums(probs)
+    expected[, j] <- as.numeric(probs %*% (0:K_j))
+  }
+  expected
+}

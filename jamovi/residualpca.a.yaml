@@ -1,0 +1,66 @@
+---
+name: residualpca
+title: PCA of Standardized Rasch Residuals
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Fits a Rasch model (RM for dichotomous data, PCM for polytomous --
+        chosen automatically) and runs an unrotated principal-component
+        analysis on the standardized residuals via `eRm::itemfit()` and
+        `stats::prcomp()`. Reports the largest eigenvalues, the proportion of
+        unexplained variance, and a loadings-vs-location plot for inspecting
+        the first residual contrast.
+
+        The "first contrast eigenvalue > 2" rule of thumb is unreliable: the
+        expected eigenvalue under a unidimensional model varies with sample
+        size, test length, and item-parameter spread. An optional
+        simulation-based critical value (Chou & Wang, 2010) compares the
+        observed eigenvalue against the 99th percentile of eigenvalues drawn
+        under the fitted unidimensional model.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+
+    - name: nComponents
+      title: Number of components to display
+      type: Integer
+      default: 3
+      min: 1
+      max: 20
+
+    - name: coordFlip
+      title: Item location on x-axis (coord_flip)
+      type: Bool
+      default: false
+
+    - name: computeCutoff
+      title: Compute simulation-based cutoff
+      type: Bool
+      default: false
+
+    - name: iterations
+      title: Number of simulation iterations
+      type: Integer
+      default: 250
+      min: 50
+      max: 5000
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+...
