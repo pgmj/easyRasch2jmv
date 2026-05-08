@@ -1,5 +1,6 @@
 # easyRasch2jmv 0.3.1
 
+- New function for LRT-based DIF analysis of categorical DIF variables.
 - New function for PCA (principal component analysis) of standardized Rasch model
   residuals with (experimental) simulation based cutoff value for the largest 
   PCA eigenvalue.

@@ -1,0 +1,57 @@
+---
+name: lrdif
+title: Andersen LR-test DIF
+jrs: '1.1'
+
+items:
+    - name: lrtTable
+      title: Per-group Item Locations
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, mair2007]
+      clearWith:
+          - vars
+          - difVar
+          - level
+          - cutoff
+          - sortByMaxDiff
+      columns: []
+
+    - name: lrtNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - difVar
+          - level
+          - cutoff
+
+    - name: lrtPlot
+      title: Per-group Locations
+      type: Image
+      width: 600
+      height: 600
+      renderFun: .lrtPlot
+      visible: (showFigure)
+      requiresData: true
+      clearWith:
+          - vars
+          - difVar
+          - level
+          - confLevel
+
+    - name: tileplot
+      title: Response Distribution by DIF Group
+      type: Image
+      width: 600
+      height: 600
+      renderFun: .tileplot
+      visible: (showTileplot)
+      requiresData: true
+      clearWith:
+          - vars
+          - difVar
+          - showTileplot
+          - tileCutoff
+          - tilePercent
+...

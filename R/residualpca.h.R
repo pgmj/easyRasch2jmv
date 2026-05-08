@@ -46,7 +46,7 @@ residualpcaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 iterations,
                 default=250,
                 min=50,
-                max=2000)
+                max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,

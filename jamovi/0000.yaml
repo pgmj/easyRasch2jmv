@@ -48,6 +48,19 @@ analyses:
       Computes conditional infit MSQ statistics for each item using
       iarm::out_infit(). Optionally determines simulation-based cutoff
       values via parametric bootstrap and visualises the results.
+  - title: Andersen LR-test DIF
+    name: lrdif
+    ns: easyRasch2jmv
+    menuGroup: easyRasch2jmv
+    menuTitle: Andersen LR-test DIF
+    category: analyses
+    description: |-
+      Splits a Rasch model by an external categorical grouping variable
+      using `eRm::LRtest()` (Andersen's likelihood-ratio test) and reports
+      per-group item locations (or per-group threshold locations) together
+      with their standard errors. The dichotomous Rasch Model (RM) is
+      fitted when the data are 0/1; the Partial Credit Model (PCM)
+      otherwise -- chosen automatically.
   - title: Partial Gamma DIF
     name: partgamdif
     ns: easyRasch2jmv

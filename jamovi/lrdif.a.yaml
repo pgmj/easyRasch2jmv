@@ -1,0 +1,93 @@
+---
+name: lrdif
+title: Andersen LR-test DIF
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Splits a Rasch model by an external categorical grouping variable
+        using `eRm::LRtest()` (Andersen's likelihood-ratio test) and reports
+        per-group item locations (or per-group threshold locations) together
+        with their standard errors. The dichotomous Rasch Model (RM) is
+        fitted when the data are 0/1; the Partial Credit Model (PCM)
+        otherwise -- chosen automatically.
+
+        Items whose largest group difference (MaxDiff) exceeds the chosen
+        cutoff (in logits) are flagged. The Andersen LR test statistic is
+        reported below the table.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: difVar
+      title: DIF Variable
+      type: Variable
+      suggested:
+        - nominal
+        - ordinal
+      permitted:
+        - factor
+
+    - name: level
+      title: Level
+      type: List
+      options:
+        - title: Item (mean of thresholds)
+          name: item
+        - title: Threshold (one row per threshold)
+          name: threshold
+      default: item
+
+    - name: cutoff
+      title: Flagging cutoff (logits)
+      type: Number
+      default: 0.5
+      min: 0
+      max: 5
+
+    - name: sortByMaxDiff
+      title: Sort by MaxDiff (descending)
+      type: Bool
+      default: false
+
+    - name: showFigure
+      title: Show panel figure
+      type: Bool
+      default: false
+
+    - name: confLevel
+      title: CI level for figure
+      type: Number
+      default: 95
+      min: 50
+      max: 99.9
+
+    - name: showTileplot
+      title: Show response distribution by DIF group
+      type: Bool
+      default: false
+
+    - name: tileCutoff
+      title: Highlight cells with count below
+      type: Integer
+      default: 10
+      min: 1
+
+    - name: tilePercent
+      title: Show percentages instead of counts
+      type: Bool
+      default: false
+...
