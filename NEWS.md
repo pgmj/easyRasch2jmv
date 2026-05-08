@@ -1,4 +1,4 @@
-# easyRasch2jmv 0.3.1 (development)
+# easyRasch2jmv 0.3.1
 
 - New function for PCA (principal component analysis) of standardized Rasch model
   residuals with (experimental) simulation based cutoff value for the largest 
