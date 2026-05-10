@@ -1,3 +1,8 @@
+# easyRasch2jmv 0.4.0
+
+- New function for testing unidimensionality with Confirmatory Factor Analysis
+  (CFA) using `lavaan` and simulation-based cutoff values for model fit metrics.
+
 # easyRasch2jmv 0.3.1
 
 - New function for LRT-based DIF analysis of categorical DIF variables.

@@ -452,3 +452,141 @@ pcm_expected_scores <- function(thetas, thresh_mat) {
   }
   expected
 }
+
+#' Run a single posterior-predictive CFA-fit-index simulation iteration
+#'
+#' Simulates a dataset under the supplied PCM/RM parameters, refits a
+#' one-factor lavaan CFA on it, and returns the fit indices.
+#'
+#' @param seed Integer seed for reproducibility.
+#' @param data_list List built inside `.runCutoffSim()`. Includes
+#'   `estimator` so the appropriate robust/scaled fit-index variants can
+#'   be returned.
+#' @return A length-3 numeric vector `(cfi, rmsea, srmr)` on success, or
+#'   a character string describing the failure.
+#' @noRd
+run_single_cfa_sim <- function(seed, data_list) {
+  set.seed(seed)
+
+  thetas_res <- sample(data_list$thetas, size = data_list$sample_n,
+                       replace = TRUE)
+
+  tryCatch({
+    if (data_list$type == "dichotomous") {
+      sim_mat <- psychotools::rrm(theta = thetas_res,
+                                  beta  = data_list$item_params)
+      sim_df <- as.data.frame(sim_mat$data)
+      colnames(sim_df) <- data_list$item_names
+
+      pos_counts <- colSums(sim_df, na.rm = TRUE)
+      neg_counts <- nrow(sim_df) - pos_counts
+      if (any(pos_counts < 2L) || any(neg_counts < 2L)) {
+        return("validation_failed: an item has < 2 responses in one of the two categories")
+      }
+    } else {
+      sim_mat <- sim_partial_score(data_list$deltaslist, thetas_res)
+      sim_df  <- as.data.frame(sim_mat)
+      colnames(sim_df) <- data_list$item_names
+
+      n_cats <- vapply(data_list$deltaslist,
+                       function(d) length(d) + 1L, integer(1L))
+      for (j in seq_len(ncol(sim_df))) {
+        tab <- tabulate(sim_df[[j]] + 1L, nbins = n_cats[j])
+        if (any(tab == 0L)) {
+          return("validation_failed: not all categories represented")
+        }
+      }
+    }
+
+    fmla <- paste0("F1 =~ ",
+                   paste(data_list$item_names, collapse = " + "))
+
+    fit <- suppressWarnings(suppressMessages(
+      lavaan::cfa(
+        model     = fmla,
+        data      = sim_df,
+        ordered   = data_list$item_names,
+        estimator = data_list$estimator,
+        warn      = FALSE,
+        verbose   = FALSE
+      )
+    ))
+
+    if (!isTRUE(lavaan::lavInspect(fit, "converged"))) {
+      return("convergence_failed: lavaan did not converge")
+    }
+
+    suppressWarnings(extract_cfa_fit(fit, data_list$estimator))
+  }, error = function(e) as.character(conditionMessage(e)))
+}
+
+#' Run CFA simulations sequentially
+#'
+#' @noRd
+run_cfa_sim_sequential <- function(iterations, sim_seeds, sim_data_list,
+                                   verbose = FALSE) {
+  if (verbose) {
+    pb <- utils::txtProgressBar(min = 0, max = iterations, style = 3)
+  }
+
+  results <- vector("list", iterations)
+  for (sim in seq_len(iterations)) {
+    results[[sim]] <- run_single_cfa_sim(sim_seeds[sim], sim_data_list)
+    if (verbose) utils::setTxtProgressBar(pb, sim)
+  }
+
+  if (verbose) {
+    close(pb)
+    message("")
+  }
+
+  results
+}
+
+#' Compute observed CFA fit on a complete-cases item data.frame
+#'
+#' Returns the same `(cfi, rmsea, srmr)` triple as `run_single_cfa_sim()`
+#' so the populating code can format both uniformly. Returns a character
+#' message on failure (typically a non-converging WLSMV fit).
+#'
+#' @noRd
+run_observed_cfa_fit <- function(df, estimator) {
+  fmla <- paste0("F1 =~ ", paste(names(df), collapse = " + "))
+  tryCatch({
+    fit <- suppressWarnings(suppressMessages(
+      lavaan::cfa(
+        model     = fmla,
+        data      = df,
+        ordered   = names(df),
+        estimator = estimator,
+        warn      = FALSE,
+        verbose   = FALSE
+      )
+    ))
+    if (!isTRUE(lavaan::lavInspect(fit, "converged"))) {
+      return("convergence_failed: lavaan did not converge")
+    }
+    suppressWarnings(extract_cfa_fit(fit, estimator))
+  }, error = function(e) as.character(conditionMessage(e)))
+}
+
+#' Pull (CFI, RMSEA, SRMR) from a fitted lavaan object
+#'
+#' Detects whether the fit object carries robust/scaled fit-index
+#' variants (WLSMV / ULSMV / MLM / MLR all do; plain DWLS / WLS / ULS
+#' / ML do not) and uses the robust versions when available, otherwise
+#' falling back to the unscaled `cfi` / `rmsea`. SRMR is unaffected by
+#' the robust correction. The `estimator` argument is unused here -- we
+#' ask lavaan directly so the function works regardless of which
+#' estimator the user picked.
+#'
+#' @noRd
+extract_cfa_fit <- function(fit, estimator = NULL) {
+  fm    <- lavaan::fitMeasures(fit)
+  names_fm <- names(fm)
+  cfi_name   <- if ("cfi.robust"   %in% names_fm) "cfi.robust"   else "cfi"
+  rmsea_name <- if ("rmsea.robust" %in% names_fm) "rmsea.robust" else "rmsea"
+  c(unname(fm[[cfi_name]]),
+    unname(fm[[rmsea_name]]),
+    unname(fm[["srmr"]]))
+}

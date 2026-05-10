@@ -1,0 +1,57 @@
+---
+name: cfacutoff
+title: Dynamic CFA Fit-Index Cutoffs
+jrs: '1.1'
+
+items:
+    - name: cfaTable
+      title: Observed CFA Fit vs Simulated Cutoff
+      type: Table
+      rows: 3
+      refs: [easyRasch2jmv]
+      clearWith:
+          - vars
+          - estimator
+          - percentile
+          - iterations
+          - seed
+      columns:
+          - name: index
+            title: Index
+            type: text
+          - name: observed
+            title: Observed
+            type: number
+            format: zto
+          - name: cutoff
+            title: Cutoff
+            type: number
+            format: zto
+          - name: flagged
+            title: Flagged
+            type: text
+
+    - name: cfaNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - estimator
+          - percentile
+          - iterations
+          - seed
+
+    - name: cfaPlot
+      title: Observed CFA Fit vs Simulated Null Distribution
+      type: Image
+      width: 700
+      height: 350
+      renderFun: .cfaPlot
+      requiresData: true
+      clearWith:
+          - vars
+          - estimator
+          - percentile
+          - iterations
+          - seed
+...

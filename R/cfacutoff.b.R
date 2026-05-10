@@ -1,0 +1,362 @@
+#' @export
+cfacutoffClass <- R6::R6Class(
+  "cfacutoffClass",
+  inherit = cfacutoffBase,
+  private = list(
+
+    # ---------------------------------------------------------------------
+    # .run
+    # ---------------------------------------------------------------------
+    .run = function() {
+
+      # 1. Return early if requirements not met
+      vars <- self$options$vars
+      if (is.null(vars) || length(vars) < 3)
+        return()
+
+      # 2. Extract data + standard validations
+      data <- self$data
+      df   <- data[, vars, drop = FALSE]
+      df   <- to_numeric_responses_df(df)
+
+      all_na_cols <- sapply(df, function(x) all(is.na(x)))
+      if (any(all_na_cols)) {
+        bad_vars <- names(df)[all_na_cols]
+        stop(paste("The following variables contain no valid numeric data:",
+                   paste(bad_vars, collapse = ", ")))
+      }
+
+      # Sentinel-value sanity check
+      max_obs <- max(as.matrix(df), na.rm = TRUE)
+      if (is.finite(max_obs) && max_obs > 20) {
+        bad_cols <- names(df)[
+          vapply(df, function(x) {
+            mx <- suppressWarnings(max(x, na.rm = TRUE))
+            is.finite(mx) && mx > 20
+          }, logical(1L))
+        ]
+        stop(paste0(
+          "Item(s) ", paste(bad_cols, collapse = ", "),
+          " contain values > 20, which look like missing-value codes ",
+          "(e.g., 999, 8888) rather than ordinal responses. ",
+          "Mark these codes as missing in the data editor, or recode your data."
+        ))
+      }
+
+      validate_response_data(df)
+
+      # Drop incomplete rows -- lavaan + simulation both need complete cases
+      n_total     <- nrow(df)
+      df_complete <- stats::na.omit(df)
+      n_complete  <- nrow(df_complete)
+      n_excluded  <- n_total - n_complete
+
+      if (n_complete == 0L)
+        stop("No complete cases found. CFA requires at least one row with responses to all selected items.")
+      if (n_complete < 30L)
+        jmvcore::reject(
+          "Warning: Only {n} complete cases found. Results may be unreliable.",
+          n = n_complete
+        )
+
+      for (col in names(df_complete)) {
+        if (length(unique(df_complete[[col]])) < 2L)
+          stop(paste0("Item '", col, "' has no variation in responses."))
+      }
+
+      # 3. Read options
+      estimator  <- toupper(self$options$estimator)
+      percentile <- self$options$percentile
+      iterations <- self$options$iterations
+      seed_val   <- self$options$seed
+
+      if (estimator %in% c("ML", "MLR", "MLM", "MLF")) {
+        stop("Estimator must be a limited-information ordinal estimator (WLSMV, DWLS, or ULSMV).")
+      }
+      if (!is.numeric(percentile) || percentile <= 50 || percentile >= 100) {
+        stop("Cutoff percentile must be in (50, 100). Common choices: 95, 99, 99.5.")
+      }
+
+      # rgl workaround
+      old_rgl <- getOption("rgl.useNULL")
+      options(rgl.useNULL = TRUE)
+      on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
+
+      # 4. Fit observed and run simulation
+      tryCatch({
+        sim_data_list <- private$.buildSimDataList(df_complete, estimator)
+
+        observed <- run_observed_cfa_fit(df_complete, estimator)
+        if (!is.numeric(observed)) {
+          stop(paste0(
+            "Observed CFA fit failed (", observed, "). ",
+            "lavaan WLSMV / DWLS / ULSMV typically fails when items have ",
+            "very rare or empty response categories. Inspect the response ",
+            "distribution per item (e.g., the descriptives module) before ",
+            "running this analysis."
+          ))
+        }
+        names(observed) <- c("cfi", "rmsea", "srmr")
+
+        actual_seed <- if (seed_val == 0) NULL else as.integer(seed_val)
+        if (!is.null(actual_seed)) set.seed(actual_seed)
+        sim_seeds <- sample.int(.Machine$integer.max, iterations)
+
+        # Sequential only -- jamovi runs single-threaded
+        results_raw <- run_cfa_sim_sequential(
+          iterations    = iterations,
+          sim_seeds     = sim_seeds,
+          sim_data_list = sim_data_list,
+          verbose       = FALSE
+        )
+
+        ok         <- vapply(results_raw, is.numeric, logical(1L))
+        successful <- results_raw[ok]
+        if (length(successful) == 0L) {
+          failed_msgs <- unlist(results_raw[!ok])
+          sample_msg <- if (length(failed_msgs) > 0L) {
+            unique(failed_msgs)[1L]
+          } else {
+            "(no message captured)"
+          }
+          stop(paste0(
+            "All ", iterations, " simulation iterations failed. Example: ",
+            sample_msg, ". Often this indicates very sparse items; ",
+            "inspect the per-item response distribution before running."
+          ))
+        }
+
+        actual_iterations <- length(successful)
+        sim_mat <- do.call(rbind, successful)
+        colnames(sim_mat) <- c("cfi", "rmsea", "srmr")
+        simulated_df <- data.frame(
+          iteration = seq_len(actual_iterations),
+          cfi       = as.numeric(sim_mat[, "cfi"]),
+          rmsea     = as.numeric(sim_mat[, "rmsea"]),
+          srmr      = as.numeric(sim_mat[, "srmr"]),
+          stringsAsFactors = FALSE
+        )
+
+        cutoffs <- private$.computeCfaCutoffs(simulated_df, percentile)
+        flagged <- private$.computeCfaFlagged(observed, cutoffs)
+
+        is_polytomous <- sim_data_list$type == "polytomous"
+
+        # 5. Populate the table (3 fixed rows, set in r.yaml)
+        table <- self$results$cfaTable
+
+        idx_names <- c("CFI", "RMSEA", "SRMR")
+        for (i in seq_len(3L)) {
+          k <- c("cfi", "rmsea", "srmr")[i]
+          table$setRow(rowNo = i, values = list(
+            index    = idx_names[i],
+            observed = observed[[k]],
+            cutoff   = cutoffs[[k]],
+            flagged  = if (isTRUE(flagged[[k]])) "TRUE" else ""
+          ))
+        }
+
+        # 6. Caption note (HTML below the table)
+        excluded_clause <- if (n_excluded > 0L) {
+          paste0(" (", n_excluded, " of ", n_total,
+                 " row(s) excluded due to missing responses)")
+        } else ""
+
+        success_clause <- if (actual_iterations < iterations) {
+          paste0(" Note: ", iterations - actual_iterations,
+                 " of ", iterations, " iterations failed and were dropped; ",
+                 actual_iterations, " contributed to the cutoffs.")
+        } else ""
+
+        note_html <- paste0(
+          "<p><b>Posterior-predictive CFA fit-index check.</b> Observed ",
+          "one-factor CFA fit (lavaan ", estimator, ", ordered = TRUE) ",
+          "compared to a parametric-bootstrap null distribution simulated ",
+          "under ", if (is_polytomous) "PCM" else "RM",
+          " unidimensionality at n = ", n_complete,
+          " complete cases", excluded_clause,
+          ", with ", actual_iterations,
+          " successful iterations. Cutoffs are one-sided at the ",
+          percentile,
+          "th percentile of the simulated distribution: CFI is flagged ",
+          "when below the (", round(100 - percentile, 1),
+          "th) lower-tail cutoff; RMSEA / SRMR are flagged when above ",
+          "the upper-tail cutoff. An item flagged 'TRUE' lies in the ",
+          "worst ", round(100 - percentile, 1),
+          "% of the simulated distribution in the unfavourable direction.",
+          success_clause, "</p>"
+        )
+        self$results$cfaNote$setContent(note_html)
+
+        # 7. Save state for the plot
+        self$results$cfaPlot$setState(list(
+          simulated         = simulated_df,
+          observed          = observed,
+          cutoffs           = cutoffs,
+          flagged           = flagged,
+          percentile        = percentile,
+          actual_iterations = actual_iterations,
+          n_complete        = n_complete,
+          is_polytomous     = is_polytomous,
+          estimator         = estimator
+        ))
+      }, error = function(e) {
+        stop(paste("Error in CFA-cutoff analysis:", e$message))
+      })
+    },
+
+    # ---------------------------------------------------------------------
+    # .buildSimDataList -- inlined from easyRasch2::RMcfaCutoff
+    # ---------------------------------------------------------------------
+    .buildSimDataList = function(df, estimator) {
+      data_mat       <- as.matrix(df)
+      sample_n       <- nrow(data_mat)
+      is_polytomous  <- max(data_mat, na.rm = TRUE) > 1L
+      item_names_vec <- colnames(data_mat)
+      if (is.null(item_names_vec))
+        item_names_vec <- paste0("V", seq_len(ncol(data_mat)))
+
+      if (is_polytomous) {
+        pcm_fit     <- eRm::PCM(data_mat)
+        pp          <- eRm::person.parameter(pcm_fit)
+        theta_table <- pp$theta.table[["Person Parameter"]]
+        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
+        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
+        thresh_mat  <- extract_item_thresholds(data_mat)
+        deltaslist  <- lapply(seq_len(nrow(thresh_mat)), function(i) {
+          as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
+        })
+        list(type       = "polytomous",
+             thetas     = thetas,
+             deltaslist = deltaslist,
+             n_items    = ncol(data_mat),
+             sample_n   = sample_n,
+             item_names = item_names_vec,
+             estimator  = estimator)
+      } else {
+        rm_fit      <- eRm::RM(data_mat)
+        pp          <- eRm::person.parameter(rm_fit)
+        theta_table <- pp$theta.table[["Person Parameter"]]
+        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
+        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
+        item_params <- -rm_fit$betapar
+        list(type        = "dichotomous",
+             thetas      = thetas,
+             item_params = item_params,
+             n_items     = ncol(data_mat),
+             sample_n    = sample_n,
+             item_names  = item_names_vec,
+             estimator   = estimator)
+      }
+    },
+
+    # ---------------------------------------------------------------------
+    # Cutoff + flag computation -- one-sided, directional
+    # ---------------------------------------------------------------------
+    .computeCfaCutoffs = function(simulated_df, percentile) {
+      pct <- percentile / 100
+      # Filter to finite values -- lavaan can return Inf for RMSEA when
+      # chi-square is exactly 0 (degenerate near-perfect fit), which
+      # would otherwise propagate into the cutoff.
+      cfi_v   <- simulated_df$cfi[is.finite(simulated_df$cfi)]
+      rmsea_v <- simulated_df$rmsea[is.finite(simulated_df$rmsea)]
+      srmr_v  <- simulated_df$srmr[is.finite(simulated_df$srmr)]
+      c(
+        cfi   = as.numeric(stats::quantile(cfi_v,   1 - pct, na.rm = TRUE)),
+        rmsea = as.numeric(stats::quantile(rmsea_v, pct,     na.rm = TRUE)),
+        srmr  = as.numeric(stats::quantile(srmr_v,  pct,     na.rm = TRUE))
+      )
+    },
+
+    .computeCfaFlagged = function(observed, cutoffs) {
+      c(
+        cfi   = !is.na(observed[["cfi"]])   && observed[["cfi"]]   < cutoffs[["cfi"]],
+        rmsea = !is.na(observed[["rmsea"]]) && observed[["rmsea"]] > cutoffs[["rmsea"]],
+        srmr  = !is.na(observed[["srmr"]])  && observed[["srmr"]]  > cutoffs[["srmr"]]
+      )
+    },
+
+    # ---------------------------------------------------------------------
+    # .cfaPlot -- faceted histogram with diamond marker and cutoff line
+    # ---------------------------------------------------------------------
+    .cfaPlot = function(image, ggtheme, theme, ...) {
+      if (is.null(image$state)) return(FALSE)
+      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
+
+      state <- image$state
+
+      # Long-format data for faceting
+      sim_long <- data.frame(
+        Index = factor(rep(c("CFI", "RMSEA", "SRMR"),
+                           each = nrow(state$simulated)),
+                       levels = c("CFI", "RMSEA", "SRMR")),
+        Value = c(state$simulated$cfi,
+                  state$simulated$rmsea,
+                  state$simulated$srmr),
+        stringsAsFactors = FALSE
+      )
+      sim_long <- sim_long[is.finite(sim_long$Value), , drop = FALSE]
+
+      obs_df <- data.frame(
+        Index    = factor(c("CFI", "RMSEA", "SRMR"),
+                          levels = c("CFI", "RMSEA", "SRMR")),
+        Observed = c(state$observed[["cfi"]],
+                     state$observed[["rmsea"]],
+                     state$observed[["srmr"]]),
+        Cutoff   = c(state$cutoffs[["cfi"]],
+                     state$cutoffs[["rmsea"]],
+                     state$cutoffs[["srmr"]]),
+        Flagged  = c(state$flagged[["cfi"]],
+                     state$flagged[["rmsea"]],
+                     state$flagged[["srmr"]]),
+        stringsAsFactors = FALSE
+      )
+      obs_df$Color <- ifelse(obs_df$Flagged, "red", "sienna2")
+
+      cfi_pct_lbl <- 100 - state$percentile
+      caption <- paste0(
+        "Histograms: ", state$actual_iterations,
+        " parametric-bootstrap datasets simulated under ",
+        if (state$is_polytomous) "PCM" else "RM",
+        " unidimensionality at n = ", state$n_complete, ",\n",
+        "refitted with lavaan::cfa(ordered = TRUE, estimator = \"",
+        state$estimator, "\").\n",
+        "Diamond: observed value (red = flagged at the ", state$percentile,
+        "th percentile in the unfavourable direction).\n",
+        "Dashed line: cutoff (CFI: ", round(cfi_pct_lbl, 1),
+        "th pct; RMSEA / SRMR: ", state$percentile, "th pct)."
+      )
+
+      p <- ggplot2::ggplot(sim_long,
+                           ggplot2::aes(x = .data$Value)) +
+        ggplot2::geom_histogram(bins = 30, fill = "grey80",
+                                colour = "white") +
+        ggplot2::geom_vline(
+          data = obs_df,
+          ggplot2::aes(xintercept = .data$Cutoff),
+          linetype = "dashed", colour = "grey40"
+        ) +
+        ggplot2::geom_point(
+          data = obs_df,
+          ggplot2::aes(x = .data$Observed, colour = .data$Color),
+          y = 0, size = 4.5, shape = 18
+        ) +
+        ggplot2::scale_colour_identity() +
+        ggplot2::facet_wrap(~ Index, scales = "free", nrow = 1) +
+        ggplot2::labs(
+          x       = "Fit index value",
+          y       = "Count of simulated datasets",
+          caption = caption
+        ) +
+        ggplot2::theme_bw(base_size = 13) +
+        ggplot2::theme(
+          plot.caption = ggplot2::element_text(hjust = 0, size = 9),
+          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12))
+        )
+
+      print(p)
+      TRUE
+    }
+  )
+)

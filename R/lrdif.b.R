@@ -456,7 +456,7 @@ lrdifClass <- R6::R6Class(
       base_theme <- ggplot2::theme_bw(base_size = 15) +
         ggplot2::theme(
           legend.position = "none",
-          plot.caption    = ggplot2::element_text(hjust = 0, face = "italic"),
+          plot.caption    = ggplot2::element_text(hjust = 0),
           axis.title.x    = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
           axis.title.y    = ggplot2::element_text(margin = ggplot2::margin(r = 12))
         )
