@@ -32,7 +32,6 @@ cfacutoffOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 estimator,
                 options=list(
                     "WLSMV",
-                    "DWLS",
                     "ULSMV"),
                 default="WLSMV")
             private$..percentile <- jmvcore::OptionNumber$new(
