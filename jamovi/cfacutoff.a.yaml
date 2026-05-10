@@ -45,8 +45,6 @@ options:
       options:
         - title: WLSMV (default; robust scaled)
           name: WLSMV
-        - title: DWLS (diagonally weighted; small-sample stable)
-          name: DWLS
         - title: ULSMV (unweighted; least demanding)
           name: ULSMV
       default: WLSMV
