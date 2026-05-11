@@ -1,5 +1,9 @@
 # easyRasch2jmv
 
+<!-- badges: start -->
+<a href="https://buymeacoffee.com/pgmj" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
+<!-- badges: end -->
+
 A [Jamovi](https://www.jamovi.org/) module wrapping analysis logic from the
 [easyRasch2](https://github.com/pgmj/easyRasch2) R package for Rasch
 Measurement Theory analysis.
