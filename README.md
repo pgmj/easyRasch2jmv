@@ -6,29 +6,67 @@ Measurement Theory analysis.
 
 ## Analyses
 
-- **Conditional item infit MSQ** from R package `iarm` (Müller, 2020), with 
-  simulation-based cutoff values (Johansson, 2025). Also uses package `eRm` (Mair & Hatzinger, 2007).
-  
-- **Item-Restscore Correlations** — Computes observed and model-expected
-  item-restscore correlations using Goodman-Kruskal's gamma (Kreiner, 2011) via the `iarm`
-  package. Supports dichotomous and polytomous (Partial Credit
-  Model, PCM) data. Reports observed vs. expected correlations, absolute
-  differences, adjusted p-values, item locations, and item locations relative
-  to the sample mean person location. Item locations estimated with CML from `eRm`.
+### Item fit
 
-- **Yen's Q3 residuals** for assessing local dependencies using R package `mirt` with MML estimation.
-  Simulation-based cutoff values are available (Christensen, et al., 2017; 
+- **Conditional Item Infit** — conditional infit MSQ via `iarm`
+  (Müller, 2020), with optional simulation-based cutoffs (Johansson,
+  2025) and a dot-plot of observed vs simulated distributions.
+- **Conditional Item Infit (Multiple Imputation)** — pooled infit MSQ
+  via Rubin's rules across `m` `mice` imputations.
+- **Bootstrap Item-Restscore** — non-parametric bootstrap of
+  `iarm::item_restscore()` for use with large samples where the
+  asymptotic test over-rejects.
+- **Item-Restscore Correlations** — observed vs model-expected
+  item-restscore correlations via Goodman-Kruskal's gamma (Kreiner, 2011).
+  Supports dichotomous and polytomous (Partial Credit Model) data. CML
+  item locations from `eRm`.
+
+### Local dependence
+
+- **Q3 Residual Correlation Matrix** — Yen's Q3 via `mirt` (MML), with
+  optional simulation-based cutoffs (Christensen et al., 2017;
   [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)).
-  
-- **Differential Item Functioning** (DIF), or invariance analysis. This also uses
-  GK gamma from the `iarm` package. Only works with categorical DIF variables.
-  
-- **Response category probabilities** - Uses `eRm::plotICC()` for response probability
-  curve plots for polytomous items only (PCM).
-  
-- **Targeting plot** generates a Wright map using functions from `eRm`, `ggplot2`, and `patchwork`. 
-  CML is used for item parameters, and MLE is used for person parameters. A table with item threshold
-  locations is also included.
+
+### Dimensionality / unidimensionality
+
+- **PCA of Standardized Residuals** — eigenvalues from PCA on Rasch
+  residuals, with optional simulation-based cutoff for the first
+  contrast (Chou & Wang, 2010) and a PC1-loading-vs-item-location plot.
+- **Dynamic/adaptive CFA Fit-Index Cutoffs** — observed one-factor
+  categorical-CFA fit indices (CFI, RMSEA, SRMR) compared to a
+  parametric-bootstrap null distribution simulated under the fitted
+  PCM/RM, via `lavaan` WLSMV / ULSMV. Avoids rule-of-thumb cutoffs.
+
+### Differential item functioning
+
+- **Andersen LR-test DIF** — Andersen's likelihood-ratio test via
+  `eRm::LRtest()`, with per-group item or threshold locations and a
+  faceted figure of group-by-item locations.
+- **Partial Gamma DIF** — partial-gamma coefficients via `iarm` for
+  categorical DIF variables, with optional simulation-based cutoffs.
+
+### Reliability, targeting, score conversion
+
+- **Reliability** — Cronbach's α, PSI (`eRm::SepRel()`), empirical
+  reliability (`mirt::empirical_rxx()`), and RMU from plausible values
+  (Bignardi, Kievit & Bürkner, 2025).
+- **Targeting Plot** — Wright-map style person-item targeting with
+  back-to-back histograms of person and item threshold locations, plus
+  a threshold-location dot plot. CML item parameters from `eRm`, MLE
+  person parameters.
+- **Sum Score to Logit Transformation** — raw-score → person-location
+  lookup, with WLE (CML via `eRm`) or EAP (MML via `mirt`).
+
+### Visualization
+
+- **Item Probability Curves** — category probability curves for PCM
+  items via `eRm::plotICC()`.
+
+## Requirements
+
+All R-package dependencies are bundled as Imports and are installed
+alongside the jamovi module: `eRm`, `iarm`, `lavaan`, `mirt`,
+`psychotools`, `mice`, `ggplot2`, `ggdist`, `patchwork`, `scales`.
 
 ## Installation
 
@@ -53,25 +91,41 @@ the module.
 
 ## References
 
-- Christensen, K. B., Makransky, G., & Horton, M. (2017). Critical Values for Yen’s Q3: 
-  Identification of Local Dependence in the Rasch Model Using Residual Correlations. 
-  *Applied Psychological Measurement, 41*(3), 178–194. <https://doi.org/10.1177/0146621616677520>
-- Johansson, M. (2025). Detecting Item Misfit in Rasch Models. 
-  *Educational Methods & Psychometrics, 3*(18). <https://doi.org/10.61186/emp.2025.5>
-- Kreiner, S. (2011). A Note on Item–Restscore Association in Rasch Models. 
-  *Applied Psychological Measurement, 35*(7), 557–561. <https://doi.org/10.1177/0146621611410227>
-- Mair P., Hatzinger R. (2007). Extended Rasch modeling: The eRm package for the application of IRT models in R. 
-  *Journal of Statistical Software, 20*. doi:10.18637/jss.v020.i09 <https://doi.org/10.18637/jss.v020.i09>.
-- Müller, M. (2020). Item fit statistics for Rasch analysis: Can we trust them? 
-  *Journal of Statistical Distributions and Applications, 7*(1), 5. 
+- Bignardi, G., Kievit, R., & Bürkner, P. C. (2025). A general method for
+  estimating reliability using Bayesian measurement uncertainty. PsyArXiv.
+  <https://doi.org/10.31234/osf.io/h54k8>
+- Chou, Y.-T., & Wang, W.-C. (2010). Checking dimensionality in item-response
+  models with principal component analysis on standardized residuals.
+  *Educational and Psychological Measurement, 70*(5), 717–731.
+  <https://doi.org/10.1177/0013164410379322>
+- Christensen, K. B., Makransky, G., & Horton, M. (2017). Critical values for
+  Yen's Q3: Identification of local dependence in the Rasch model using
+  residual correlations. *Applied Psychological Measurement, 41*(3), 178–194.
+  <https://doi.org/10.1177/0146621616677520>
+- Johansson, M. (2024). Simulation-based cutoff values for Rasch item fit and
+  residual correlations. <https://pgmj.github.io/simcutoffs.html>
+- Johansson, M. (2025). Detecting item misfit in Rasch models.
+  *Educational Methods & Psychometrics, 3*(18).
+  <https://doi.org/10.61186/emp.2025.5>
+- Kreiner, S. (2011). A note on item-restscore association in Rasch models.
+  *Applied Psychological Measurement, 35*(7), 557–561.
+  <https://doi.org/10.1177/0146621611410227>
+- Mair, P., & Hatzinger, R. (2007). Extended Rasch modeling: The eRm package
+  for the application of IRT models in R. *Journal of Statistical Software,
+  20*(9). <https://doi.org/10.18637/jss.v020.i09>
+- Müller, M. (2020). Item fit statistics for Rasch analysis: Can we trust them?
+  *Journal of Statistical Distributions and Applications, 7*(1), 5.
   <https://doi.org/10.1186/s40488-020-00108-7>
+- Rosseel, Y. (2012). lavaan: An R package for structural equation modeling.
+  *Journal of Statistical Software, 48*(2), 1–36.
+  <https://doi.org/10.18637/jss.v048.i02>
 
 
 ## Credits
 
-As stated, this is based on my `easyRasch` package, and I am using Claude Opus 4.6 
-to "transfer" functions to this more properly formatted package. While it uses my
-earlier code, most of the code in this package is produced by the LLM and bug fixed by me.
+This is largely based on my `easyRasch` package, and I am using Claude Opus 
+to "transfer" functions to a more properly formatted package - `easyRasch2` - 
+which is the foundation for all code in the Jamovi module. 
 
 [Magnus Johansson](https://ki.se/en/people/magnus-johansson-3) is a licensed 
 psychologist with a PhD in behavior analysis. He works as a research specialist 
