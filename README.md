@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 <a href="https://buymeacoffee.com/pgmj" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-<a href="https://doi.org/10.5281/zenodo.20136864"><img src="https://zenodo.org/badge/1199494308.svg" alt="DOI"></a>
+<a href="https://doi.org/10.5281/zenodo.20136864" target="_blank"><img src="https://zenodo.org/badge/1199494308.svg" alt="DOI"></a>
 <!-- badges: end -->
 
 A [Jamovi](https://www.jamovi.org/) module wrapping analysis logic from the
