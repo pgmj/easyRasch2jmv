@@ -1,3 +1,13 @@
+# easyRasch2jmv 0.4.1
+
+- Slight modification of the dynamic CFA cutoff to always rely on the scaled
+  metrics rather than using the robust metrics when available. In practice this
+  makes no difference, since the important thing is to use the same metric from 
+  the simulations as from the observed values to judge the fit. 
+  The change is for consistency and to make sure that one gets fit values from 
+  each iteration in the simulation, even with small samples. You may however 
+  note different actual metrics, but model flagging should be the same.
+
 # easyRasch2jmv 0.4.0
 
 - New function for testing unidimensionality with Confirmatory Factor Analysis

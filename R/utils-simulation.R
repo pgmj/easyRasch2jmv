@@ -572,21 +572,30 @@ run_observed_cfa_fit <- function(df, estimator) {
 
 #' Pull (CFI, RMSEA, SRMR) from a fitted lavaan object
 #'
-#' Detects whether the fit object carries robust/scaled fit-index
-#' variants (WLSMV / ULSMV / MLM / MLR all do; plain DWLS / WLS / ULS
-#' / ML do not) and uses the robust versions when available, otherwise
-#' falling back to the unscaled `cfi` / `rmsea`. SRMR is unaffected by
-#' the robust correction. The `estimator` argument is unused here -- we
-#' ask lavaan directly so the function works regardless of which
-#' estimator the user picked.
+#' Uses the Satorra-Bentler-scaled CFI / RMSEA (`cfi.scaled`,
+#' `rmsea.scaled`) when available, falling back to the uncorrected
+#' `cfi` / `rmsea` when not. Scaled variants are preferred over the
+#' Yuan-Bentler `.robust` variants because the latter return `NA` for a
+#' non-trivial fraction of small-n fits, which would produce holes in
+#' the simulated null distribution. For percentile-based comparison the
+#' binding requirement is internal consistency across iterations (same
+#' metric on both observed and simulated data), which `.scaled` provides
+#' more reliably. SRMR is unaffected by either correction.
 #'
 #' @noRd
 extract_cfa_fit <- function(fit, estimator = NULL) {
-  fm    <- lavaan::fitMeasures(fit)
-  names_fm <- names(fm)
-  cfi_name   <- if ("cfi.robust"   %in% names_fm) "cfi.robust"   else "cfi"
-  rmsea_name <- if ("rmsea.robust" %in% names_fm) "rmsea.robust" else "rmsea"
-  c(unname(fm[[cfi_name]]),
-    unname(fm[[rmsea_name]]),
-    unname(fm[["srmr"]]))
+  fm <- lavaan::fitMeasures(fit)
+  pick_scaled <- function(name) {
+    key_s <- paste0(name, ".scaled")
+    if (key_s %in% names(fm) && is.finite(fm[[key_s]])) {
+      return(as.numeric(fm[[key_s]]))
+    }
+    if (name %in% names(fm) && is.finite(fm[[name]])) {
+      return(as.numeric(fm[[name]]))
+    }
+    NA_real_
+  }
+  c(pick_scaled("cfi"),
+    pick_scaled("rmsea"),
+    as.numeric(fm[["srmr"]]))
 }
