@@ -311,7 +311,7 @@ cfacutoffClass <- R6::R6Class(
                      state$flagged[["srmr"]]),
         stringsAsFactors = FALSE
       )
-      obs_df$Color <- ifelse(obs_df$Flagged, "red", "sienna2")
+      obs_df$Color <- ifelse(obs_df$Flagged, "red", "black")
 
       cfi_pct_lbl <- 100 - state$percentile
       caption <- paste0(
@@ -339,7 +339,7 @@ cfacutoffClass <- R6::R6Class(
         ggplot2::geom_point(
           data = obs_df,
           ggplot2::aes(x = .data$Observed, colour = .data$Color),
-          y = 0, size = 4.5, shape = 18
+          y = 0, size = 6, shape = 18
         ) +
         ggplot2::scale_colour_identity() +
         ggplot2::facet_wrap(~ Index, scales = "free", nrow = 1) +
