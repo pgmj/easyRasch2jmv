@@ -411,7 +411,8 @@ residualpcaClass <- R6::R6Class(
         ggplot2::theme(
           plot.caption = ggplot2::element_text(size = 10),
           axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12))
+          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
+          legend.position = "none"
         ) +
         ggplot2::scale_color_viridis_d()
 

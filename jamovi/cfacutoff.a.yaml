@@ -43,9 +43,9 @@ options:
       title: Estimator
       type: List
       options:
-        - title: WLSMV (default; robust scaled)
+        - title: WLSMV (default; .scaled)
           name: WLSMV
-        - title: ULSMV (unweighted; least demanding)
+        - title: ULSMV (unweighted)
           name: ULSMV
       default: WLSMV
 

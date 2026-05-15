@@ -1,12 +1,16 @@
-# easyRasch2jmv 0.4.1
+# easyRasch2jmv 0.4.0.1
 
-- Slight modification of the dynamic CFA cutoff to always rely on the scaled
-  metrics rather than using the robust metrics when available. In practice this
-  makes no difference, since the important thing is to use the same metric from 
-  the simulations as from the observed values to judge the fit. 
+Only minor changes/fixes:
+
+- Slight modification of the dynamic CFA cutoff to always rely on the .scaled
+  metrics rather than using the .robust metrics when available. In practice this
+  makes little difference, since the important thing is to use the same metric from 
+  the simulations as from the observed values to evaluate model fit. 
   The change is for consistency and to make sure that one gets fit values from 
-  each iteration in the simulation, even with small samples. You may however 
-  note different actual metrics, but model flagging should be the same.
+  each iteration in the simulation, even with small samples. You may  
+  note different actual metrics reported compared to the earlier version, but 
+  model flagging should be the same.
+- Removed the color legend for PCA loadings/locations plot.
 
 # easyRasch2jmv 0.4.0
 
