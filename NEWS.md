@@ -1,4 +1,4 @@
-# easyRasch2jmv 0.4.0.1
+# easyRasch2jmv 0.4.1
 
 Only minor changes/fixes:
 
