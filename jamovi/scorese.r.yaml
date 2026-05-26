@@ -21,6 +21,7 @@ items:
           - name: logitScore
             title: Logit score
             type: number
+            format: zto
           - name: logitSE
             title: Logit std.error
             type: number

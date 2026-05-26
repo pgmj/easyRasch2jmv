@@ -33,4 +33,19 @@ items:
             type: number
             format: zto
 
+    - name: q3Plot
+      title: Simulated Q3 Distribution per Item Pair
+      type: Image
+      width: 500
+      height: 600
+      renderFun: .q3Plot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
+          - nPairs
+
 ...

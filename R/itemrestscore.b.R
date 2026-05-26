@@ -109,7 +109,7 @@ itemrestscoreClass <- R6::R6Class(
         }
       }
 
-      # Run analysis (logic inlined from easyRasch2::RMitemrestscore)
+      # Run analysis (logic inlined from easyRasch2::RMitemRestscore)
       tryCatch(
         {
           data_mat <- as.matrix(df)
@@ -148,23 +148,27 @@ itemrestscoreClass <- R6::R6Class(
           p_adjusted <- round(as.numeric(res_mat[seq_len(n_items), 5L]), 3)
           significance <- as.character(res_mat[seq_len(n_items), 6L])
 
-          # Assemble result data.frame
+          # Assemble result data.frame. `Difference` is signed (observed -
+          # expected): positive = item over-discriminates (often LD),
+          # negative = item under-discriminates (often noise / multi-dim).
           results <- data.frame(
-            Item                = names(df),
-            Observed            = observed,
-            Expected            = expected,
-            Absolute_difference = round(abs(expected - observed), 3),
-            p_adjusted          = p_adjusted,
-            Significance        = significance,
-            Location            = round(item_avg_locations, 2),
-            Relative_location   = round(relative_item_avg_locations, 2),
-            stringsAsFactors    = FALSE,
-            row.names           = NULL
+            Item              = names(df),
+            Observed          = observed,
+            Expected          = expected,
+            Difference        = round(observed - expected, 3),
+            p_adjusted        = p_adjusted,
+            Significance      = significance,
+            Location          = round(item_avg_locations, 2),
+            Relative_location = round(relative_item_avg_locations, 2),
+            stringsAsFactors  = FALSE,
+            row.names         = NULL
           )
 
-          # Sort if requested
+          # Sort by absolute magnitude when requested, so both over- and
+          # underfit items rise to the top while the signed value remains
+          # visible in the table.
           if (isTRUE(sort_by_diff)) {
-            results <- results[order(results$Absolute_difference, decreasing = TRUE), ]
+            results <- results[order(abs(results$Difference), decreasing = TRUE), ]
             rownames(results) <- NULL
           }
 
@@ -175,7 +179,7 @@ itemrestscoreClass <- R6::R6Class(
               item        = results$Item[i],
               observed    = results$Observed[i],
               expected    = results$Expected[i],
-              absDiff     = results$Absolute_difference[i],
+              difference  = results$Difference[i],
               pAdjusted   = results$p_adjusted[i],
               significance = results$Significance[i],
               location    = results$Location[i],

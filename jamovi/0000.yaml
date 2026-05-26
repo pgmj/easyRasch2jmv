@@ -1,12 +1,12 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 0.4.1
+version: 0.5.0
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-05-15'
+date: '2026-05-26'
 type: R
 description: >
   Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
@@ -25,8 +25,10 @@ analyses:
       Computes observed and model-expected item-restscore correlations using
       Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
       (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
-      then reports observed vs. expected restscore correlations, absolute
-      differences, adjusted p-values, and item locations.
+      then reports observed vs. expected restscore correlations, the signed
+      difference (observed minus expected; positive = over-discrimination /
+      often LD, negative = under-discrimination / often noise),
+      adjusted p-values, and item locations.
   - title: Q3 Residual Correlation Matrix
     name: locdepq3
     ns: easyRasch2jmv

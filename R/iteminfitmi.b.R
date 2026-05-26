@@ -541,7 +541,7 @@ iteminfitmiClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .runOneCutoffSim — RMinfitcutoff()-style sequential simulation on a
+    # .runOneCutoffSim — RMitemInfitCutoff()-style sequential simulation on a
     # single completed dataset, mirroring iteminfit.b.R$.runCutoffSim
     # ---------------------------------------------------------------------
     .runOneCutoffSim = function(data_complete, iterations, seed) {

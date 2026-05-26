@@ -10,8 +10,10 @@ description:
         Computes observed and model-expected item-restscore correlations using
         Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
         (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
-        then reports observed vs. expected restscore correlations, absolute
-        differences, adjusted p-values, and item locations.
+        then reports observed vs. expected restscore correlations, the signed
+        difference (observed minus expected; positive = over-discrimination /
+        often LD, negative = under-discrimination / often noise),
+        adjusted p-values, and item locations.
 
 options:
     - name: data
@@ -28,7 +30,7 @@ options:
           - numeric
 
     - name: sortByDiff
-      title: Sort by absolute difference
+      title: Sort by absolute difference (largest first)
       type: Bool
       default: false
 

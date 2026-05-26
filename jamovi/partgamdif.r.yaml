@@ -37,9 +37,12 @@ items:
           type: number
           format: zto
         - name: padjBH
-          title: Adjusted p (BH)
+          title: Adj. p-value (BH)
           type: number
           format: zto,pvalue
+        - name: sig
+          title: p-value sign.
+          type: text
         - name: gammaLow
           title: Gamma low
           type: number

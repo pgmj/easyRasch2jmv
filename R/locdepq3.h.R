@@ -9,7 +9,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             computeCutoff = FALSE,
             iterations = 100,
-            seed = 42, ...) {
+            seed = 42,
+            nPairs = 10, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -41,22 +42,31 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 seed,
                 default=42,
                 min=0)
+            private$..nPairs <- jmvcore::OptionInteger$new(
+                "nPairs",
+                nPairs,
+                default=10,
+                min=1,
+                max=50)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..computeCutoff)
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
+            self$.addOption(private$..nPairs)
         }),
     active = list(
         vars = function() private$..vars$value,
         computeCutoff = function() private$..computeCutoff$value,
         iterations = function() private$..iterations$value,
-        seed = function() private$..seed$value),
+        seed = function() private$..seed$value,
+        nPairs = function() private$..nPairs$value),
     private = list(
         ..vars = NA,
         ..computeCutoff = NA,
         ..iterations = NA,
-        ..seed = NA)
+        ..seed = NA,
+        ..nPairs = NA)
 )
 
 locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -64,7 +74,8 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     inherit = jmvcore::Group,
     active = list(
         q3Table = function() private$.items[["q3Table"]],
-        cutoffTable = function() private$.items[["cutoffTable"]]),
+        cutoffTable = function() private$.items[["cutoffTable"]],
+        q3Plot = function() private$.items[["q3Plot"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -107,7 +118,22 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `name`="value", 
                         `title`="Value", 
                         `type`="number", 
-                        `format`="zto"))))}))
+                        `format`="zto"))))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="q3Plot",
+                title="Simulated Q3 Distribution per Item Pair",
+                width=500,
+                height=600,
+                renderFun=".q3Plot",
+                visible="(computeCutoff)",
+                requiresData=TRUE,
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "seed",
+                    "nPairs")))}))
 
 locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "locdepq3Base",
@@ -142,10 +168,12 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param computeCutoff .
 #' @param iterations .
 #' @param seed .
+#' @param nPairs .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$q3Table} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$cutoffTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$q3Plot} \tab \tab \tab \tab \tab an image \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -160,7 +188,8 @@ locdepq3 <- function(
     vars,
     computeCutoff = FALSE,
     iterations = 100,
-    seed = 42) {
+    seed = 42,
+    nPairs = 10) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("locdepq3 requires jmvcore to be installed (restart may be required)")
@@ -176,7 +205,8 @@ locdepq3 <- function(
         vars = vars,
         computeCutoff = computeCutoff,
         iterations = iterations,
-        seed = seed)
+        seed = seed,
+        nPairs = nPairs)
 
     analysis <- locdepq3Class$new(
         options = options,

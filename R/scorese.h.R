@@ -118,7 +118,8 @@ scoreseResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="logitScore", 
                         `title`="Logit score", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="logitSE", 
                         `title`="Logit std.error", 

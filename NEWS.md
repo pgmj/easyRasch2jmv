@@ -1,3 +1,59 @@
+# easyRasch2jmv 0.5.0
+
+## Q3 residual correlations
+
+- Added a **per-pair Q3 simulation plot** to the Q3 analysis (visible
+  when *Compute simulation-based cutoff* is enabled), mirroring the
+  design of the conditional-infit MSQ plot: one row per item pair with
+  a `ggdist` dot cloud of the simulated null distribution, the
+  per-pair simulation median as a black dot, and the observed Q3 from
+  the mirt fit overlaid as an orange diamond. A dashed reference line
+  at 0 (Q3 = 0 = local independence) makes it easy to read pairs that
+  fall above the simulated null cloud.
+- New **Number of item pairs to plot** option (default 10). Pairs are
+  ranked by their *deviance from the simulated null*
+  (`|observed Q3 − median(simulated Q3 per pair)|`), with the
+  most-deviant pair at the top of the plot. Set higher to see more
+  pairs; set very high (e.g. 500) to see every pair.
+- The underlying simulation function now retains and aggregates
+  per-pair Q3 residuals across iterations (in addition to the
+  pre-existing `mean` / `max` scalars). The global cutoff scalar
+  (`p99` of `max − mean`) is unchanged.
+
+## Partial gamma DIF
+
+- Added a **p-value sign.** star-string column (`""` / `"."` / `"*"` /
+  `"**"` / `"***"`) sourced from `iarm::partgam_DIF()`, displayed
+  immediately after the adjusted p-value. Matches the convention used
+  by item-restscore output in this module.
+- Retitled `Adjusted p (BH)` → `Adj. p-value (BH)` for header
+  consistency with item-restscore.
+
+## Item-restscore
+
+- The `Abs. difference` column is now a *signed* `Difference`
+  (observed minus expected). Positive values indicate
+  over-discrimination (often associated with local dependence);
+  negative values indicate under-discrimination (often associated
+  with multidimensionality or noise). Sorting by *Sort by absolute
+  difference* still puts the largest-magnitude misfits at the top
+  but now lets you see the direction at a glance.
+
+## Decimal formatting (jamovi `format: zto`)
+
+- **Sum-score-to-Logit table** — `Logit score` column now uses jamovi's
+  `zto` format for consistent decimal-place display.
+- **Q3 residual correlation matrix** — the entire matrix now uses
+  `zto` formatting.
+- **Item-restscore** — the `Location` column now uses `zto` formatting.
+
+## Renaming alignment with easyRasch2 0.8.0
+
+- All internal calls to `easyRasch2::RM*()` were updated for the
+  upstream renaming in easyRasch2 0.8.0 (e.g. `RMpartgamDIF()` →
+  `RMdifGamma()`, `RMitemrestscore()` → `RMitemRestscore()`, etc.).
+  Jamovi UI labels and option names are unchanged.
+
 # easyRasch2jmv 0.4.1
 
 Only minor changes/fixes:

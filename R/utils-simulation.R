@@ -49,8 +49,12 @@ extract_item_thresholds <- function(data) {
 #' Run a single Q3 simulation iteration
 #'
 #' @param seed Integer seed for reproducibility.
-#' @param data_list List produced inside `.runCutoffSim()`.
-#' @return A list with `mean` and `max` Q3, or a character string on failure.
+#' @param data_list List produced inside `.runCutoffSim()`. Should include
+#'   `item_names` (character vector) so per-pair `pair_q3` rows are labelled
+#'   with the user's item names rather than mirt's auto V1/V2/... .
+#' @return A list with `mean`, `max`, and a long-format `pair_q3`
+#'   data.frame (one row per upper-triangle pair: `Item1`, `Item2`, `Q3`),
+#'   or a character string on failure.
 #' @noRd
 run_single_q3_sim <- function(seed, data_list) {
   set.seed(seed)
@@ -84,6 +88,13 @@ run_single_q3_sim <- function(seed, data_list) {
       }
     }
 
+    # Preserve the user's item labels so per-pair Q3 rows use them
+    # (rather than psychotools / mirt's auto-generated V1, V2, ...).
+    if (!is.null(data_list$item_names) &&
+        length(data_list$item_names) == ncol(sim_df)) {
+      colnames(sim_df) <- data_list$item_names
+    }
+
     mirt_fit <- mirt::mirt(
       sim_df,
       model    = 1,
@@ -100,7 +111,21 @@ run_single_q3_sim <- function(seed, data_list) {
     mean_q3 <- mean(q3_mat, na.rm = TRUE)
     max_q3  <- max(q3_mat,  na.rm = TRUE)
 
-    list(mean = mean_q3, max = max_q3)
+    # Per-pair Q3 (upper triangle, long format) for the per-pair plot.
+    item_names_q3 <- colnames(q3_mat)
+    if (is.null(item_names_q3)) {
+      item_names_q3 <- as.character(seq_len(ncol(q3_mat)))
+    }
+    upper_idx <- which(upper.tri(q3_mat), arr.ind = TRUE)
+    pair_q3 <- data.frame(
+      Item1 = item_names_q3[upper_idx[, "row"]],
+      Item2 = item_names_q3[upper_idx[, "col"]],
+      Q3    = q3_mat[upper_idx],
+      stringsAsFactors = FALSE,
+      row.names = NULL
+    )
+
+    list(mean = mean_q3, max = max_q3, pair_q3 = pair_q3)
   }, error = function(e) {
     as.character(conditionMessage(e))
   })

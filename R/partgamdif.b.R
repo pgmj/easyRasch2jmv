@@ -154,7 +154,9 @@ partgamdifClass <- R6::R6Class(
             se     = pgam_df$se[i],
             lower  = pgam_df$lower[i],
             upper  = pgam_df$upper[i],
-            padjBH = pgam_df$padj_bh[i]
+            padjBH = pgam_df$padj_bh[i],
+            # iarm's sig column is padded with leading spaces; trim for display.
+            sig    = trimws(pgam_df$sig[i])
           )
           if (!is.null(cutoff_res)) {
             vals$gammaLow  <- pgam_df$gamma_low[i]
@@ -263,7 +265,7 @@ partgamdifClass <- R6::R6Class(
     },
 
     .runCutoffSim = function(df, dif_vec) {
-      # Implements RMpgDIFcutoff() logic (sequential only)
+      # Implements RMdifGammaCutoff() logic (sequential only)
       hdci_width  <- self$options$hdciWidth / 100
       iterations  <- self$options$iterations
       seed        <- self$options$seed
@@ -465,7 +467,7 @@ partgamdifClass <- R6::R6Class(
     # Faceted tileplot of item × category response counts, faceted by
     # the DIF grouping variable. Diagnostic to inspect subgroup
     # response distributions before / alongside the DIF analysis.
-    # Mirrors easyRasch2::RMtileplot logic.
+    # Mirrors easyRasch2::RMplotTile logic.
     # ------------------------------------------------------------------
     .tileplot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)

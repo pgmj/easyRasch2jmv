@@ -206,7 +206,7 @@ cfacutoffClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .buildSimDataList -- inlined from easyRasch2::RMcfaCutoff
+    # .buildSimDataList -- inlined from easyRasch2::RMdimCFACutoff
     # ---------------------------------------------------------------------
     .buildSimDataList = function(df, estimator) {
       data_mat       <- as.matrix(df)

@@ -25,8 +25,8 @@ items:
             title: Expected value
             type: number
             format: zto
-          - name: absDiff
-            title: Abs. difference
+          - name: difference
+            title: Difference
             type: number
             format: zto
           - name: pAdjusted
@@ -39,6 +39,7 @@ items:
           - name: location
             title: Location
             type: number
+            format: zto
           - name: relLocation
             title: Rel. location
             type: number

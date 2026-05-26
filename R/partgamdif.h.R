@@ -173,9 +173,13 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `format`="zto"),
                     list(
                         `name`="padjBH", 
-                        `title`="Adjusted p (BH)", 
+                        `title`="Adj. p-value (BH)", 
                         `type`="number", 
                         `format`="zto,pvalue"),
+                    list(
+                        `name`="sig", 
+                        `title`="p-value sign.", 
+                        `type`="text"),
                     list(
                         `name`="gammaLow", 
                         `title`="Gamma low", 

@@ -215,7 +215,7 @@ iteminfitClass <- R6::R6Class(
     },
 
     .runCutoffSim = function(df) {
-      # Implements RMinfitcutoff() logic (sequential only)
+      # Implements RMitemInfitCutoff() logic (sequential only)
       hdci_width <- self$options$hdciWidth / 100
       iterations <- self$options$iterations
       seed <- self$options$seed

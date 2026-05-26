@@ -520,7 +520,7 @@ lrdifClass <- R6::R6Class(
     # Build per-(item x category x group) counts for the tileplot.
     # `df` is numeric, complete-cases item data; `dif_vec` is the
     # corresponding DIF variable values (length = nrow(df)).
-    # Mirrors easyRasch2::RMtileplot logic.
+    # Mirrors easyRasch2::RMplotTile logic.
     # ------------------------------------------------------------------
     .computeTileCounts = function(df, dif_vec) {
       item_names <- names(df)
@@ -580,7 +580,7 @@ lrdifClass <- R6::R6Class(
 
     # ------------------------------------------------------------------
     # .tileplot -- faceted tile of item x category response counts,
-    # faceted by the DIF grouping variable. Mirrors RMtileplot.
+    # faceted by the DIF grouping variable. Mirrors RMplotTile.
     # ------------------------------------------------------------------
     .tileplot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)

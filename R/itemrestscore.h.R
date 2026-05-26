@@ -94,8 +94,8 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `type`="number", 
                         `format`="zto"),
                     list(
-                        `name`="absDiff", 
-                        `title`="Abs. difference", 
+                        `name`="difference", 
+                        `title`="Difference", 
                         `type`="number", 
                         `format`="zto"),
                     list(
@@ -110,7 +110,8 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     list(
                         `name`="location", 
                         `title`="Location", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="relLocation", 
                         `title`="Rel. location", 
@@ -142,8 +143,10 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Computes observed and model-expected item-restscore correlations using
 #' Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
 #' (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
-#' then reports observed vs. expected restscore correlations, absolute
-#' differences, adjusted p-values, and item locations.
+#' then reports observed vs. expected restscore correlations, the signed
+#' difference (observed minus expected; positive = over-discrimination /
+#' often LD, negative = under-discrimination / often noise),
+#' adjusted p-values, and item locations.
 #' 
 #' @param data .
 #' @param vars .

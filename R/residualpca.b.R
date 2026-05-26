@@ -80,7 +80,7 @@ residualpcaClass <- R6::R6Class(
       options(rgl.useNULL = TRUE)
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-      # 4. Run analysis (logic inlined from easyRasch2::RMresidualPCA)
+      # 4. Run analysis (logic inlined from easyRasch2::RMdimResidualPCA)
       tryCatch({
         pca_res <- private$.runResidualPCA(df_complete, n_components)
 
@@ -172,7 +172,7 @@ residualpcaClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .runResidualPCA  -- inlined from easyRasch2::RMresidualPCA()
+    # .runResidualPCA  -- inlined from easyRasch2::RMdimResidualPCA()
     # ---------------------------------------------------------------------
     .runResidualPCA = function(df, n_components) {
 
@@ -294,7 +294,7 @@ residualpcaClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .runCutoffSim  -- inlined from easyRasch2::RMpcaCutoff()
+    # .runCutoffSim  -- inlined from easyRasch2::RMdimResidualPCACutoff()
     # ---------------------------------------------------------------------
     .runCutoffSim = function(df, iterations, seed) {
       if (!is.null(seed)) set.seed(seed)

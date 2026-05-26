@@ -305,7 +305,7 @@ bootrestscoreClass <- R6::R6Class(
 )
 
 # ---------------------------------------------------------------------------
-# Internal helpers (mirror easyRasch2::RMbootRestscore internals)
+# Internal helpers (mirror easyRasch2::RMitemRestscoreBoot internals)
 # ---------------------------------------------------------------------------
 
 #' Run a single item-restscore bootstrap iteration

@@ -18,7 +18,7 @@ locdepq3Class <- R6::R6Class(
 
       q3_table$addColumn(name = "item", title = "", type = "text")
       for (v in vars) {
-        q3_table$addColumn(name = v, title = v, type = "number")
+        q3_table$addColumn(name = v, title = v, type = "number", format = "zto")
       }
       if (isTRUE(self$options$computeCutoff)) {
         q3_table$addColumn(name = "above_cutoff", title = "Above cutoff", type = "text")
@@ -147,6 +147,31 @@ locdepq3Class <- R6::R6Class(
             }
           }
 
+          # --- Step 3b: Save state for the per-pair Q3 plot ----------------------
+          if (compute_cutoff) {
+            # Build observed_pair_df from the upper-triangle of the observed
+            # mirt-fitted Q3 matrix, matching the pair labels used in the
+            # simulated pair_results.
+            obs_upper <- which(upper.tri(resid_mat), arr.ind = TRUE)
+            observed_pair_df <- data.frame(
+              Item1       = colnames(resid_mat)[obs_upper[, "row"]],
+              Item2       = colnames(resid_mat)[obs_upper[, "col"]],
+              observed_Q3 = resid_mat[obs_upper],
+              stringsAsFactors = FALSE
+            )
+            observed_pair_df$Pair <- paste(observed_pair_df$Item1, "-",
+                                           observed_pair_df$Item2)
+
+            self$results$q3Plot$setState(list(
+              pair_results      = cutoff_res$pair_results,
+              actual_iterations = cutoff_res$actual_iterations,
+              sample_n          = cutoff_res$sample_n,
+              n_complete        = n_complete,
+              observed_pair_df  = observed_pair_df,
+              n_pairs           = self$options$nPairs
+            ))
+          }
+
           # --- Step 4: Populate the Q3 table (structure set up in .init()) --------
           q3_table <- self$results$q3Table
 
@@ -200,6 +225,11 @@ locdepq3Class <- R6::R6Class(
       sample_n  <- nrow(data_mat)
       is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
 
+      item_names_vec <- colnames(data_mat)
+      if (is.null(item_names_vec)) {
+        item_names_vec <- paste0("V", seq_len(ncol(data_mat)))
+      }
+
       if (is_polytomous) {
         pcm_fit     <- eRm::PCM(data_mat)
         pp          <- eRm::person.parameter(pcm_fit)
@@ -211,11 +241,12 @@ locdepq3Class <- R6::R6Class(
           as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
         })
         sim_data_list <- list(
-          type      = "polytomous",
-          thetas    = thetas,
+          type       = "polytomous",
+          thetas     = thetas,
           deltaslist = deltaslist,
-          n_items   = ncol(data_mat),
-          sample_n  = sample_n
+          n_items    = ncol(data_mat),
+          sample_n   = sample_n,
+          item_names = item_names_vec
         )
       } else {
         rm_fit      <- eRm::RM(data_mat)
@@ -229,7 +260,8 @@ locdepq3Class <- R6::R6Class(
           thetas      = thetas,
           item_params = item_params,
           n_items     = ncol(data_mat),
-          sample_n    = sample_n
+          sample_n    = sample_n,
+          item_names  = item_names_vec
         )
       }
 
@@ -255,9 +287,20 @@ locdepq3Class <- R6::R6Class(
       max_q3  <- vapply(successful, function(x) x$max,  numeric(1L))
       diff_q3 <- max_q3 - mean_q3
 
+      # Per-pair aggregation: stack pair_q3 frames + add iteration index
+      pair_iter_dfs <- lapply(seq_along(successful), function(i) {
+        d <- successful[[i]]$pair_q3
+        d$iteration <- i
+        d
+      })
+      pair_results <- do.call(rbind, pair_iter_dfs)
+      rownames(pair_results) <- NULL
+
       list(
         actual_iterations = actual_iterations,
         sample_n          = sample_n,
+        item_names        = item_names_vec,
+        pair_results      = pair_results,
         max_diff          = max(diff_q3),
         sd_diff           = stats::sd(diff_q3),
         p95               = stats::quantile(diff_q3, 0.95),
@@ -266,6 +309,141 @@ locdepq3Class <- R6::R6Class(
         p999              = stats::quantile(diff_q3, 0.999),
         suggested_cutoff  = stats::quantile(diff_q3, 0.99)
       )
+    },
+
+    # ---------------------------------------------------------------------
+    # Per-pair Q3 simulation plot — mirrors iteminfit's plot design
+    # (ggdist::stat_dots dot cloud + black per-pair median + orange diamonds
+    # for the observed Q3 from the mirt fit).
+    # ---------------------------------------------------------------------
+    .q3Plot = function(image, ggtheme, theme, ...) {
+      if (is.null(image$state)) return(FALSE)
+
+      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
+      if (!requireNamespace("ggdist", quietly = TRUE))  return(FALSE)
+      if (!requireNamespace("scales", quietly = TRUE))  return(FALSE)
+
+      state <- image$state
+      pair_results      <- state$pair_results
+      actual_iterations <- state$actual_iterations
+      sample_n          <- state$sample_n
+      n_complete        <- state$n_complete
+      observed_pair_df  <- state$observed_pair_df   # data.frame: Pair, observed_Q3
+      n_pairs           <- state$n_pairs            # NULL or positive integer
+
+      pair_results$Pair <- paste(pair_results$Item1, "-", pair_results$Item2)
+
+      # --- Top-N filter by |observed Q3 - median(simulated Q3 per pair)| -------
+      # Mirrors RMlocdepGammaPlot's ranking: rank pairs by how far the observed
+      # value lies from the simulation null, keep the top N, and order the
+      # y-axis so the most-deviant pair sits at the top of the plot.
+      if (is.numeric(n_pairs) && length(n_pairs) == 1L && n_pairs >= 1L) {
+        n_pairs <- as.integer(n_pairs)
+        pair_names_all <- unique(pair_results$Pair)
+        med_sim <- vapply(pair_names_all, function(pp) {
+          stats::median(pair_results$Q3[pair_results$Pair == pp], na.rm = TRUE)
+        }, numeric(1L))
+        obs_lookup <- stats::setNames(observed_pair_df$observed_Q3,
+                                      observed_pair_df$Pair)
+        deviation  <- abs(obs_lookup[pair_names_all] - med_sim[pair_names_all])
+        ord        <- order(deviation, decreasing = TRUE)
+        keep_n     <- min(n_pairs, length(pair_names_all))
+        keep_pairs <- pair_names_all[ord[seq_len(keep_n)]]
+
+        pair_results     <- pair_results[pair_results$Pair %in% keep_pairs, ,
+                                         drop = FALSE]
+        observed_pair_df <- observed_pair_df[observed_pair_df$Pair %in%
+                                             keep_pairs, , drop = FALSE]
+        pair_levels      <- rev(keep_pairs)  # largest deviation at the top
+      } else {
+        pair_levels <- rev(unique(pair_results$Pair))
+      }
+
+      lo_hi <- do.call(rbind, lapply(unique(pair_results$Pair), function(pp) {
+        sub <- pair_results[pair_results$Pair == pp, ]
+        data.frame(
+          Pair      = pp,
+          min_q3    = stats::quantile(sub$Q3, 0.001, na.rm = TRUE),
+          max_q3    = stats::quantile(sub$Q3, 0.999, na.rm = TRUE),
+          p66lo_q3  = stats::quantile(sub$Q3, 0.167, na.rm = TRUE),
+          p66hi_q3  = stats::quantile(sub$Q3, 0.833, na.rm = TRUE),
+          median_q3 = stats::median  (sub$Q3,         na.rm = TRUE),
+          stringsAsFactors = FALSE, row.names = NULL
+        )
+      }))
+      lo_hi$Pair_f <- factor(lo_hi$Pair, levels = pair_levels)
+
+      q3_sim <- data.frame(
+        Pair  = pair_results$Pair,
+        Value = pair_results$Q3,
+        stringsAsFactors = FALSE
+      )
+      q3_sim <- merge(q3_sim, observed_pair_df[, c("Pair", "observed_Q3")],
+                      by = "Pair", sort = FALSE)
+      q3_sim$Pair <- factor(q3_sim$Pair, levels = pair_levels)
+
+      caption_text <- paste0(
+        "Note: Observed and simulated Q3 are based on n = ",
+        if (!is.null(n_complete)) n_complete else sample_n,
+        " complete responses.\n",
+        "Simulated distributions: ", actual_iterations,
+        " parametric-bootstrap datasets using the same n.\n",
+        "Orange diamonds: observed Q3. Black dots: simulation median."
+      )
+
+      p <- ggplot2::ggplot(q3_sim, ggplot2::aes(x = .data$Value, y = .data$Pair)) +
+        ggdist::stat_dots(
+          ggplot2::aes(slab_fill = ggplot2::after_stat(.data$level)),
+          quantiles  = actual_iterations,
+          layout     = "weave",
+          slab_color = NA,
+          .width     = c(0.666, 0.999)
+        ) +
+        ggplot2::geom_segment(
+          data = lo_hi,
+          ggplot2::aes(x = .data$min_q3, xend = .data$max_q3,
+                       y = .data$Pair_f, yend = .data$Pair_f),
+          color = "black", linewidth = 0.7
+        ) +
+        ggplot2::geom_segment(
+          data = lo_hi,
+          ggplot2::aes(x = .data$p66lo_q3, xend = .data$p66hi_q3,
+                       y = .data$Pair_f, yend = .data$Pair_f),
+          color = "black", linewidth = 1.2
+        ) +
+        ggplot2::geom_point(
+          data = lo_hi,
+          ggplot2::aes(x = .data$median_q3, y = .data$Pair_f),
+          size = 3.6
+        ) +
+        ggplot2::geom_point(
+          ggplot2::aes(x = .data$observed_Q3),
+          color = "sienna2", shape = 18,
+          position = ggplot2::position_nudge(y = -0.1),
+          size = 7
+        ) +
+        ggplot2::geom_vline(
+          xintercept = 0,
+          linetype   = "dashed",
+          color      = "grey50",
+          linewidth  = 0.4
+        ) +
+        ggplot2::labs(x = "Q3 residual correlation", y = "Item pair",
+                      caption = caption_text) +
+        ggplot2::scale_color_manual(
+          values     = scales::brewer_pal()(3)[-1],
+          aesthetics = "slab_fill", guide = "none"
+        ) +
+        ggplot2::theme_minimal(base_size = 15) +
+        ggplot2::theme(
+          panel.spacing = ggplot2::unit(0.7, "cm"),
+          plot.caption  = ggplot2::element_text(size = 11),
+          axis.title.x  = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
+          axis.title.y  = ggplot2::element_text(margin = ggplot2::margin(r = 12))
+        )
+
+      print(p)
+      TRUE
     }
   )
 )
