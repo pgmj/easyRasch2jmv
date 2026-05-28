@@ -314,7 +314,7 @@ cfacutoffClass <- R6::R6Class(
       obs_df$Color <- ifelse(obs_df$Flagged, "red", "black")
 
       cfi_pct_lbl <- 100 - state$percentile
-      caption <- paste0(
+      caption <- er2_caption(paste0(
         "Histograms: ", state$actual_iterations,
         " parametric-bootstrap datasets simulated under ",
         if (state$is_polytomous) "PCM" else "RM",
@@ -325,7 +325,7 @@ cfacutoffClass <- R6::R6Class(
         "th percentile in the unfavourable direction).\n",
         "Dashed line: cutoff (CFI: ", round(cfi_pct_lbl, 1),
         "th pct; RMSEA / SRMR: ", state$percentile, "th pct)."
-      )
+      ))
 
       p <- ggplot2::ggplot(sim_long,
                            ggplot2::aes(x = .data$Value)) +
@@ -349,11 +349,8 @@ cfacutoffClass <- R6::R6Class(
           caption = caption
         ) +
         ggplot2::theme_bw(base_size = 13) +
-        ggplot2::theme(
-          plot.caption = ggplot2::element_text(hjust = 0, size = 9),
-          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12))
-        )
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

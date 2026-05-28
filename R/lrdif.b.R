@@ -448,18 +448,17 @@ lrdifClass <- R6::R6Class(
       plot_df    <- plot_df[plot_df$DIFgroup %in% groups, , drop = FALSE]
       plot_df$DIFgroup <- factor(plot_df$DIFgroup, levels = groups)
 
-      caption <- paste0(
+      caption <- er2_caption(paste0(
         "Error bars: ", round(conf * 100), "% CI. ",
         "n = ", state$n_complete, "."
-      )
+      ))
 
       base_theme <- ggplot2::theme_bw(base_size = 15) +
         ggplot2::theme(
-          legend.position = "none",
-          plot.caption    = ggplot2::element_text(hjust = 0),
-          axis.title.x    = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y    = ggplot2::element_text(margin = ggplot2::margin(r = 12))
-        )
+          legend.position = "none"
+        ) +
+        er2_axis_margins() +
+        er2_plot_caption()
 
       if (level == "item") {
         p <- ggplot2::ggplot(
@@ -633,10 +632,9 @@ lrdifClass <- R6::R6Class(
         ggplot2::theme(
           axis.text.x   = ggplot2::element_text(size = 10),
           panel.grid    = ggplot2::element_blank(),
-          axis.title.x  = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y  = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
           panel.spacing = ggplot2::unit(0.7, "cm")
-        )
+        ) +
+        er2_axis_margins()
 
       print(p)
       TRUE

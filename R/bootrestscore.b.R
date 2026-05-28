@@ -263,11 +263,11 @@ bootrestscoreClass <- R6::R6Class(
       d$item_restscore <- factor(d$item_restscore,
                                  levels = c("overfit", "underfit", "no misfit"))
 
-      caption_text <- paste0(
-        "Note: ", state$actual_iterations,
+      caption_text <- er2_caption(paste0(
+        state$actual_iterations,
         " bootstrap iterations with n = ", state$samplesize_used, " per draw.\n",
         "Each point is one iteration; colour = per-iteration classification (BH-adj. p < .05)."
-      )
+      ))
 
       p <- ggplot2::ggplot(
         d,
@@ -294,9 +294,10 @@ bootrestscoreClass <- R6::R6Class(
         ) +
         ggplot2::theme_minimal(base_size = 13) +
         ggplot2::theme(
-          axis.text.x  = ggplot2::element_text(angle = 45, hjust = 1),
-          plot.caption = ggplot2::element_text(size = 10)
-        )
+          axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
+        ) +
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

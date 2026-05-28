@@ -81,13 +81,15 @@ targetingClass <- R6::R6Class(
           erm_out <- eRm::PCM(df)
         }
 
-        # Extract item thresholds (CML approach, no SE needed for table)
+        # Extract item thresholds and per-threshold SEs (for optional CI bars)
         if (is_dicho) {
           item_locs <- stats::coef(erm_out, "beta") * -1
+          item_ses  <- erm_out$se.beta
           item_thresholds <- data.frame(
             Item      = item_names,
             Threshold = "T1",
             Location  = as.numeric(item_locs),
+            SE        = as.numeric(item_ses),
             stringsAsFactors = FALSE
           )
         } else {
@@ -104,8 +106,13 @@ targetingClass <- R6::R6Class(
           grand_mean   <- mean(as.numeric(as.matrix(thresh_table)), na.rm = TRUE)
           thresh_table <- thresh_table - grand_mean
 
-          # Build long-format data.frame
+          # thresh_obj$se.thresh is a flat numeric vector matching
+          # thresh_obj$threshpar (one SE per threshold, item-major)
+          se_vec <- thresh_obj$se.thresh
+
+          # Build long-format data.frame with per-threshold SE
           thresh_list <- vector("list", nrow(thresh_table))
+          se_idx <- 1L
           for (i in seq_len(nrow(thresh_table))) {
             vals     <- thresh_table[i, ]
             non_na   <- !is.na(vals)
@@ -114,11 +121,27 @@ targetingClass <- R6::R6Class(
               Item      = item_names[i],
               Threshold = paste0("T", seq_len(n_thresh)),
               Location  = as.numeric(vals[non_na]),
+              SE        = as.numeric(se_vec[se_idx:(se_idx + n_thresh - 1L)]),
               stringsAsFactors = FALSE
             )
+            se_idx <- se_idx + n_thresh
           }
           item_thresholds <- do.call(rbind, thresh_list)
           rownames(item_thresholds) <- NULL
+        }
+
+        # Compute CI bounds for thresholds (Location +/- z * SE).
+        # `show_ci` is FALSE if the user turned it off or if any SE is
+        # NA / non-finite (which can happen for degenerate items).
+        ci_level <- self$options$ciLevel / 100
+        show_ci  <- isTRUE(self$options$showCi) &&
+                    all(is.finite(item_thresholds$SE))
+        if (show_ci) {
+          z_val <- stats::qnorm(1 - (1 - ci_level) / 2)
+          item_thresholds$CI_low  <- item_thresholds$Location - z_val *
+                                     item_thresholds$SE
+          item_thresholds$CI_high <- item_thresholds$Location + z_val *
+                                     item_thresholds$SE
         }
 
         # Person parameters
@@ -132,8 +155,14 @@ targetingClass <- R6::R6Class(
         robust     <- self$options$robust
         sort_items <- self$options$sortItems
 
-        # Auto-expand xlim
+        # Auto-expand xlim --- include CI bounds if shown so error bars
+        # don't get clipped at the plot edge
         all_values <- c(person_theta, item_thresholds$Location)
+        if (show_ci) {
+          all_values <- c(all_values,
+                          item_thresholds$CI_low,
+                          item_thresholds$CI_high)
+        }
         if (max(all_values, na.rm = TRUE) > xlim[2]) {
           xlim[2] <- ceiling(max(all_values, na.rm = TRUE))
         }
@@ -152,6 +181,8 @@ targetingClass <- R6::R6Class(
           item_names      = item_names,
           n_items         = n_items,
           is_dicho        = is_dicho,
+          show_ci         = show_ci,
+          ci_level        = ci_level,
           n_persons       = nrow(df)
         ))
 
@@ -188,6 +219,8 @@ targetingClass <- R6::R6Class(
       n_items         <- state$n_items
       is_dicho        <- state$is_dicho
       n_persons       <- state$n_persons
+      show_ci         <- isTRUE(state$show_ci)
+      ci_level        <- state$ci_level
 
       person_fill    <- "#0072B2"
       threshold_fill <- "#D55E00"
@@ -257,7 +290,8 @@ targetingClass <- R6::R6Class(
           axis.text.x  = ggplot2::element_blank(),
           axis.ticks.x = ggplot2::element_blank(),
           plot.margin  = ggplot2::margin(5, 5, 0, 5)
-        )
+        ) +
+        er2_axis_margins()
 
       # MIDDLE PANEL: Inverted threshold histogram
       thresh_hist_df <- data.frame(location = item_thresholds$Location)
@@ -300,26 +334,46 @@ targetingClass <- R6::R6Class(
           axis.ticks.x = ggplot2::element_blank(),
           axis.ticks.y = ggplot2::element_blank(),
           plot.margin  = ggplot2::margin(0, 5, 0, 5)
-        )
+        ) +
+        er2_axis_margins()
 
       # BOTTOM PANEL: Item threshold dot plot
       item_thresholds$Item <- factor(item_thresholds$Item, levels = item_order)
 
-      caption_text <- paste0(
+      ci_caption <- if (show_ci) {
+        paste0(" Horizontal error bars show ", round(ci_level * 100),
+               "% CIs around item threshold locations.")
+      } else {
+        ""
+      }
+      caption_text <- er2_caption(paste0(
         "Person location ", tolower(center_label), ": ",
         round(p_center, 2), " (", spread_label, " ",
         round(p_spread, 2), "). Item threshold location ",
         tolower(center_label), ": ",
         round(t_center, 2), " (", spread_label, " ",
-        round(t_spread, 2), "). n = ", n_persons, "."
-      )
+        round(t_spread, 2), "). n = ", n_persons, ".",
+        ci_caption
+      ))
 
       if (is_dicho) {
         p3 <- ggplot2::ggplot(
           item_thresholds,
           ggplot2::aes(x = .data$Location, y = .data$Item)
-        ) +
-          ggplot2::geom_point(size = 9, colour = threshold_fill, shape = 18) +
+        )
+
+        # CI error bars drawn first so the diamond points sit on top
+        if (show_ci) {
+          p3 <- p3 +
+            ggplot2::geom_errorbar(
+              ggplot2::aes(xmin = .data$CI_low, xmax = .data$CI_high),
+              width = 0.25, linewidth = 0.5, colour = threshold_fill,
+              orientation = "y"
+            )
+        }
+
+        p3 <- p3 +
+          ggplot2::geom_point(size = 6, colour = threshold_fill, shape = 18) +
           ggplot2::coord_cartesian(xlim = xlim) +
           ggplot2::scale_x_continuous(breaks = scales::breaks_pretty(8)) +
           ggplot2::labs(
@@ -329,9 +383,10 @@ targetingClass <- R6::R6Class(
           ) +
           ggplot2::theme_bw(base_size = 15) +
           ggplot2::theme(
-            plot.caption = ggplot2::element_text(hjust = 0),
-            plot.margin  = ggplot2::margin(0, 5, 5, 5)
-          )
+            plot.margin = ggplot2::margin(0, 5, 5, 5)
+          ) +
+          er2_axis_margins() +
+          er2_plot_caption()
       } else {
         p3 <- ggplot2::ggplot(
           item_thresholds,
@@ -340,9 +395,24 @@ targetingClass <- R6::R6Class(
             y      = .data$Item,
             colour = .data$Threshold
           )
-        ) +
+        )
+
+        # CI error bars drawn first, dodged by Threshold so bars from
+        # different thresholds for the same item don't overlap. Matches
+        # the dodge width used by geom_point() below.
+        if (show_ci) {
+          p3 <- p3 +
+            ggplot2::geom_errorbar(
+              ggplot2::aes(xmin = .data$CI_low, xmax = .data$CI_high),
+              width = 0.25, linewidth = 0.5,
+              position = ggplot2::position_dodge(width = 0.4),
+              orientation = "y"
+            )
+        }
+
+        p3 <- p3 +
           ggplot2::geom_point(
-            size     = 6.5, shape = 18,
+            size     = 6, shape = 18,
             position = ggplot2::position_dodge(width = 0.4)
           ) +
           ggplot2::scale_colour_viridis_d(end = 0.9) +
@@ -357,9 +427,10 @@ targetingClass <- R6::R6Class(
           ggplot2::theme_bw(base_size = 15) +
           ggplot2::theme(
             legend.position = "bottom",
-            plot.caption    = ggplot2::element_text(hjust = 0),
             plot.margin     = ggplot2::margin(0, 5, 5, 5)
-          )
+          ) +
+          er2_axis_margins() +
+          er2_plot_caption()
       }
 
       print(p1 / p2 / p3 + patchwork::plot_layout(heights = c(3, 2, 5)))

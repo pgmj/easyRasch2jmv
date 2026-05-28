@@ -666,13 +666,13 @@ iteminfitmiClass <- R6::R6Class(
       infit_sim$Item <- factor(infit_sim$Item, levels = item_levels)
       lo_hi$Item_f   <- factor(lo_hi$Item, levels = item_levels)
 
-      caption_text <- paste0(
-        "Note: Stacked results from ", actual_iterations,
+      caption_text <- er2_caption(paste0(
+        "Stacked results from ", actual_iterations,
         " simulated datasets across ", n_imputations,
         " imputations (n = ", sample_n, " per dataset).\n",
         "Orange dots indicate the pooled (Rubin's rules) observed infit.\n",
         "Black dots indicate median fit from simulations."
-      )
+      ))
 
       p <- ggplot2::ggplot(infit_sim,
                            ggplot2::aes(x = .data$Value, y = .data$Item)) +
@@ -715,8 +715,9 @@ iteminfitmiClass <- R6::R6Class(
         ggplot2::scale_x_continuous(breaks = seq(0.5, 1.5, 0.1),
                                     minor_breaks = NULL) +
         ggplot2::theme_minimal(base_size = 15) +
-        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm"),
-                       plot.caption  = ggplot2::element_text(size = 11))
+        ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm")) +
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

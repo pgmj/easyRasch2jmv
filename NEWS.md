@@ -1,3 +1,36 @@
+# easyRasch2jmv 0.5.1
+
+## Targeting plot
+
+- The bottom panel (item threshold locations) now optionally shows
+  horizontal **confidence intervals** around each threshold, mirroring
+  the behaviour of `easyRasch2::RMtargeting()`. New options:
+  * **Show CIs around item threshold locations** (default: on).
+  * **Confidence level (%)** (default: 95).
+  Polytomous items get CI bars dodged per threshold so they don't
+  overlap. The x-axis auto-expands to include the CI endpoints, and
+  the caption gains a note describing the CI width. SEs come from
+  `eRm`: `erm_out$se.beta` for dichotomous, `thresholds(fit)$se.thresh`
+  for polytomous.
+
+## Visual consistency with easyRasch2
+
+- All ggplot output now uses three shared internal theme helpers
+  (`er2_axis_margins()`, `er2_plot_caption()`, and `er2_caption()`)
+  that mirror what `easyRasch2` itself applies to its R-package plots.
+  Net effect for jamovi users:
+  * Every plot has the same extra breathing room around the x and y
+    axis titles.
+  * Every figure caption renders left-aligned, italic, at 10 pt with a
+    "Note. " prefix.
+  * Long captions are wrapped at 90 characters via `strwrap()` so they
+    no longer run off the right edge of the plot (this fixes a
+    cut-off caption that was visible on the conditional-infit plot in
+    earlier versions).
+- Figure captions changed their prefix from "Note: ..." (colon) to the
+  APA-conventional "Note. ". The body text of each
+  caption is unchanged.
+
 # easyRasch2jmv 0.5.0
 
 ## Q3 residual correlations

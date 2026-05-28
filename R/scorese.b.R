@@ -221,7 +221,7 @@ scoreseClass <- R6::R6Class(
       # Drop boundary rows where SE is NA so the figure stays clean
       d <- d[is.finite(d$logit_score) & !is.na(d$logit_se), , drop = FALSE]
 
-      caption_text <- paste0(
+      caption_text <- er2_caption(paste0(
         if (state$method == "WLE") {
           "Warm's WLE (CML, eRm)."
         } else {
@@ -230,7 +230,7 @@ scoreseClass <- R6::R6Class(
         " Error bars: ±", state$ci_multiplier,
         " × logit SE. n = ", state$n_complete,
         " complete responses."
-      )
+      ))
 
       p <- ggplot2::ggplot(
         d,
@@ -248,7 +248,8 @@ scoreseClass <- R6::R6Class(
           caption = caption_text
         ) +
         ggplot2::theme_bw(base_size = 14) +
-        ggplot2::theme(plot.caption = ggplot2::element_text(size = 10))
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

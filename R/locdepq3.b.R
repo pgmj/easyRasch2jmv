@@ -382,14 +382,14 @@ locdepq3Class <- R6::R6Class(
                       by = "Pair", sort = FALSE)
       q3_sim$Pair <- factor(q3_sim$Pair, levels = pair_levels)
 
-      caption_text <- paste0(
-        "Note: Observed and simulated Q3 are based on n = ",
+      caption_text <- er2_caption(paste0(
+        "Observed and simulated Q3 are based on n = ",
         if (!is.null(n_complete)) n_complete else sample_n,
         " complete responses.\n",
         "Simulated distributions: ", actual_iterations,
         " parametric-bootstrap datasets using the same n.\n",
         "Orange diamonds: observed Q3. Black dots: simulation median."
-      )
+      ))
 
       p <- ggplot2::ggplot(q3_sim, ggplot2::aes(x = .data$Value, y = .data$Pair)) +
         ggdist::stat_dots(
@@ -436,11 +436,10 @@ locdepq3Class <- R6::R6Class(
         ) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(
-          panel.spacing = ggplot2::unit(0.7, "cm"),
-          plot.caption  = ggplot2::element_text(size = 11),
-          axis.title.x  = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y  = ggplot2::element_text(margin = ggplot2::margin(r = 12))
-        )
+          panel.spacing = ggplot2::unit(0.7, "cm")
+        ) +
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

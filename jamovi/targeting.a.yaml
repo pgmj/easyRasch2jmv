@@ -53,4 +53,16 @@ options:
       default: 4
       min: 0
       max: 10
+
+    - name: showCi
+      title: Show CIs around item threshold locations
+      type: Bool
+      default: true
+
+    - name: ciLevel
+      title: Confidence level (%)
+      type: Number
+      default: 95
+      min: 50
+      max: 99.9
 ...

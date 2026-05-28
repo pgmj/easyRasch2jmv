@@ -405,15 +405,14 @@ residualpcaClass <- R6::R6Class(
         ggplot2::labs(
           x       = "Loading on first residual contrast (PC1)",
           y       = "Item location (logit scale)",
-          caption = state$variance_text
+          caption = er2_caption(state$variance_text)
         ) +
         ggplot2::theme_bw(base_size = 15) +
         ggplot2::theme(
-          plot.caption = ggplot2::element_text(size = 10),
-          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
           legend.position = "none"
         ) +
+        er2_axis_margins() +
+        er2_plot_caption() +
         ggplot2::scale_color_viridis_d()
 
       if (isTRUE(state$coord_flip)) {

@@ -11,7 +11,9 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             sortItems = "data",
             bins = 15,
             xlimLow = -4,
-            xlimHigh = 4, ...) {
+            xlimHigh = 4,
+            showCi = TRUE,
+            ciLevel = 95, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -56,6 +58,16 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 default=4,
                 min=0,
                 max=10)
+            private$..showCi <- jmvcore::OptionBool$new(
+                "showCi",
+                showCi,
+                default=TRUE)
+            private$..ciLevel <- jmvcore::OptionNumber$new(
+                "ciLevel",
+                ciLevel,
+                default=95,
+                min=50,
+                max=99.9)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..robust)
@@ -63,6 +75,8 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..bins)
             self$.addOption(private$..xlimLow)
             self$.addOption(private$..xlimHigh)
+            self$.addOption(private$..showCi)
+            self$.addOption(private$..ciLevel)
         }),
     active = list(
         vars = function() private$..vars$value,
@@ -70,14 +84,18 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         sortItems = function() private$..sortItems$value,
         bins = function() private$..bins$value,
         xlimLow = function() private$..xlimLow$value,
-        xlimHigh = function() private$..xlimHigh$value),
+        xlimHigh = function() private$..xlimHigh$value,
+        showCi = function() private$..showCi$value,
+        ciLevel = function() private$..ciLevel$value),
     private = list(
         ..vars = NA,
         ..robust = NA,
         ..sortItems = NA,
         ..bins = NA,
         ..xlimLow = NA,
-        ..xlimHigh = NA)
+        ..xlimHigh = NA,
+        ..showCi = NA,
+        ..ciLevel = NA)
 )
 
 targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -111,7 +129,9 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "sortItems",
                     "bins",
                     "xlimLow",
-                    "xlimHigh")))
+                    "xlimHigh",
+                    "showCi",
+                    "ciLevel")))
             self$add(jmvcore::Table$new(
                 options=options,
                 name="thresholdTable",
@@ -164,6 +184,8 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param bins .
 #' @param xlimLow .
 #' @param xlimHigh .
+#' @param showCi .
+#' @param ciLevel .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$targetingPlot} \tab \tab \tab \tab \tab an image \cr
@@ -184,7 +206,9 @@ targeting <- function(
     sortItems = "data",
     bins = 15,
     xlimLow = -4,
-    xlimHigh = 4) {
+    xlimHigh = 4,
+    showCi = TRUE,
+    ciLevel = 95) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("targeting requires jmvcore to be installed (restart may be required)")
@@ -202,7 +226,9 @@ targeting <- function(
         sortItems = sortItems,
         bins = bins,
         xlimLow = xlimLow,
-        xlimHigh = xlimHigh)
+        xlimHigh = xlimHigh,
+        showCi = showCi,
+        ciLevel = ciLevel)
 
     analysis <- targetingClass$new(
         options = options,

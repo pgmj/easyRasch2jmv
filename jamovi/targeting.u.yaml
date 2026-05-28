@@ -36,4 +36,14 @@ children:
       - type: TextBox
         name: xlimHigh
         format: number
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: showCi
+        children:
+          - type: TextBox
+            name: ciLevel
+            format: number
 ...

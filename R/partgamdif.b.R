@@ -407,12 +407,12 @@ partgamdifClass <- R6::R6Class(
       gamma_sim$Item <- factor(gamma_sim$Item, levels = item_levels)
       lo_hi$Item_f <- factor(lo_hi$Item, levels = item_levels)
 
-      caption_text <- paste0(
-        "Note: Results from ", actual_iterations,
+      caption_text <- er2_caption(paste0(
+        "Results from ", actual_iterations,
         " simulated datasets with ", sample_n, " respondents.\n",
         "Orange dots indicate observed partial gamma.\n",
         "Black dots indicate median gamma from simulations."
-      )
+      ))
 
       p <- ggplot2::ggplot(gamma_sim, ggplot2::aes(x = .data$Value, y = .data$Item)) +
         ggdist::stat_dots(
@@ -453,11 +453,10 @@ partgamdifClass <- R6::R6Class(
         ) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(
-          axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
-          panel.spacing = ggplot2::unit(0.7, "cm"),
-          plot.caption  = ggplot2::element_text(size = 11)
-        )
+          panel.spacing = ggplot2::unit(0.7, "cm")
+        ) +
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE
@@ -516,10 +515,9 @@ partgamdifClass <- R6::R6Class(
         ggplot2::theme(
           axis.text.x   = ggplot2::element_text(size = 8),
           panel.grid    = ggplot2::element_blank(),
-          axis.title.x  = ggplot2::element_text(margin = ggplot2::margin(t = 12)),
-          axis.title.y  = ggplot2::element_text(margin = ggplot2::margin(r = 12)),
           panel.spacing = ggplot2::unit(0.7, "cm")
-        )
+        ) +
+        er2_axis_margins()
 
       print(p)
       TRUE
