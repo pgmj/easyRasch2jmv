@@ -5,6 +5,37 @@ reliabilityClass <- R6::R6Class(
   private = list(
 
     # ---------------------------------------------------------------------
+    # .init -- build the fixed 4-row table structure up front so the table
+    # renders immediately instead of flickering from a blank placeholder to a
+    # populated table when .run() finishes. The row count (always 4) and their
+    # metric labels are fully determined by options (estim), not by the data,
+    # so they belong here. .run() fills in the computed estimates via setRow().
+    # ---------------------------------------------------------------------
+    .init = function() {
+      if (is.null(self$options$vars) || length(self$options$vars) < 2)
+        return()
+
+      estim <- self$options$estim
+      table <- self$results$relTable
+
+      labels <- c(
+        "Cronbach's alpha",
+        "PSI",
+        paste0("Empirical (", estim, ")"),
+        paste0("RMU (", estim, ")")
+      )
+      for (i in seq_along(labels)) {
+        table$addRow(rowKey = i, values = list(
+          metric   = labels[i],
+          estimate = NA_real_,
+          lower    = NA_real_,
+          upper    = NA_real_,
+          notes    = ""
+        ))
+      }
+    },
+
+    # ---------------------------------------------------------------------
     # .run
     # ---------------------------------------------------------------------
     .run = function() {
@@ -196,10 +227,10 @@ reliabilityClass <- R6::R6Class(
                notes    = rmu_note)
         )
 
-        # 12. Populate table
+        # 12. Populate table (rows created in .init(); fill values here)
         table <- self$results$relTable
         for (i in seq_along(rows)) {
-          table$addRow(rowKey = i, values = rows[[i]])
+          table$setRow(rowKey = i, values = rows[[i]])
         }
         table$setNote(
           "context",

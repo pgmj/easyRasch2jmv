@@ -1,3 +1,10 @@
+# easyRasch2jmv 1.0.0
+
+- Fixes based on Jamovi Module Audit Report
+  - Added missing `ggrepel` dependency in DESCRIPTION/Imports
+  - Bumped version number to 1.x
+  - Table structure modifications for lrdif, reliability, and locdepq3
+
 # easyRasch2jmv 0.5.1
 
 ## Targeting plot

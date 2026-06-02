@@ -165,6 +165,13 @@ lrdifClass <- R6::R6Class(
         }
 
         # 10. Set up table columns now that the group structure is known.
+        # NOTE: these group columns depend on the levels of difVar, which
+        # cannot be read until the data is loaded -- so they genuinely
+        # cannot be moved to .init() (defensible Level 3 case). This causes
+        # a one-time UI restructure when the analysis first opens: the table
+        # appears blank, then gains its group columns once difVar resolves.
+        # If jamovi ever adds a way to re-init on variable assignment,
+        # revisit and move the static columns to .init().
         # Numeric columns use format = "zto" to match the formatting of
         # all other tables in the module (and avoids the per-column
         # sig-figs heuristic expanding decimals for small magnitudes).

@@ -36,6 +36,21 @@ locdepq3Class <- R6::R6Class(
         }
         q3_table$addRow(rowKey = i, values = row_vals)
       }
+
+      # The cutoff summary table has a fixed 7-row structure determined by the
+      # design (not by data), so build it here with NA placeholders. .run()
+      # fills in the bootstrap results via setRow() once the simulation
+      # finishes -- this avoids the blank-then-populated UI jump.
+      if (isTRUE(self$options$computeCutoff)) {
+        ct <- self$results$cutoffTable
+        ct$addRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = NA_real_))
+        ct$addRow(rowKey = "p95",  values = list(parameter = "p95",                    value = NA_real_))
+        ct$addRow(rowKey = "p99",  values = list(parameter = "p99",                    value = NA_real_))
+        ct$addRow(rowKey = "p995", values = list(parameter = "p99.5",                  value = NA_real_))
+        ct$addRow(rowKey = "p999", values = list(parameter = "p99.9",                  value = NA_real_))
+        ct$addRow(rowKey = "iter", values = list(parameter = "Actual iterations",      value = NA_real_))
+        ct$addRow(rowKey = "n",    values = list(parameter = "Sample N",               value = NA_real_))
+      }
     },
 
     .run = function() {
@@ -124,15 +139,15 @@ locdepq3Class <- R6::R6Class(
             cutoff_val  <- cutoff_res$suggested_cutoff
             dyn_cutoff  <- mean_resid + cutoff_val
 
-            # Populate cutoff summary table
+            # Fill cutoff summary table (rows created in .init())
             ct <- self$results$cutoffTable
-            ct$addRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = round(cutoff_res$suggested_cutoff, 4)))
-            ct$addRow(rowKey = "p95",  values = list(parameter = "p95",  value = round(cutoff_res$p95,  4)))
-            ct$addRow(rowKey = "p99",  values = list(parameter = "p99",  value = round(cutoff_res$p99,  4)))
-            ct$addRow(rowKey = "p995", values = list(parameter = "p99.5", value = round(cutoff_res$p995, 4)))
-            ct$addRow(rowKey = "p999", values = list(parameter = "p99.9", value = round(cutoff_res$p999, 4)))
-            ct$addRow(rowKey = "iter", values = list(parameter = "Actual iterations", value = cutoff_res$actual_iterations))
-            ct$addRow(rowKey = "n",    values = list(parameter = "Sample N",          value = cutoff_res$sample_n))
+            ct$setRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = round(cutoff_res$suggested_cutoff, 4)))
+            ct$setRow(rowKey = "p95",  values = list(parameter = "p95",  value = round(cutoff_res$p95,  4)))
+            ct$setRow(rowKey = "p99",  values = list(parameter = "p99",  value = round(cutoff_res$p99,  4)))
+            ct$setRow(rowKey = "p995", values = list(parameter = "p99.5", value = round(cutoff_res$p995, 4)))
+            ct$setRow(rowKey = "p999", values = list(parameter = "p99.9", value = round(cutoff_res$p999, 4)))
+            ct$setRow(rowKey = "iter", values = list(parameter = "Actual iterations", value = cutoff_res$actual_iterations))
+            ct$setRow(rowKey = "n",    values = list(parameter = "Sample N",          value = cutoff_res$sample_n))
           }
 
           # --- Step 3: Determine above_cutoff flags using the lower triangle only
