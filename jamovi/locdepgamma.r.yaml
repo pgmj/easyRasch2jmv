@@ -1,0 +1,106 @@
+---
+name: locdepgamma
+title: Partial Gamma Local Dependence
+jrs: '1.1'
+
+items:
+    - name: dir1Table
+      title: 'Direction 1: Rest Score = Total − Item 2'
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, christensen2013, mueller2022]
+      clearWith:
+          - vars
+          - nPairs
+          - sigOnly
+          - gammaThreshold
+          - sortByGamma
+      columns:
+          - name: item1
+            title: Item 1
+            type: text
+          - name: item2
+            title: Item 2
+            type: text
+          - name: gamma
+            title: Partial gamma
+            type: number
+            format: zto
+          - name: se
+            title: SE
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: lower
+            title: Lower CI
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: upper
+            title: Upper CI
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: padjBH
+            title: Adj. p-value (BH)
+            type: number
+            format: zto,pvalue
+          - name: sig
+            title: p-value sign.
+            type: text
+
+    - name: dir2Table
+      title: 'Direction 2: Rest Score = Total − Item 1'
+      type: Table
+      rows: 0
+      clearWith:
+          - vars
+          - nPairs
+          - sigOnly
+          - gammaThreshold
+          - sortByGamma
+      columns:
+          - name: item1
+            title: Item 1
+            type: text
+          - name: item2
+            title: Item 2
+            type: text
+          - name: gamma
+            title: Partial gamma
+            type: number
+            format: zto
+          - name: se
+            title: SE
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: lower
+            title: Lower CI
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: upper
+            title: Upper CI
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: padjBH
+            title: Adj. p-value (BH)
+            type: number
+            format: zto,pvalue
+          - name: sig
+            title: p-value sign.
+            type: text
+
+    - name: ldNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - nPairs
+          - sigOnly
+          - gammaThreshold
+          - sortByGamma
+          - showSE
+...

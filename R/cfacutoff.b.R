@@ -9,10 +9,27 @@ cfacutoffClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if requirements not met
+      # 1. Return early if requirements not met.
+      # A one-factor CFA needs at least 4 indicators to be over-identified
+      # (df > 0). With 3 items the model is just-identified (df = 0) and every
+      # fit index is degenerate (CFI = 1, RMSEA = 0, SRMR = 0) for both the
+      # observed data and every simulated dataset, so the cutoff distribution
+      # carries no information; with <= 2 items the model is not identified and
+      # lavaan cannot invert the information matrix. Verified with lavaan
+      # 0.6-21 (ordered = TRUE, WLSMV).
       vars <- self$options$vars
-      if (is.null(vars) || length(vars) < 3)
+      if (is.null(vars) || length(vars) == 0)
         return()
+      if (length(vars) < 4) {
+        self$results$cfaNote$setContent(paste0(
+          "<p>This analysis requires at least <b>4 items</b>. A one-factor ",
+          "CFA with fewer indicators is just-identified (3 items, 0 degrees ",
+          "of freedom) or not identified (&le; 2 items), so the model fit is ",
+          "perfect by construction and the simulated fit-index cutoffs carry ",
+          "no information. Select at least 4 items.</p>"
+        ))
+        return()
+      }
 
       # 2. Extract data + standard validations
       data <- self$data

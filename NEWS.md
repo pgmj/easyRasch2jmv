@@ -1,3 +1,17 @@
+# easyRasch2jmv 1.0.1
+
+- Since `lavaan::cfa()` requires at least 4 items, this is now noted in a       message when the user has added fewer items to the CFA function.
+- New analysis: **Partial Gamma Local Dependence** (`locdepgamma`), based on
+  `easyRasch2::RMlocdepGamma()`. Tests each item pair for residual
+  association via `iarm::partgam_LD()`, controlling for the rest score in
+  both directions (two tables). An option limits output to the top-N pairs
+  by absolute partial gamma (0 = show all). The simulation-based cutoff
+  part of the R-package function is not included. Additional options:
+  show only significant pairs (BH-adjusted p < .05), show only pairs with
+  |gamma| at or above a threshold, sort by |gamma| descending, and show
+  SE with 95% confidence intervals (off by default). Both tables carry a
+  footnote explaining the BH abbreviation.
+
 # easyRasch2jmv 1.0.0
 
 - Fixes based on Jamovi Module Audit Report

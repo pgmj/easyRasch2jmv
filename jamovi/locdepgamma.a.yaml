@@ -1,0 +1,49 @@
+---
+name: locdepgamma
+title: Partial Gamma Local Dependence
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: nPairs
+      title: Number of pairs to display (0 = all)
+      type: Integer
+      default: 0
+      min: 0
+
+    - name: sigOnly
+      title: Show only significant pairs (adj. p < .05)
+      type: Bool
+      default: false
+
+    - name: gammaThreshold
+      title: Show only pairs with |gamma| at or above (0 = off)
+      type: Number
+      default: 0
+      min: 0
+      max: 1
+
+    - name: sortByGamma
+      title: Sort by |Partial gamma| (descending)
+      type: Bool
+      default: false
+
+    - name: showSE
+      title: Show SE and 95% confidence interval
+      type: Bool
+      default: false
+...
