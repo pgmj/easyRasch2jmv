@@ -19,16 +19,19 @@ items:
           - computeCutoff
           - hdciWidth
           - iterations
+          - sortByInfit
       columns:
           - name: item
             title: Item
             type: text
           - name: infitMSQ
-            title: Infit MSQ
+            title: Pooled infit
             type: number
+            format: zto
           - name: infitSE
             title: Pooled SE
             type: number
+            format: zto
           - name: infitLow
             title: Lower
             type: number
@@ -38,12 +41,17 @@ items:
           - name: infitHigh
             title: Upper
             type: number
+            format: zto
             visible: (computeCutoff)
             superTitle: Expected range
-          - name: flagged
-            title: Flagged
+          - name: misfit
+            title: Misfit
             type: text
             visible: (computeCutoff)
+          - name: relLocation
+            title: Rel. location
+            type: number
+            format: zto
 
     - name: imputationNote
       title: ''

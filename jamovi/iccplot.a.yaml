@@ -5,6 +5,16 @@ menuGroup: easyRasch2jmv
 version: '1.0.0'
 jas: '1.2'
 
+description:
+    main: |
+        Plots model-implied response probabilities as a function of the
+        latent trait, using CML estimation via eRm (RM for dichotomous
+        data, PCM for polytomous -- chosen automatically). Dichotomous
+        data are shown as joint item characteristic curves (all items in
+        one panel, one curve per item, cf. eRm::plotjointICC); polytomous
+        data as category probability curves with one facet per item.
+        Mirrors easyRasch2::RMitemCatProb().
+
 options:
     - name: data
       type: Data

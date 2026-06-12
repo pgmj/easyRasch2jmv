@@ -33,6 +33,7 @@ options:
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: nComponents
       title: Number of components to display

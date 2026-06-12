@@ -26,7 +26,8 @@ residualpcaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "continuous",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..nComponents <- jmvcore::OptionInteger$new(
                 "nComponents",
                 nComponents,
@@ -112,15 +113,18 @@ residualpcaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     list(
                         `name`="eigenvalue", 
                         `title`="Eigenvalue", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="propVar", 
                         `title`="Prop. of unexplained var.", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="cutoff", 
                         `title`="Cutoff (99th percentile)", 
                         `type`="number", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)"),
                     list(
                         `name`="flagged", 

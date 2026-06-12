@@ -189,6 +189,14 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Targeting Plot
 #'
+#' Person-item targeting plot (Wright map): back-to-back histograms
+#' of person locations and item threshold locations, plus a dot plot
+#' of individual item thresholds with optional confidence intervals.
+#' Item thresholds are estimated with CML (eRm); when any response
+#' category has fewer than 3 observations the analysis falls back to
+#' MML (mirt), which is more numerically stable under sparse
+#' categories. Person locations always come from the eRm model.
+#' Mirrors easyRasch2::RMtargeting().
 #' 
 #' @param data .
 #' @param vars .

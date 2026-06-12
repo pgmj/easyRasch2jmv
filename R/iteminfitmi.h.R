@@ -30,7 +30,8 @@ iteminfitmiOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "continuous",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..auxVars <- jmvcore::OptionVariables$new(
                 "auxVars",
                 auxVars,
@@ -157,7 +158,8 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "seed",
                     "computeCutoff",
                     "hdciWidth",
-                    "iterations"),
+                    "iterations",
+                    "sortByInfit"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -165,12 +167,14 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `type`="text"),
                     list(
                         `name`="infitMSQ", 
-                        `title`="Infit MSQ", 
-                        `type`="number"),
+                        `title`="Pooled infit", 
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="infitSE", 
                         `title`="Pooled SE", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="infitLow", 
                         `title`="Lower", 
@@ -182,13 +186,19 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `name`="infitHigh", 
                         `title`="Upper", 
                         `type`="number", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
                     list(
-                        `name`="flagged", 
-                        `title`="Flagged", 
+                        `name`="misfit", 
+                        `title`="Misfit", 
                         `type`="text", 
-                        `visible`="(computeCutoff)"))))
+                        `visible`="(computeCutoff)"),
+                    list(
+                        `name`="relLocation", 
+                        `title`="Rel. location", 
+                        `type`="number", 
+                        `format`="zto"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="imputationNote",

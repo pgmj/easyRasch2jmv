@@ -86,41 +86,9 @@ locdepq3Class <- R6::R6Class(
       seed_val        <- self$options$seed
 
       # Select only the specified variables
-      df <- data[, vars, drop = FALSE]
-
-      # Robust conversion: handles factors with text labels (SPSS),
-      # haven_labelled vectors, and numerics.
-      df <- to_numeric_responses_df(df)
-
-      # Check for all-NA columns
-      all_na_cols <- sapply(df, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df)[all_na_cols]
-        stop(paste(
-          "The following variables contain no valid numeric data:",
-          paste(bad_vars, collapse = ", ")
-        ))
-      }
-
-      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
-      max_obs <- max(as.matrix(df), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df)[
-          vapply(df, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      # Validate data (non-negative integers, min = 0)
-      validate_response_data(df)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df <- prepare_item_data(data, vars)
 
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
@@ -198,7 +166,8 @@ locdepq3Class <- R6::R6Class(
               "cutoff (99th percentile) is added to the observed mean Q3 ",
               "to give the dynamic cut-off applied in the correlation ",
               "matrix above. See the item-pair table below for per-pair ",
-              "intervals."
+              "intervals.",
+              iteration_note(iterations, 100L)
             ))
           }
 

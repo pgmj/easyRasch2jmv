@@ -191,6 +191,20 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Conditional Item Infit
 #'
+#' Computes conditional infit MSQ statistics for each item using
+#' iarm::out_infit() (CML item parameters from eRm; RM for dichotomous
+#' data, PCM for polytomous -- chosen automatically). Optionally
+#' determines simulation-based per-item cutoff intervals via parametric
+#' bootstrap: datasets are simulated under the fitted model (no misfit
+#' by construction) and the HDCI of each item's simulated infit forms
+#' the expected range. Items are labelled overfit (infit below the
+#' range; more predictable than the model expects) or underfit (above;
+#' noisier than expected).
+#' 
+#' Note on iterations: more simulation iterations are generally
+#' recommended for publication-ready results. Conditional infit is an
+#' exception: with small samples, around 100 iterations can yield
+#' better detection power than a larger number (Johansson, 2025).
 #' 
 #' @param data .
 #' @param vars .

@@ -5,51 +5,53 @@ residualpcaClass <- R6::R6Class(
   private = list(
 
     # ---------------------------------------------------------------------
+    # .init -- pre-create the eigenvalue rows: the row count is
+    # min(nComponents, number of items), fully determined by options.
+    # ---------------------------------------------------------------------
+    .init = function() {
+      vars <- self$options$vars
+      if (is.null(vars) || length(vars) < 3)
+        return()
+      k_show <- min(self$options$nComponents, length(vars))
+      table <- self$results$pcaTable
+      for (i in seq_len(k_show)) {
+        table$addRow(rowKey = i, values = list(
+          component  = paste0("PC", i),
+          eigenvalue = NA_real_,
+          propVar    = NA_real_,
+          cutoff     = NA_real_,
+          flagged    = ""
+        ))
+      }
+    },
+
+    # ---------------------------------------------------------------------
     # .run
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if no/insufficient variables selected
+      # 1. Return early / explain if requirements not met. With 2 items
+      # the residual PCA has a single possible contrast (the two items
+      # against each other), which carries no information about
+      # multidimensionality.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$pcaNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only ",
+          "2 items the residual PCA has a single possible contrast (the ",
+          "two items against each other), which carries no information ",
+          "about multidimensionality. Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Extract data and convert to numeric
       data <- self$data
       vars <- self$options$vars
-      df   <- data[, vars, drop = FALSE]
-
-      # Robust conversion: handles factors with text labels (SPSS),
-      # haven_labelled vectors, and numerics.
-      df <- to_numeric_responses_df(df)
-
-      # All-NA columns
-      all_na_cols <- sapply(df, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df)[all_na_cols]
-        stop(paste("The following variables contain no valid numeric data:",
-                   paste(bad_vars, collapse = ", ")))
-      }
-
-      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
-      max_obs <- max(as.matrix(df), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df)[
-          vapply(df, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      validate_response_data(df)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df <- prepare_item_data(data, vars)
 
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
@@ -88,32 +90,46 @@ residualpcaClass <- R6::R6Class(
       tryCatch({
         pca_res <- private$.runResidualPCA(df_complete, n_components)
 
-        # 5. Optional simulation-based cutoff
+        # 5. Optional simulation-based cutoff. Seed is always applied
+        # (default 42) so results are reproducible by default. If the
+        # simulation cannot deliver a reliable cutoff, degrade
+        # gracefully: eigenvalues are shown without the cutoff/flag and
+        # the note explains why.
         cutoff_value <- NULL
         cutoff_iters <- NULL
+        sim_fail_msg <- NULL
         if (compute_cutoff) {
-          actual_seed <- if (self$options$seed == 0) NULL else as.integer(self$options$seed)
-          cutoff_res <- private$.runCutoffSim(df_complete,
-                                              self$options$iterations,
-                                              actual_seed)
-          cutoff_value <- cutoff_res$suggested_cutoff
-          cutoff_iters <- cutoff_res$actual_iterations
-          pca_res$result_df$Flagged <- pca_res$result_df$Eigenvalue > cutoff_value
+          cutoff_res <- tryCatch(
+            private$.runCutoffSim(df_complete,
+                                  self$options$iterations,
+                                  as.integer(self$options$seed)),
+            error = function(e) {
+              sim_fail_msg <<- e$message
+              NULL
+            }
+          )
+          if (!is.null(cutoff_res)) {
+            cutoff_value <- cutoff_res$suggested_cutoff
+            cutoff_iters <- cutoff_res$actual_iterations
+            pca_res$result_df$Flagged <-
+              pca_res$result_df$Eigenvalue > cutoff_value
+          }
         }
 
-        # 6. Populate eigenvalue table
+        # 6. Populate eigenvalue table (rows created in .init(); raw
+        # values so jamovi's Number format preferences apply)
         table <- self$results$pcaTable
         for (i in seq_len(nrow(pca_res$result_df))) {
           vals <- list(
             component  = pca_res$result_df$Component[i],
-            eigenvalue = round(pca_res$result_df$Eigenvalue[i], 3),
-            propVar    = round(pca_res$result_df$Proportion_of_variance[i], 3)
+            eigenvalue = pca_res$result_df$Eigenvalue[i],
+            propVar    = pca_res$result_df$Proportion_of_variance[i]
           )
-          if (compute_cutoff) {
-            vals$cutoff  <- round(cutoff_value, 3)
+          if (!is.null(cutoff_value)) {
+            vals$cutoff  <- cutoff_value
             vals$flagged <- if (isTRUE(pca_res$result_df$Flagged[i])) "TRUE" else ""
           }
-          table$addRow(rowKey = i, values = vals)
+          table$setRow(rowNo = i, values = vals)
         }
 
         table$setNote(
@@ -149,14 +165,20 @@ residualpcaClass <- R6::R6Class(
           )
         }
 
-        cutoff_text <- if (compute_cutoff) {
+        cutoff_text <- if (!is.null(cutoff_value)) {
           paste0(
             "<p><b>Simulation-based cutoff.</b> ",
             cutoff_iters,
             " parametric-bootstrap datasets drawn from the fitted ",
             "unidimensional model at the same n. Suggested cutoff is the ",
             "99th percentile of the simulated first-contrast eigenvalues ",
-            "(= ", round(cutoff_value, 3), ").</p>"
+            "(= ", round(cutoff_value, 3), ").",
+            iteration_note(self$options$iterations, 250L), "</p>"
+          )
+        } else if (!is.null(sim_fail_msg)) {
+          paste0(
+            "<p><b>Simulation-based cutoff unavailable:</b> ",
+            sim_fail_msg, "</p>"
           )
         } else {
           ""
@@ -268,8 +290,8 @@ residualpcaClass <- R6::R6Class(
       k_show <- min(as.integer(n_components), length(eigvals))
       result_df <- data.frame(
         Component              = paste0("PC", seq_len(k_show)),
-        Eigenvalue             = round(eigvals[seq_len(k_show)], 3),
-        Proportion_of_variance = round(prop_var[seq_len(k_show)], 3),
+        Eigenvalue             = eigvals[seq_len(k_show)],
+        Proportion_of_variance = prop_var[seq_len(k_show)],
         stringsAsFactors       = FALSE,
         row.names              = NULL
       )
@@ -350,15 +372,25 @@ residualpcaClass <- R6::R6Class(
       ok         <- vapply(results_raw, is.numeric, logical(1L))
       successful <- results_raw[ok]
 
-      if (length(successful) == 0L) {
-        stop(
-          "All simulation iterations failed. Check your data: items must ",
-          "have sufficient response variation (at least 8 positive and 8 ",
-          "negative responses per item for dichotomous data; all response ",
-          "categories represented for polytomous data), and the sample ",
-          "must be large enough for stable Rasch model estimation.",
-          call. = FALSE
-        )
+      # Guard against a degenerate cutoff: with very few successful
+      # iterations the 99th percentile collapses onto a handful of
+      # values. Require at least 20 successes and a 50% success rate;
+      # otherwise report the dominant failure reason.
+      n_ok <- length(successful)
+      if (n_ok < 20L || n_ok < iterations / 2) {
+        fail_msgs <- unlist(results_raw[!ok])
+        top_reason <- if (length(fail_msgs) > 0L) {
+          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+        } else NULL
+        stop(paste0(
+          "Only ", n_ok, " of ", iterations, " simulation iterations ",
+          "succeeded -- too few to estimate a reliable cutoff.",
+          if (!is.null(top_reason))
+            paste0(" Most common failure: ", top_reason, ".") else "",
+          " Check your data: items must have sufficient response ",
+          "variation, and the sample must be large enough for stable ",
+          "Rasch model estimation."
+        ), call. = FALSE)
       }
 
       actual_iterations <- length(successful)

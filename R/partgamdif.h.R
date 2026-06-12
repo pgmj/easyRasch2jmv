@@ -280,6 +280,17 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Partial Gamma DIF
 #'
+#' Computes partial gamma coefficients for Differential Item
+#' Functioning (DIF) using iarm::partgam_DIF(): the association
+#' between each item and the DIF variable, controlling for the rest
+#' score. Optionally determines simulation-based expected ranges via
+#' parametric bootstrap (the DIF variable is randomly reassigned with
+#' preserved group proportions, so the simulated data contain no true
+#' DIF). A response-distribution tileplot is available for inspecting
+#' per-group category counts.
+#' 
+#' More simulation iterations are generally recommended for
+#' publication-ready results.
 #' 
 #' @param data .
 #' @param vars .

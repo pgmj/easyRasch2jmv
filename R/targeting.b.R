@@ -19,11 +19,9 @@ targetingClass <- R6::R6Class(
       # Extract and validate data
       data <- self$data
       vars <- self$options$vars
-      df <- data[, vars, drop = FALSE]
-
-      # Robust conversion: handles factors with text labels (SPSS),
-      # haven_labelled vectors, and numerics.
-      df <- to_numeric_responses_df(df)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df <- prepare_item_data(data, vars)
 
       # Strip jmvcore S4 column wrappers
       col_names <- names(df)
@@ -34,44 +32,11 @@ targetingClass <- R6::R6Class(
                dimnames = list(NULL, col_names))
       )
 
-      # Check for all-NA columns
-      all_na_cols <- sapply(df, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df)[all_na_cols]
-        stop(paste("The following variables contain no valid numeric data:",
-                   paste(bad_vars, collapse = ", ")))
-      }
-
-      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
-      max_obs <- max(as.matrix(df), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df)[
-          vapply(df, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      validate_response_data(df)
-
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
       if (n_complete < 30)
         jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
-
-      for (col in names(df)) {
-        unique_vals <- length(unique(stats::na.omit(df[[col]])))
-        if (unique_vals < 2)
-          stop(paste0("Item '", col, "' has no variation in responses."))
-      }
 
       tryCatch({
         data_mat  <- as.matrix(df)

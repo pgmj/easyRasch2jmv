@@ -23,58 +23,9 @@ iteminfitClass <- R6::R6Class(
       # 2. Extract and validate data
       data <- self$data
       vars <- self$options$vars
-      df <- data[, vars, drop = FALSE]
-
-      # Robust conversion: handles factors with text labels (SPSS),
-      # haven_labelled vectors, and numerics.
-      df <- to_numeric_responses_df(df)
-
-      # Identical-item check
-      n_vars <- ncol(df)
-      identical_pairs <- list()
-      for (i in 1:(n_vars - 1)) {
-        for (j in (i + 1):n_vars) {
-          cor_val <- cor(df[[i]], df[[j]], use = "complete.obs")
-          if (!is.na(cor_val) && cor_val == 1) {
-            identical_pairs <- append(identical_pairs, list(c(names(df)[i], names(df)[j])))
-          }
-        }
-      }
-      if (length(identical_pairs) > 0) {
-        pair_strings <- sapply(identical_pairs, function(p) paste0("'", p[1], "' and '", p[2], "'"))
-        pair_msg <- paste(pair_strings, collapse = "; ")
-        if (ncol(df) == 2) {
-          stop(paste("The two selected items are identical:", pair_msg, "- please select different items."))
-        } else {
-          jmvcore::reject("Warning: Some items appear to be identical ({pairs}). This may affect results.", pairs = pair_msg)
-        }
-      }
-
-      # All-NA columns
-      all_na_cols <- sapply(df, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df)[all_na_cols]
-        stop(paste("The following variables contain no valid numeric data:", paste(bad_vars, collapse = ", ")))
-      }
-
-      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
-      max_obs <- max(as.matrix(df), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df)[
-          vapply(df, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      validate_response_data(df)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df <- prepare_item_data(data, vars)
 
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
@@ -89,11 +40,6 @@ iteminfitClass <- R6::R6Class(
       if (n_complete < 30)
         jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
 
-      for (col in names(df)) {
-        unique_vals <- length(unique(stats::na.omit(df[[col]])))
-        if (unique_vals < 2)
-          stop(paste0("Item '", col, "' has no variation in responses."))
-      }
 
       # 3. Fit Rasch model and compute infit
       tryCatch({
@@ -251,7 +197,9 @@ iteminfitClass <- R6::R6Class(
             "<p>Cutoff values based on ",
             cutoff_res$actual_iterations, " simulation iterations (",
             method_label, ") drawn from the same n = ", n_complete,
-            " complete cases.</p>"
+            " complete cases.",
+            iteration_note(self$options$iterations, 200L, infit = TRUE),
+            "</p>"
           )
           self$results$cutoffNote$setContent(note_html)
         }

@@ -21,10 +21,16 @@ analyses:
     menuGroup: easyRasch2jmv
     menuTitle: Conditional Item Infit
     category: analyses
-    description: |
+    description: |-
       Computes conditional infit MSQ statistics for each item using
-      iarm::out_infit(). Optionally determines simulation-based cutoff
-      values via parametric bootstrap and visualises the results.
+      iarm::out_infit() (CML item parameters from eRm; RM for dichotomous
+      data, PCM for polytomous -- chosen automatically). Optionally
+      determines simulation-based per-item cutoff intervals via parametric
+      bootstrap: datasets are simulated under the fitted model (no misfit
+      by construction) and the HDCI of each item's simulated infit forms
+      the expected range. Items are labelled overfit (infit below the
+      range; more predictable than the model expects) or underfit (above;
+      noisier than expected).
   - title: Item-Restscore Correlations
     name: itemrestscore
     ns: easyRasch2jmv
@@ -105,10 +111,12 @@ analyses:
     category: analyses
     description: |
       Computes partial gamma coefficients for Local Dependence (LD)
-      assessment using iarm::partgam_LD(). Each pair of items is tested for
-      residual association, controlling for the rest score (total score
-      minus one of the items in the pair), in both rest-score directions.
-      Optionally displays only the top-N pairs by absolute partial gamma.
+      assessment using iarm::partgam_LD(). Each pair of items is tested
+      for residual association, controlling for the rest score (total
+      score minus one of the items in the pair). Because it matters
+      which item of a pair is subtracted from the total score, each pair
+      is tested in both rest-score directions (two tables). Based on
+      easyRasch2::RMlocdepGamma().
   - title: Q3 Residual Correlation Matrix
     name: locdepq3
     ns: easyRasch2jmv
@@ -139,10 +147,15 @@ analyses:
     menuGroup: easyRasch2jmv
     menuTitle: Partial Gamma DIF
     category: analyses
-    description: |
-      Computes partial gamma coefficients for Differential Item Functioning
-      (DIF) using iarm::partgam_DIF(). Optionally determines simulation-based
-      cutoff values via parametric bootstrap and visualises the results.
+    description: |-
+      Computes partial gamma coefficients for Differential Item
+      Functioning (DIF) using iarm::partgam_DIF(): the association
+      between each item and the DIF variable, controlling for the rest
+      score. Optionally determines simulation-based expected ranges via
+      parametric bootstrap (the DIF variable is randomly reassigned with
+      preserved group proportions, so the simulated data contain no true
+      DIF). A response-distribution tileplot is available for inspecting
+      per-group category counts.
   - title: Item Probability Curves
     name: iccplot
     ns: easyRasch2jmv
@@ -150,9 +163,13 @@ analyses:
     menuTitle: Item Probability Curves
     category: analyses
     description: |
-      Fits a Rasch model using eRm (CML) and displays item characteristic
-      curve (ICC) trace plots showing the probability of each response
-      category as a function of the latent trait (theta).
+      Plots model-implied response probabilities as a function of the
+      latent trait, using CML estimation via eRm (RM for dichotomous
+      data, PCM for polytomous -- chosen automatically). Dichotomous
+      data are shown as joint item characteristic curves (all items in
+      one panel, one curve per item, cf. eRm::plotjointICC); polytomous
+      data as category probability curves with one facet per item.
+      Mirrors easyRasch2::RMitemCatProb().
   - title: Targeting Plot
     name: targeting
     ns: easyRasch2jmv
@@ -160,9 +177,14 @@ analyses:
     menuTitle: Targeting Plot
     category: analyses
     description: |
-      Person-item targeting plot (Wright Map) showing back-to-back histograms
-      of person and item threshold locations, plus a dot plot of individual
-      item thresholds. Uses CML estimation via eRm.
+      Person-item targeting plot (Wright map): back-to-back histograms
+      of person locations and item threshold locations, plus a dot plot
+      of individual item thresholds with optional confidence intervals.
+      Item thresholds are estimated with CML (eRm); when any response
+      category has fewer than 3 observations the analysis falls back to
+      MML (mirt), which is more numerically stable under sparse
+      categories. Person locations always come from the eRm model.
+      Mirrors easyRasch2::RMtargeting().
   - title: Reliability
     name: reliability
     ns: easyRasch2jmv

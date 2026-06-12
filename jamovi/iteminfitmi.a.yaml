@@ -37,6 +37,7 @@ options:
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: auxVars
       title: Auxiliary variables (optional)

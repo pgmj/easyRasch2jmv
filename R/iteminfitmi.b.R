@@ -9,11 +9,21 @@ iteminfitmiClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if no variables selected
+      # 1. Return early / explain if requirements not met. With 2 items
+      # the conditional infit is ~1 for both items by construction (no
+      # degrees of freedom left for misfit once the total score is
+      # conditioned on), so at least 3 items are required.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$imputationNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
+          "items the conditional infit equals 1 for both items by ",
+          "construction and carries no information about item fit. ",
+          "Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Required packages
       if (!requireNamespace("mice", quietly = TRUE))
@@ -28,74 +38,14 @@ iteminfitmiClass <- R6::R6Class(
       if (is.null(aux_vars)) aux_vars <- character(0)
       aux_vars  <- setdiff(aux_vars, vars)
 
-      df_items <- data[, vars, drop = FALSE]
-
-      # Robust conversion: handles factors with text labels (SPSS),
-      # haven_labelled vectors, and numerics.
-      df_items <- to_numeric_responses_df(df_items)
-
-      # Identical-item check
-      n_vars <- ncol(df_items)
-      identical_pairs <- list()
-      for (i in 1:(n_vars - 1)) {
-        for (j in (i + 1):n_vars) {
-          cor_val <- cor(df_items[[i]], df_items[[j]], use = "complete.obs")
-          if (!is.na(cor_val) && cor_val == 1) {
-            identical_pairs <- append(identical_pairs,
-                                      list(c(names(df_items)[i], names(df_items)[j])))
-          }
-        }
-      }
-      if (length(identical_pairs) > 0) {
-        pair_strings <- sapply(identical_pairs,
-                               function(p) paste0("'", p[1], "' and '", p[2], "'"))
-        pair_msg <- paste(pair_strings, collapse = "; ")
-        if (ncol(df_items) == 2) {
-          stop(paste("The two selected items are identical:", pair_msg,
-                     "- please select different items."))
-        } else {
-          jmvcore::reject(
-            "Warning: Some items appear to be identical ({pairs}). This may affect results.",
-            pairs = pair_msg
-          )
-        }
-      }
-
-      all_na_cols <- sapply(df_items, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df_items)[all_na_cols]
-        stop(paste("The following items contain no valid numeric data:",
-                   paste(bad_vars, collapse = ", ")))
-      }
-
-      # Sentinel-value sanity check (e.g., 999, 8888 unmarked as missing)
-      max_obs <- max(as.matrix(df_items), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df_items)[
-          vapply(df_items, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      validate_response_data(df_items)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df_items <- prepare_item_data(data, vars)
 
       sparse_msg <- sparse_note(df_items)
       if (!is.null(sparse_msg))
         self$results$infitTable$setNote("sparse", sparse_msg)
 
-      for (col in names(df_items)) {
-        unique_vals <- length(unique(stats::na.omit(df_items[[col]])))
-        if (unique_vals < 2)
-          stop(paste0("Item '", col, "' has no variation in responses."))
-      }
 
       # 4. Detect missingness
       n_missing_total <- sum(is.na(df_items))
@@ -277,24 +227,36 @@ iteminfitmiClass <- R6::R6Class(
         pooled_se       <- sqrt(total_var)
         pooled_location <- rowMeans(loc_mat)
 
+        # Raw values (no pre-rounding) so the jamovi frontend applies
+        # the user's "Number format" preferences.
         results <- data.frame(
           Item              = item_names,
-          Infit_MSQ         = round(pooled_msq, 3),
-          Infit_SE          = round(pooled_se, 3),
-          Relative_location = round(pooled_location, 2),
+          Infit_MSQ         = pooled_msq,
+          Infit_SE          = pooled_se,
+          Relative_location = pooled_location,
           stringsAsFactors  = FALSE,
           row.names         = NULL
         )
 
-        # 10. Optional: simulation-based cutoffs across imputations
+        # 10. Optional: simulation-based cutoffs across imputations. If
+        # the simulation cannot deliver reliable cutoffs, degrade
+        # gracefully: pooled estimates are shown without the expected
+        # range, and the note explains why.
         cutoff_res <- NULL
+        sim_fail_msg <- NULL
         if (compute_cutoff) {
-          cutoff_res <- private$.runCutoffSimMI(
-            mids_object  = mids_object,
-            item_names   = item_names,
-            iterations   = sim_iterations,
-            hdci_width   = hdci_width,
-            seed         = seed
+          cutoff_res <- tryCatch(
+            private$.runCutoffSimMI(
+              mids_object  = mids_object,
+              item_names   = item_names,
+              iterations   = sim_iterations,
+              hdci_width   = hdci_width,
+              seed         = seed
+            ),
+            error = function(e) {
+              sim_fail_msg <<- e$message
+              NULL
+            }
           )
           if (!is.null(cutoff_res)) {
             cutoff_df <- cutoff_res$item_cutoffs
@@ -303,14 +265,19 @@ iteminfitmiClass <- R6::R6Class(
             results <- merge(results, cutoff_sub, by = "Item", sort = FALSE)
             results <- results[match(data_items, results$Item), ]
             rownames(results) <- NULL
-            results$Infit_low  <- round(results$infit_low,  3)
-            results$Infit_high <- round(results$infit_high, 3)
+            results$Infit_low  <- results$infit_low
+            results$Infit_high <- results$infit_high
             results$infit_low  <- NULL
             results$infit_high <- NULL
-            results$Flagged <- results$Infit_MSQ < results$Infit_low |
-                               results$Infit_MSQ > results$Infit_high
+            # Misfit direction is inverted relative to the restscore
+            # analyses: infit BELOW the expected range = overfit (too
+            # predictable), ABOVE = underfit (noisy).
+            results$Misfit <- ifelse(
+              results$Infit_MSQ < results$Infit_low, "overfit",
+              ifelse(results$Infit_MSQ > results$Infit_high, "underfit", "")
+            )
             results <- results[, c("Item", "Infit_MSQ", "Infit_SE",
-                                   "Infit_low", "Infit_high", "Flagged",
+                                   "Infit_low", "Infit_high", "Misfit",
                                    "Relative_location")]
           }
         }
@@ -325,16 +292,38 @@ iteminfitmiClass <- R6::R6Class(
         table <- self$results$infitTable
         for (i in seq_len(nrow(results))) {
           vals <- list(
-            item     = results$Item[i],
-            infitMSQ = results$Infit_MSQ[i],
-            infitSE  = results$Infit_SE[i]
+            item        = results$Item[i],
+            infitMSQ    = results$Infit_MSQ[i],
+            infitSE     = results$Infit_SE[i],
+            relLocation = results$Relative_location[i]
           )
           if (!is.null(cutoff_res)) {
             vals$infitLow  <- results$Infit_low[i]
             vals$infitHigh <- results$Infit_high[i]
-            vals$flagged   <- ifelse(results$Flagged[i], "TRUE", "")
+            vals$misfit    <- results$Misfit[i]
           }
           table$setRow(rowNo = i, values = vals)
+        }
+
+        # Footnotes: pooled-SE caveat, misfit rule, location definition
+        table$setNote("se", paste0(
+          "Pooled SE combines within-imputation variance (iarm's ",
+          "asymptotic infit SE) and between-imputation variance via ",
+          "Rubin's rules. Note that Mueller (2020) showed the asymptotic ",
+          "infit SE can be unreliable -- base fit decisions on the ",
+          "simulation-based expected range rather than the SE."
+        ))
+        table$setNote("loc", paste0(
+          "Rel. location = pooled mean item (threshold) location ",
+          "relative to the mean person location, in logits."
+        ))
+        if (!is.null(cutoff_res)) {
+          table$setNote("misfit", paste0(
+            "Misfit: pooled infit below the expected range = overfit ",
+            "(item is more predictable than the model expects); above = ",
+            "underfit (noisier than expected). Note the direction is ",
+            "inverted relative to the item-restscore analyses."
+          ))
         }
 
         # 13. Caption note
@@ -360,7 +349,12 @@ iteminfitmiClass <- R6::R6Class(
             " Cutoff values based on ", cutoff_res$actual_iterations,
             " total simulation iterations across ",
             cutoff_res$n_imputations, " imputed datasets (",
-            round(hdci_width * 100, 1), "% HDCI)."
+            round(hdci_width * 100, 1), "% HDCI).",
+            iteration_note(sim_iterations, 500L, infit = TRUE)
+          )
+        } else if (!is.null(sim_fail_msg)) {
+          paste0(
+            " <b>Simulation-based cutoffs unavailable:</b> ", sim_fail_msg
           )
         } else {
           ""
@@ -514,6 +508,23 @@ iteminfitmiClass <- R6::R6Class(
 
       total_actual <- sum(actual_per_imp)
       n_imputations <- m - n_failed
+
+      # Guard against degenerate cutoffs: with very few successful
+      # iterations in the stacked distribution the HDCI collapses.
+      # Require at least 20 successes and a 50% success rate overall.
+      if (total_actual < 20L || total_actual < iterations / 2) {
+        sample_msgs <- utils::head(unique(error_messages), 3L)
+        stop(paste0(
+          "Only ", total_actual, " of ", iterations, " simulation ",
+          "iterations succeeded across the imputed datasets -- too few ",
+          "to estimate reliable cutoff intervals.",
+          if (length(sample_msgs) > 0L)
+            paste0(" Example failure(s): ",
+                   paste(sample_msgs, collapse = " | "), ".") else "",
+          " This typically happens when items have very low or very ",
+          "high endorsement rates relative to the sample size."
+        ), call. = FALSE)
+      }
 
       # Per-item HDCI cutoffs from stacked distribution
       unique_items <- unique(stacked_df$Item)
@@ -674,7 +685,7 @@ iteminfitmiClass <- R6::R6Class(
         "Stacked results from ", actual_iterations,
         " simulated datasets across ", n_imputations,
         " imputations (n = ", sample_n, " per dataset).\n",
-        "Orange dots indicate the pooled (Rubin's rules) observed infit.\n",
+        "Orange diamonds indicate the pooled (Rubin's rules) observed infit.\n",
         "Black dots indicate median fit from simulations."
       ))
 
@@ -716,8 +727,7 @@ iteminfitmiClass <- R6::R6Class(
           values = scales::brewer_pal()(3)[-1],
           aesthetics = "slab_fill", guide = "none"
         ) +
-        ggplot2::scale_x_continuous(breaks = seq(0.5, 1.5, 0.1),
-                                    minor_breaks = NULL) +
+        ggplot2::scale_x_continuous(minor_breaks = NULL) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm")) +
         er2_axis_margins() +

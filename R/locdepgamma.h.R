@@ -236,6 +236,13 @@ locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Partial Gamma Local Dependence
 #'
+#' Computes partial gamma coefficients for Local Dependence (LD)
+#' assessment using iarm::partgam_LD(). Each pair of items is tested
+#' for residual association, controlling for the rest score (total
+#' score minus one of the items in the pair). Because it matters
+#' which item of a pair is subtracted from the total score, each pair
+#' is tested in both rest-score directions (two tables). Based on
+#' easyRasch2::RMlocdepGamma().
 #' 
 #' @param data .
 #' @param vars .

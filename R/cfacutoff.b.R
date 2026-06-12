@@ -53,34 +53,9 @@ cfacutoffClass <- R6::R6Class(
 
       # 2. Extract data + standard validations
       data <- self$data
-      df   <- data[, vars, drop = FALSE]
-      df   <- to_numeric_responses_df(df)
-
-      all_na_cols <- sapply(df, function(x) all(is.na(x)))
-      if (any(all_na_cols)) {
-        bad_vars <- names(df)[all_na_cols]
-        stop(paste("The following variables contain no valid numeric data:",
-                   paste(bad_vars, collapse = ", ")))
-      }
-
-      # Sentinel-value sanity check
-      max_obs <- max(as.matrix(df), na.rm = TRUE)
-      if (is.finite(max_obs) && max_obs > 20) {
-        bad_cols <- names(df)[
-          vapply(df, function(x) {
-            mx <- suppressWarnings(max(x, na.rm = TRUE))
-            is.finite(mx) && mx > 20
-          }, logical(1L))
-        ]
-        stop(paste0(
-          "Item(s) ", paste(bad_cols, collapse = ", "),
-          " contain values > 20, which look like missing-value codes ",
-          "(e.g., 999, 8888) rather than ordinal responses. ",
-          "Mark these codes as missing in the data editor, or recode your data."
-        ))
-      }
-
-      validate_response_data(df)
+      # Shared validation: conversion, all-NA / sentinel checks,
+      # response validation, per-item variation, identical-items check
+      df <- prepare_item_data(data, vars)
 
       # Drop incomplete rows -- lavaan + simulation both need complete cases
       n_total     <- nrow(df)
@@ -253,7 +228,8 @@ cfacutoffClass <- R6::R6Class(
           "the upper-tail cutoff. An item flagged 'TRUE' lies in the ",
           "worst ", round(100 - percentile, 1),
           "% of the simulated distribution in the unfavourable direction.",
-          success_clause, "</p>"
+          success_clause,
+          iteration_note(iterations, 250L), "</p>"
         )
         self$results$cfaNote$setContent(note_html)
 

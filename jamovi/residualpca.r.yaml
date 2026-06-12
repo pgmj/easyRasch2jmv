@@ -22,12 +22,15 @@ items:
           - name: eigenvalue
             title: Eigenvalue
             type: number
+            format: zto
           - name: propVar
             title: Prop. of unexplained var.
             type: number
+            format: zto
           - name: cutoff
             title: Cutoff (99th percentile)
             type: number
+            format: zto
             visible: (computeCutoff)
           - name: flagged
             title: Flagged
