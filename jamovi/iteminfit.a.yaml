@@ -27,7 +27,7 @@ options:
     - name: hdciWidth
       title: HDCI width
       type: Number
-      default: 99.9
+      default: 99
       min: 50
       max: 100
 

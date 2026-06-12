@@ -25,10 +25,10 @@ options:
       type: Variables
       suggested:
           - continuous
-          - nominal
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: iterations
       title: Number of bootstrap iterations
@@ -53,6 +53,18 @@ options:
       title: Random seed
       type: Integer
       default: 42
+
+    - name: sortBy
+      title: Sort items by
+      type: List
+      options:
+          - title: None (data order)
+            name: none
+          - title: '% overfit (descending)'
+            name: overfit
+          - title: '% underfit (descending)'
+            name: underfit
+      default: none
 
     - name: showPlot
       title: Show classification plot

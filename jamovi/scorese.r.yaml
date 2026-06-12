@@ -25,6 +25,7 @@ items:
           - name: logitSE
             title: Logit std.error
             type: number
+            format: zto
 
     - name: scoreNote
       title: ''

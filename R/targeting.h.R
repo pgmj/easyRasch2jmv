@@ -103,7 +103,8 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     inherit = jmvcore::Group,
     active = list(
         targetingPlot = function() private$.items[["targetingPlot"]],
-        thresholdTable = function() private$.items[["thresholdTable"]]),
+        thresholdTable = function() private$.items[["thresholdTable"]],
+        targetingNote = function() private$.items[["targetingNote"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -151,7 +152,19 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="location", 
                         `title`="Location", 
-                        `type`="number"))))}))
+                        `type`="number", 
+                        `format`="zto"),
+                    list(
+                        `name`="se", 
+                        `title`="SE", 
+                        `type`="number", 
+                        `format`="zto"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="targetingNote",
+                title="",
+                clearWith=list(
+                    "vars")))}))
 
 targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "targetingBase",
@@ -190,6 +203,7 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' \tabular{llllll}{
 #'   \code{results$targetingPlot} \tab \tab \tab \tab \tab an image \cr
 #'   \code{results$thresholdTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$targetingNote} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:

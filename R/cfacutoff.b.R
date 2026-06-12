@@ -5,6 +5,26 @@ cfacutoffClass <- R6::R6Class(
   private = list(
 
     # ---------------------------------------------------------------------
+    # .init -- the three rows exist via r.yaml (rows: 3); pre-fill the
+    # design-fixed index labels so the table renders meaningfully before
+    # .run() finishes.
+    # ---------------------------------------------------------------------
+    .init = function() {
+      if (is.null(self$options$vars) || length(self$options$vars) < 4)
+        return()
+      table <- self$results$cfaTable
+      idx_names <- c("CFI", "RMSEA", "SRMR")
+      for (i in seq_len(3L)) {
+        table$setRow(rowNo = i, values = list(
+          index    = idx_names[i],
+          observed = NA_real_,
+          cutoff   = NA_real_,
+          flagged  = ""
+        ))
+      }
+    },
+
+    # ---------------------------------------------------------------------
     # .run
     # ---------------------------------------------------------------------
     .run = function() {
@@ -81,17 +101,19 @@ cfacutoffClass <- R6::R6Class(
           stop(paste0("Item '", col, "' has no variation in responses."))
       }
 
+      # Sparse-category warning on the complete cases actually analysed
+      sparse_msg <- sparse_note(df_complete)
+      if (!is.null(sparse_msg))
+        self$results$cfaTable$setNote("sparse", sparse_msg)
+
       # 3. Read options
       estimator  <- toupper(self$options$estimator)
       percentile <- self$options$percentile
       iterations <- self$options$iterations
       seed_val   <- self$options$seed
 
-      if (estimator %in% c("ML", "MLR", "MLM", "MLF")) {
-        stop("Estimator must be a limited-information ordinal estimator (WLSMV, DWLS, or ULSMV).")
-      }
-      if (!is.numeric(percentile) || percentile <= 50 || percentile >= 100) {
-        stop("Cutoff percentile must be in (50, 100). Common choices: 95, 99, 99.5.")
+      if (!is.numeric(percentile) || percentile < 50 || percentile > 99.9) {
+        stop("Cutoff percentile must be between 50 and 99.9. Common choices: 95, 99, 99.5.")
       }
 
       # rgl workaround
@@ -107,7 +129,7 @@ cfacutoffClass <- R6::R6Class(
         if (!is.numeric(observed)) {
           stop(paste0(
             "Observed CFA fit failed (", observed, "). ",
-            "lavaan WLSMV / DWLS / ULSMV typically fails when items have ",
+            "lavaan WLSMV / ULSMV typically fails when items have ",
             "very rare or empty response categories. Inspect the response ",
             "distribution per item (e.g., the descriptives module) before ",
             "running this analysis."
@@ -115,8 +137,9 @@ cfacutoffClass <- R6::R6Class(
         }
         names(observed) <- c("cfi", "rmsea", "srmr")
 
-        actual_seed <- if (seed_val == 0) NULL else as.integer(seed_val)
-        if (!is.null(actual_seed)) set.seed(actual_seed)
+        # Seed is always applied (default 42) so results are reproducible
+        # by default, consistent with the other simulation-based analyses.
+        set.seed(as.integer(seed_val))
         sim_seeds <- sample.int(.Machine$integer.max, iterations)
 
         # Sequential only -- jamovi runs single-threaded
@@ -129,18 +152,42 @@ cfacutoffClass <- R6::R6Class(
 
         ok         <- vapply(results_raw, is.numeric, logical(1L))
         successful <- results_raw[ok]
-        if (length(successful) == 0L) {
-          failed_msgs <- unlist(results_raw[!ok])
-          sample_msg <- if (length(failed_msgs) > 0L) {
-            unique(failed_msgs)[1L]
-          } else {
-            "(no message captured)"
+
+        # Guard against degenerate cutoffs: with very few successful
+        # iterations the percentile cutoffs collapse onto a handful of
+        # values. Require at least 20 successes and a 50% success rate;
+        # otherwise show the observed fit indices without cutoffs and
+        # explain the dominant failure reason (the observed lavaan fit
+        # is independent of the simulation, so it remains valid).
+        n_ok <- length(successful)
+        if (n_ok < 20L || n_ok < iterations / 2) {
+          fail_msgs <- unlist(results_raw[!ok])
+          top_reason <- if (length(fail_msgs) > 0L) {
+            names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+          } else NULL
+
+          table <- self$results$cfaTable
+          idx_names <- c("CFI", "RMSEA", "SRMR")
+          for (i in seq_len(3L)) {
+            k <- c("cfi", "rmsea", "srmr")[i]
+            table$setRow(rowNo = i, values = list(
+              index    = idx_names[i],
+              observed = observed[[k]],
+              cutoff   = NA_real_,
+              flagged  = ""
+            ))
           }
-          stop(paste0(
-            "All ", iterations, " simulation iterations failed. Example: ",
-            sample_msg, ". Often this indicates very sparse items; ",
-            "inspect the per-item response distribution before running."
+          self$results$cfaNote$setContent(paste0(
+            "<p><b>Simulation-based cutoffs unavailable:</b> Only ", n_ok,
+            " of ", iterations, " simulation iterations succeeded -- too ",
+            "few to estimate reliable cutoffs.",
+            if (!is.null(top_reason))
+              paste0(" Most common failure: ", top_reason, ".") else "",
+            " Often this indicates very sparse items; inspect the ",
+            "per-item response distribution. The observed fit indices ",
+            "are shown without cutoffs.</p>"
           ))
+          return()
         }
 
         actual_iterations <- length(successful)
@@ -172,6 +219,11 @@ cfacutoffClass <- R6::R6Class(
             flagged  = if (isTRUE(flagged[[k]])) "TRUE" else ""
           ))
         }
+        table$setNote("flag", paste0(
+          "Flagged = TRUE when the observed value lies beyond the cutoff ",
+          "in the unfavourable direction (CFI below the cutoff; RMSEA ",
+          "and SRMR above)."
+        ))
 
         # 6. Caption note (HTML below the table)
         excluded_clause <- if (n_excluded > 0L) {

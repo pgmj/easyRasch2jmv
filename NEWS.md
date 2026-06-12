@@ -1,16 +1,38 @@
-# easyRasch2jmv 1.0.1
+# easyRasch2jmv 2.0.0
 
-- Since `lavaan::cfa()` requires at least 4 items, this is now noted in a       message when the user has added fewer items to the CFA function.
-- New analysis: **Partial Gamma Local Dependence** (`locdepgamma`), based on
-  `easyRasch2::RMlocdepGamma()`. Tests each item pair for residual
-  association via `iarm::partgam_LD()`, controlling for the rest score in
-  both directions (two tables). An option limits output to the top-N pairs
-  by absolute partial gamma (0 = show all). The simulation-based cutoff
-  part of the R-package function is not included. Additional options:
-  show only significant pairs (BH-adjusted p < .05), show only pairs with
-  |gamma| at or above a threshold, sort by |gamma| descending, and show
-  SE with 95% confidence intervals (off by default). Both tables carry a
-  footnote explaining the BH abbreviation.
+Major consistency and documentation release: every analysis was reviewed
+for consistent UX, analytical options, and documentation detail. The
+complete record is in
+[CHANGELOG-2.0.0.md](https://github.com/pgmj/easyRasch2jmv/blob/main/CHANGELOG-2.0.0.md);
+highlights:
+
+- **New analysis: Partial Gamma Local Dependence** (`locdepgamma`),
+  testing item pairs for residual association in both rest-score
+  directions, with significance/magnitude filters and top-N display.
+- **Q3**: new per-pair table with simulation-based "above"/"below"
+  flagging (per-pair HDCI intervals) alongside the global cutoff;
+  observed Q3 precision raised from 2 to 4 decimals.
+- **Targeting**: automatic CML-to-MML fallback when response categories
+  are sparse (ports `easyRasch2::RMtargeting()`).
+- **ICC plot rebuilt as a ggplot** (ports `easyRasch2::RMitemCatProb()`),
+  with the model auto-selected (RM/PCM) instead of always PCM.
+- **Module-wide standardizations**: Observed/Expected column labels with
+  "Expected range" super-titles; "overfit"/"underfit" misfit vocabulary
+  in the infit and restscore analyses; HDCI width defaults unified at
+  99%; BH p-adjustment hardcoded; seeds always applied (reproducible by
+  default); raw values with jamovi number formatting throughout.
+- **Robustness**: all simulations now require >= 20 successful
+  iterations and a 50% success rate, with the dominant failure reason
+  reported -- degenerate cutoffs from near-total simulation failure are
+  no longer possible.
+- **Sparse-data alerts**: every analysis warns when response categories
+  have fewer than 3 observations; DIF analyses check within each group
+  and point to the tileplot.
+- **Documentation**: sample-size and missing-data handling notes
+  everywhere (including where statistics and locations use different
+  samples), table footnotes for abbreviations and classification rules,
+  and explanatory messages instead of silent returns when too few items
+  are selected.
 
 # easyRasch2jmv 1.0.0
 

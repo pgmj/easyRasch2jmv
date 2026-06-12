@@ -32,15 +32,17 @@ items:
             format: zto
             visible: (showSE)
           - name: lower
-            title: Lower CI
+            title: Lower
             type: number
             format: zto
             visible: (showSE)
+            superTitle: 95% CI
           - name: upper
-            title: Upper CI
+            title: Upper
             type: number
             format: zto
             visible: (showSE)
+            superTitle: 95% CI
           - name: padjBH
             title: Adj. p-value (BH)
             type: number
@@ -76,15 +78,17 @@ items:
             format: zto
             visible: (showSE)
           - name: lower
-            title: Lower CI
+            title: Lower
             type: number
             format: zto
             visible: (showSE)
+            superTitle: 95% CI
           - name: upper
-            title: Upper CI
+            title: Upper
             type: number
             format: zto
             visible: (showSE)
+            superTitle: 95% CI
           - name: padjBH
             title: Adj. p-value (BH)
             type: number

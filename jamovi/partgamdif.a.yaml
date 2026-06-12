@@ -56,6 +56,11 @@ options:
       type: Bool
       default: false
 
+    - name: showSE
+      title: Show SE and 95% confidence interval
+      type: Bool
+      default: false
+
     - name: showTileplot
       title: Show response distribution by DIF group
       type: Bool

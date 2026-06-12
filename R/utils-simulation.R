@@ -298,8 +298,13 @@ run_single_partgam_sim <- function(seed, data_list) {
       prob = data_list$dif_proportions
     )
 
-    # Compute partial gamma DIF via iarm
-    pgam <- iarm::partgam_DIF(sim_df, random_dif)
+    # Compute partial gamma DIF via iarm (suppress its per-iteration
+    # console printing; the finally handler removes the sink exactly once)
+    sink(nullfile())
+    pgam <- tryCatch(
+      iarm::partgam_DIF(sim_df, random_dif),
+      finally = sink()
+    )
     pgam_df <- as.data.frame(pgam)
 
     data.frame(

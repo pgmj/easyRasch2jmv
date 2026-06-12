@@ -1,7 +1,7 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 1.0.1
+version: 2.0.0
 jms: '1.0'
 authors:
   - Magnus Johansson
@@ -48,12 +48,19 @@ analyses:
     description: >
       Non-parametric bootstrap of item-restscore fit using
       iarm::item_restscore().
+
       For each iteration a sample of size `samplesize` is drawn from the data
+
       with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
+
       psychotools::pcmodel for polytomous) is refitted, and items are classified
+
       as overfit, underfit, or no misfit based on the BH-adjusted p-value
+
       (< .05) and the sign of (expected - observed). Useful with large samples
+
       where the asymptotic test can flag items that are not practically
+
       misfitting.
   - title: Conditional Item Infit (Multiple Imputation)
     name: iteminfitmi

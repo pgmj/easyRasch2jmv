@@ -16,7 +16,7 @@ items:
       columns: []
 
     - name: cutoffTable
-      title: Simulation-Based Q3 Cutoff
+      title: Simulation-Based Global Q3 Cutoff
       type: Table
       visible: (computeCutoff)
       clearWith:
@@ -48,4 +48,49 @@ items:
           - seed
           - nPairs
 
+    - name: pairTable
+      title: Q3 by Item Pair
+      type: Table
+      rows: 0
+      visible: (computeCutoff)
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
+      columns:
+          - name: item1
+            title: Item 1
+            type: text
+          - name: item2
+            title: Item 2
+            type: text
+          - name: q3
+            title: Observed Q3
+            type: number
+            format: zto
+          - name: q3Low
+            title: Lower
+            type: number
+            format: zto
+            superTitle: Expected range
+          - name: q3High
+            title: Upper
+            type: number
+            format: zto
+            superTitle: Expected range
+          - name: flagged
+            title: Flagged
+            type: text
+
+    - name: q3Note
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
 ...

@@ -13,6 +13,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             iterations = 250,
             seed = 42,
             sortByGamma = FALSE,
+            showSE = FALSE,
             showTileplot = FALSE,
             tileCutoff = 10,
             tilePercent = FALSE, ...) {
@@ -63,6 +64,10 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 "sortByGamma",
                 sortByGamma,
                 default=FALSE)
+            private$..showSE <- jmvcore::OptionBool$new(
+                "showSE",
+                showSE,
+                default=FALSE)
             private$..showTileplot <- jmvcore::OptionBool$new(
                 "showTileplot",
                 showTileplot,
@@ -84,6 +89,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
             self$.addOption(private$..sortByGamma)
+            self$.addOption(private$..showSE)
             self$.addOption(private$..showTileplot)
             self$.addOption(private$..tileCutoff)
             self$.addOption(private$..tilePercent)
@@ -96,6 +102,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         iterations = function() private$..iterations$value,
         seed = function() private$..seed$value,
         sortByGamma = function() private$..sortByGamma$value,
+        showSE = function() private$..showSE$value,
         showTileplot = function() private$..showTileplot$value,
         tileCutoff = function() private$..tileCutoff$value,
         tilePercent = function() private$..tilePercent$value),
@@ -107,6 +114,7 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..iterations = NA,
         ..seed = NA,
         ..sortByGamma = NA,
+        ..showSE = NA,
         ..showTileplot = NA,
         ..tileCutoff = NA,
         ..tilePercent = NA)
@@ -145,7 +153,8 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed"),
+                    "seed",
+                    "sortByGamma"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -153,24 +162,29 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `type`="text"),
                     list(
                         `name`="gamma", 
-                        `title`="Partial gamma", 
+                        `title`="Observed gamma", 
                         `type`="number", 
                         `format`="zto"),
                     list(
                         `name`="se", 
                         `title`="SE", 
                         `type`="number", 
-                        `format`="zto"),
+                        `format`="zto", 
+                        `visible`="(showSE)"),
                     list(
                         `name`="lower", 
-                        `title`="Lower CI", 
+                        `title`="Lower", 
                         `type`="number", 
-                        `format`="zto"),
+                        `format`="zto", 
+                        `visible`="(showSE)", 
+                        `superTitle`="95% CI"),
                     list(
                         `name`="upper", 
-                        `title`="Upper CI", 
+                        `title`="Upper", 
                         `type`="number", 
-                        `format`="zto"),
+                        `format`="zto", 
+                        `visible`="(showSE)", 
+                        `superTitle`="95% CI"),
                     list(
                         `name`="padjBH", 
                         `title`="Adj. p-value (BH)", 
@@ -182,16 +196,18 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `type`="text"),
                     list(
                         `name`="gammaLow", 
-                        `title`="Gamma low", 
+                        `title`="Lower", 
                         `type`="number", 
                         `format`="zto", 
-                        `visible`="(computeCutoff)"),
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
                     list(
                         `name`="gammaHigh", 
-                        `title`="Gamma high", 
+                        `title`="Upper", 
                         `type`="number", 
                         `format`="zto", 
-                        `visible`="(computeCutoff)"),
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
@@ -201,14 +217,14 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 options=options,
                 name="cutoffNote",
                 title="",
-                visible="(computeCutoff)",
                 clearWith=list(
                     "vars",
                     "difVar",
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed")))
+                    "seed",
+                    "showSE")))
             self$add(jmvcore::Image$new(
                 options=options,
                 name="pgdifPlot",
@@ -273,6 +289,7 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param iterations .
 #' @param seed .
 #' @param sortByGamma .
+#' @param showSE .
 #' @param showTileplot .
 #' @param tileCutoff .
 #' @param tilePercent .
@@ -300,6 +317,7 @@ partgamdif <- function(
     iterations = 250,
     seed = 42,
     sortByGamma = FALSE,
+    showSE = FALSE,
     showTileplot = FALSE,
     tileCutoff = 10,
     tilePercent = FALSE) {
@@ -325,6 +343,7 @@ partgamdif <- function(
         iterations = iterations,
         seed = seed,
         sortByGamma = sortByGamma,
+        showSE = showSE,
         showTileplot = showTileplot,
         tileCutoff = tileCutoff,
         tilePercent = tilePercent)

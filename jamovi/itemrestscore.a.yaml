@@ -24,26 +24,14 @@ options:
       type: Variables
       suggested:
           - continuous
-          - nominal
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: sortByDiff
       title: Sort by absolute difference (largest first)
       type: Bool
       default: false
-
-    - name: pAdj
-      title: P-value adjustment method
-      type: List
-      options:
-          - title: Benjamini-Hochberg (BH)
-            name: BH
-          - title: Holm
-            name: holm
-          - title: Bonferroni
-            name: bonferroni
-      default: BH
 
 ...

@@ -17,4 +17,10 @@ items:
         - thetaMin
         - thetaMax
         - showLegend
+
+    - name: iccNote
+      title: ''
+      type: Html
+      clearWith:
+        - vars
 ...

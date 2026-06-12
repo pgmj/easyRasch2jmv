@@ -12,17 +12,16 @@ items:
       clearWith:
           - vars
           - sortByDiff
-          - pAdj
       columns:
           - name: item
             title: Item
             type: text
           - name: observed
-            title: Observed value
+            title: Observed gamma
             type: number
             format: zto
           - name: expected
-            title: Expected value
+            title: Expected gamma
             type: number
             format: zto
           - name: difference
@@ -30,18 +29,24 @@ items:
             type: number
             format: zto
           - name: pAdjusted
-            title: Adj. p-value
+            title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
           - name: significance
             title: p-value sign.
             type: text
-          - name: location
-            title: Location
-            type: number
-            format: zto
+          - name: fit
+            title: Misfit
+            type: text
           - name: relLocation
             title: Rel. location
             type: number
+            format: zto
+
+    - name: restscoreNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
 
 ...

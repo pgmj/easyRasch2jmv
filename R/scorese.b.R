@@ -9,11 +9,17 @@ scoreseClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if no variables selected
+      # 1. Return early / explain if requirements not met (eRm CML needs
+      # at least 2 items)
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 2) {
+        self$results$scoreNote$setContent(paste0(
+          "<p>This analysis requires at least <b>2 items</b> to fit a ",
+          "Rasch model. Select at least 2 items.</p>"
+        ))
         return()
+      }
 
       # 2. Extract data and convert to numeric
       data <- self$data
@@ -48,6 +54,10 @@ scoreseClass <- R6::R6Class(
       }
 
       validate_response_data(df)
+
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$scoreTable$setNote("sparse", sparse_msg)
 
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
@@ -86,20 +96,33 @@ scoreseClass <- R6::R6Class(
           private$.scoreSE_eap(df)
         }
       }, error = function(e) {
-        stop(paste("Error computing score-to-theta table:", e$message))
+        hint <- if (grepl("degrees of freedom", e$message, fixed = TRUE)) {
+          paste0(" With very few items the MML model cannot be estimated; ",
+                 "use the WLE method or select more items.")
+        } else ""
+        stop(paste0("Error computing score-to-theta table: ", e$message,
+                    hint))
       })
 
-      # 5. Populate table
+      # 5. Populate table. Raw values (no pre-rounding) so the jamovi
+      # frontend applies the user's "Number format" preferences.
+      # NOTE: rows are added here rather than in .init() because the row
+      # count (max sum score + 1) depends on the observed item maxima --
+      # it cannot be derived from the options alone (defensible Level 3
+      # case).
       table <- self$results$scoreTable
       for (i in seq_len(nrow(score_table))) {
         table$addRow(rowKey = i, values = list(
           rawScore   = score_table$raw_score[i],
-          logitScore = round(score_table$logit_score[i], 3),
-          logitSE    = round(score_table$logit_se[i],    3)
+          logitScore = score_table$logit_score[i],
+          logitSE    = score_table$logit_se[i]
         ))
       }
 
-      # Footnote: estimation method + complete-case basis
+      # Footnote: estimation method + sample basis. Both estimation
+      # paths fit the model on all available responses (eRm CML / mirt
+      # MML retain rows with partially missing responses).
+      n_used <- sum(rowSums(!is.na(df)) > 0)
       method_text <- if (method == "WLE") {
         paste0("Person locations via Warm's WLE (CML item parameters from eRm). ",
                "Boundary scores searched within theta range [",
@@ -113,23 +136,19 @@ scoreseClass <- R6::R6Class(
       table$setNote(
         "method",
         paste0(method_text,
-               " Item parameters fitted on n = ", n_complete,
-               " complete responses (rows with no missing values across the ",
-               "selected items).")
+               " Item parameters fitted on N = ", n_used,
+               " respondents (rows with partially missing responses are ",
+               "retained by the estimation).")
       )
 
       # 6. Caption HTML (kept short; setNote already conveys most info)
-      n_total    <- nrow(df)
-      n_excluded <- n_total - n_complete
-      excluded_msg <- if (n_excluded > 0L) {
-        paste0(" (", n_excluded, " of ", n_total,
-               " row(s) excluded due to missing responses)")
+      missing_msg <- if (n_used > n_complete) {
+        paste0(" (", n_complete, " with complete responses)")
       } else {
         ""
       }
       self$results$scoreNote$setContent(
-        paste0("<p>n = ", n_complete, " complete responses",
-               excluded_msg, ".</p>")
+        paste0("<p>N = ", n_used, " respondents", missing_msg, ".</p>")
       )
 
       # 7. Save state for plot
@@ -138,7 +157,7 @@ scoreseClass <- R6::R6Class(
           score_table   = score_table,
           ci_multiplier = ci_multiplier,
           method        = method,
-          n_complete    = n_complete
+          n_used        = n_used
         ))
       }
     },
@@ -228,8 +247,7 @@ scoreseClass <- R6::R6Class(
           "EAPsum (MML, mirt)."
         },
         " Error bars: ±", state$ci_multiplier,
-        " × logit SE. n = ", state$n_complete,
-        " complete responses."
+        " × logit SE. n = ", state$n_used, "."
       ))
 
       p <- ggplot2::ggplot(
@@ -247,7 +265,7 @@ scoreseClass <- R6::R6Class(
           y = "Ordinal sum score",
           caption = caption_text
         ) +
-        ggplot2::theme_bw(base_size = 14) +
+        ggplot2::theme_bw(base_size = 15) +
         er2_axis_margins() +
         er2_plot_caption()
 

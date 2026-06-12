@@ -33,6 +33,7 @@ options:
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: method
       title: Estimation method

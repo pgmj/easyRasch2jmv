@@ -94,6 +94,12 @@ locdepgammaClass <- R6::R6Class(
 
       validate_response_data(df)
 
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg)) {
+        self$results$dir1Table$setNote("sparse", sparse_msg)
+        self$results$dir2Table$setNote("sparse", sparse_msg)
+      }
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")

@@ -15,6 +15,7 @@ items:
           - samplesize
           - seed
           - cutoff
+          - sortBy
       columns:
           - name: item
             title: Item
@@ -22,20 +23,17 @@ items:
           - name: pctOverfit
             title: '% Overfit'
             type: number
+            format: zto
           - name: pctUnderfit
             title: '% Underfit'
             type: number
-          - name: pctNoMisfit
-            title: '% No misfit'
-            type: number
-          - name: infitMSQ
-            title: Cond. infit MSQ
-            type: number
+            format: zto
           - name: relLocation
             title: Rel. location
             type: number
-          - name: flagged
-            title: Flagged
+            format: zto
+          - name: misfit
+            title: Misfit
             type: text
 
     - name: bootstrapNote
@@ -46,10 +44,9 @@ items:
           - iterations
           - samplesize
           - seed
-          - cutoff
 
     - name: bootstrapPlot
-      title: Bootstrap Classification Percentages
+      title: Bootstrap Item-Restscore Differences
       type: Image
       width: 700
       height: 600
@@ -61,6 +58,6 @@ items:
           - iterations
           - samplesize
           - seed
-          - cutoff
+          - sortBy
 
 ...

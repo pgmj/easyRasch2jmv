@@ -32,6 +32,7 @@ options:
           - ordinal
       permitted:
           - numeric
+      rejectInf: true
 
     - name: estim
       title: Theta estimator (Empirical & RMU)

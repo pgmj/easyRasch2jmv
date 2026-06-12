@@ -29,6 +29,8 @@ children:
     children:
       - type: CheckBox
         name: sortByGamma
+      - type: CheckBox
+        name: showSE
 
   - type: LayoutBox
     margin: large

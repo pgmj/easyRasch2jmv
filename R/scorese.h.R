@@ -26,7 +26,8 @@ scoreseOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "continuous",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..method <- jmvcore::OptionList$new(
                 "method",
                 method,
@@ -123,7 +124,8 @@ scoreseResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="logitSE", 
                         `title`="Logit std.error", 
-                        `type`="number"))))
+                        `type`="number", 
+                        `format`="zto"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="scoreNote",

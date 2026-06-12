@@ -35,5 +35,7 @@ children:
   - type: LayoutBox
     margin: large
     children:
+      - type: ComboBox
+        name: sortBy
       - type: CheckBox
         name: showPlot

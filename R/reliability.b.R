@@ -12,7 +12,7 @@ reliabilityClass <- R6::R6Class(
     # so they belong here. .run() fills in the computed estimates via setRow().
     # ---------------------------------------------------------------------
     .init = function() {
-      if (is.null(self$options$vars) || length(self$options$vars) < 2)
+      if (is.null(self$options$vars) || length(self$options$vars) < 3)
         return()
 
       estim <- self$options$estim
@@ -40,11 +40,22 @@ reliabilityClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if no variables selected
+      # 1. Return early / explain if requirements not met. With 2
+      # dichotomous items the MML model (mirt) is not estimable (too few
+      # degrees of freedom), and reliability estimates from 2-item
+      # scales are generally not informative, so require 3 items.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$relNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With 2 ",
+          "dichotomous items the latent model used for the Empirical and ",
+          "RMU estimates cannot be estimated (too few degrees of ",
+          "freedom), and reliability estimates from 2-item scales are ",
+          "generally not informative. Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Required suggested package
       if (!requireNamespace("ggdist", quietly = TRUE))
@@ -81,6 +92,10 @@ reliabilityClass <- R6::R6Class(
       }
 
       validate_response_data(df)
+
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$relTable$setNote("sparse", sparse_msg)
 
       n_complete <- sum(complete.cases(df))
       n_total    <- nrow(df)
@@ -185,7 +200,9 @@ reliabilityClass <- R6::R6Class(
           }, numeric(1L))
           alpha_vec <- alpha_vec[is.finite(alpha_vec)]
           actual_boot <- length(alpha_vec)
-          if (actual_boot >= 2L) {
+          # Same robustness thresholds as the simulation analyses: a
+          # CI from a handful of usable resamples would be misleading.
+          if (actual_boot >= 20L && actual_boot >= boot_iter / 2) {
             alpha_int   <- ggdist::hdci(alpha_vec, .width = conf_int)
             alpha_lower <- alpha_int[1L, 1L]
             alpha_upper <- alpha_int[1L, 2L]
@@ -194,36 +211,40 @@ reliabilityClass <- R6::R6Class(
 
         # 11. Build result rows
         boot_note <- if (isTRUE(boot_alpha)) {
-          if (!is.na(actual_boot) && actual_boot >= 2L) {
+          if (!is.na(actual_boot) &&
+              actual_boot >= 20L && actual_boot >= boot_iter / 2) {
             paste0(actual_boot, " bootstrap resamples")
           } else {
-            "bootstrap failed"
+            paste0("bootstrap failed (only ", actual_boot, " of ",
+                   boot_iter, " resamples usable)")
           }
         } else {
           "no bootstrap"
         }
         rmu_note <- paste0(draws, " PVs, ", rmu_iter, " RMU iterations")
 
+        # Raw values (no pre-rounding) so the jamovi frontend applies
+        # the user's "Number format" preferences.
         rows <- list(
           list(metric   = "Cronbach's alpha",
-               estimate = round(alpha, 3),
-               lower    = round(alpha_lower, 3),
-               upper    = round(alpha_upper, 3),
+               estimate = alpha,
+               lower    = alpha_lower,
+               upper    = alpha_upper,
                notes    = boot_note),
           list(metric   = "PSI",
-               estimate = round(psi, 3),
+               estimate = psi,
                lower    = NA_real_,
                upper    = NA_real_,
                notes    = "eRm::SepRel"),
           list(metric   = paste0("Empirical (", estim, ")"),
-               estimate = round(emp_rel, 3),
+               estimate = emp_rel,
                lower    = NA_real_,
                upper    = NA_real_,
                notes    = "mirt::empirical_rxx"),
           list(metric   = paste0("RMU (", estim, ")"),
-               estimate = round(rmu_estimate, 3),
-               lower    = round(rmu_lower, 3),
-               upper    = round(rmu_upper, 3),
+               estimate = rmu_estimate,
+               lower    = rmu_lower,
+               upper    = rmu_upper,
                notes    = rmu_note)
         )
 
@@ -240,22 +261,41 @@ reliabilityClass <- R6::R6Class(
             "parameters from mirt; theta estimator: ", estim, "."
           )
         )
+        table$setNote(
+          "hdci",
+          paste0(
+            "HDCI = highest-density continuous interval (width set by the ",
+            "HDCI width option; here ", round(conf_int * 100, 1),
+            "%). Available for Cronbach's alpha (when bootstrapped) and ",
+            "RMU; PSI and Empirical reliability are reported as point ",
+            "estimates only."
+          )
+        )
 
-        # 13. Caption
-        n_excluded <- n_total - n_complete
-        excluded_msg <- if (n_excluded > 0L) {
-          paste0(" (", n_excluded, " of ", n_total,
-                 " row(s) had a missing response and were excluded from ",
-                 "model fitting)")
+        # 13. Caption. The estimates use different samples when data are
+        # missing: Cronbach's alpha is closed-form on complete cases,
+        # while the model-based estimates retain partially missing rows
+        # (eRm CML / mirt MML).
+        n_used <- sum(rowSums(!is.na(df)) > 0)
+        missing_msg <- if (n_used > n_complete) {
+          paste0(
+            " Cronbach's alpha is computed from the ", n_complete,
+            " complete cases; the model-based estimates (PSI, Empirical, ",
+            "RMU) use all ", n_used, " rows with at least one response ",
+            "(eRm's CML and mirt's MML estimation accommodate partially ",
+            "missing responses)."
+          )
         } else {
           ""
         }
         self$results$relNote$setContent(
           paste0(
-            "<p>Reliability based on n = ", n_complete,
-            " complete responses across ", ncol(df), " items",
-            excluded_msg, ". HDCI width = ",
-            round(conf_int * 100, 1), "%.</p>"
+            "<p>Reliability based on N = ", n_used,
+            " respondents across ", ncol(df), " items",
+            if (n_used > n_complete)
+              paste0(" (", n_complete, " with complete responses)")
+            else "",
+            ".", missing_msg, "</p>"
           )
         )
 

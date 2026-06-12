@@ -4,13 +4,24 @@ partgamdifClass <- R6::R6Class(
   inherit = partgamdifBase,
   private = list(
     .run = function() {
-      # 1. Return early if no variables selected or difVar not set
+      # 1. Return early / explain if requirements not met. With 2 items
+      # the rest score reduces to the other item of the pair and
+      # partgam_DIF returns mirror-duplicate rows (gamma_1 = -gamma_2,
+      # identical SE and p), i.e. a single coarsely-conditioned test
+      # shown twice -- so at least 3 items are required.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
       if (is.null(self$options$difVar))
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$cutoffNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
+          "items the rest score (total score minus the item) reduces to ",
+          "the other item, and the two rows of the table become mirror ",
+          "duplicates of a single test. Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Extract and validate data
       data <- self$data
@@ -94,18 +105,30 @@ partgamdifClass <- R6::R6Class(
           stop(paste0("Item '", col, "' has no variation in responses."))
       }
 
+      # Sparse-category warning per DIF group -- the relevant split for
+      # this analysis. Shown even when the tileplot is off, pointing
+      # users to it for visual inspection.
+      sparse_msg <- sparse_note_grouped(df, dif_vec)
+      if (!is.null(sparse_msg)) {
+        self$results$pgdifTable$setNote("sparse", paste0(
+          sparse_msg, " Enable 'Show response distribution by DIF group' ",
+          "to inspect the counts."
+        ))
+      }
+
       # rgl workaround
       old_rgl <- getOption("rgl.useNULL")
       options(rgl.useNULL = TRUE)
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
       tryCatch({
-        # Compute partial gamma DIF
-        nullfile_path <- nullfile()
-        sink(nullfile_path)
-        on.exit(sink(), add = TRUE)
-        pgam_raw <- iarm::partgam_DIF(as.data.frame(df), dif_vec)
-        sink()
+        # Compute partial gamma DIF (suppress iarm console output; the
+        # finally handler guarantees the sink is removed exactly once)
+        sink(nullfile())
+        pgam_raw <- tryCatch(
+          iarm::partgam_DIF(as.data.frame(df), dif_vec),
+          finally = sink()
+        )
 
         pgam_df <- data.frame(
           Item    = as.character(pgam_raw$Item),
@@ -123,10 +146,20 @@ partgamdifClass <- R6::R6Class(
 
         n_complete_used <- n_complete
 
-        # Optionally compute cutoffs
+        # Optionally compute cutoffs. If the simulation cannot deliver
+        # reliable cutoffs (e.g. too few successful iterations), degrade
+        # gracefully: show the observed gammas without the expected range
+        # and explain why in the note below the table.
         cutoff_res <- NULL
+        sim_fail_msg <- NULL
         if (isTRUE(self$options$computeCutoff)) {
-          cutoff_res <- private$.runCutoffSim(df, dif_vec)
+          cutoff_res <- tryCatch(
+            private$.runCutoffSim(df, dif_vec),
+            error = function(e) {
+              sim_fail_msg <<- e$message
+              NULL
+            }
+          )
 
           if (!is.null(cutoff_res)) {
             cutoff_df <- cutoff_res$item_cutoffs
@@ -166,20 +199,57 @@ partgamdifClass <- R6::R6Class(
           table$setRow(rowNo = i, values = vals)
         }
 
-        # Set cutoff note
+        # Table footnotes
+        table$setNote("sig", paste0(
+          "P-values adjusted with the Benjamini-Hochberg (BH) ",
+          "false-discovery-rate method. ",
+          "*** p < .001, ** p < .01, * p < .05, . p < .10 (adjusted)."
+        ))
         if (!is.null(cutoff_res)) {
-          method_label <- paste0(cutoff_res$hdci_width * 100, "% HDCI")
-          note_html <- paste0(
-            "<p>Partial gamma DIF analysis (n = ", n_complete_used,
-            " complete cases). Cutoff values based on ",
-            cutoff_res$actual_iterations, " simulation iterations (",
-            method_label, ").</p>"
-          )
-          self$results$cutoffNote$setContent(note_html)
+          table$setNote("flag", paste0(
+            "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI of ",
+            "partial gamma values simulated under no DIF (the DIF ",
+            "variable is randomly reassigned, preserving group ",
+            "proportions). Flagged = TRUE when the observed gamma falls ",
+            "outside the expected range."
+          ))
+        }
 
-          # Save state for plot
+        # HTML note: n reporting (always), CI level when shown, cutoff
+        # basis or simulation-failure explanation.
+        n_total    <- length(complete_mask)
+        n_excluded <- n_total - n_complete_used
+        excluded_clause <- if (n_excluded > 0L) {
+          paste0(" (", n_excluded, " of ", n_total, " row(s) excluded ",
+                 "due to missing item responses or a missing DIF value)")
+        } else ""
+        se_clause <- if (isTRUE(self$options$showSE)) {
+          paste0(" Confidence intervals are 95% Wald intervals ",
+                 "(gamma &plusmn; 1.96 &times; SE).")
+        } else ""
+        cutoff_clause <- if (!is.null(cutoff_res)) {
+          paste0(" Cutoff values based on ", cutoff_res$actual_iterations,
+                 " simulation iterations (", cutoff_res$hdci_width * 100,
+                 "% HDCI).")
+        } else if (!is.null(sim_fail_msg)) {
+          paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
+                 sim_fail_msg)
+        } else ""
+        self$results$cutoffNote$setContent(paste0(
+          "<p>Partial gamma DIF analysis based on n = ", n_complete_used,
+          " complete cases", excluded_clause, ".", se_clause,
+          cutoff_clause, "</p>"
+        ))
+
+        if (!is.null(cutoff_res)) {
+          # Save state for plot (incl. the 95% Wald CI of the observed
+          # gamma, drawn as a segment in the same colour as the diamond)
           observed_gamma_vec <- pgam_df$gamma
+          observed_lower_vec <- pgam_df$lower
+          observed_upper_vec <- pgam_df$upper
           names(observed_gamma_vec) <- pgam_df$Item
+          names(observed_lower_vec) <- pgam_df$Item
+          names(observed_upper_vec) <- pgam_df$Item
 
           self$results$pgdifPlot$setState(list(
             results_df        = cutoff_res$results,
@@ -187,6 +257,8 @@ partgamdifClass <- R6::R6Class(
             actual_iterations = cutoff_res$actual_iterations,
             sample_n          = cutoff_res$sample_n,
             observed_gamma    = observed_gamma_vec,
+            observed_lower    = observed_lower_vec,
+            observed_upper    = observed_upper_vec,
             item_names_data   = names(df)
           ))
         }
@@ -257,10 +329,13 @@ partgamdifClass <- R6::R6Class(
       # Item ordering: top of y-axis = first column of df
       count_df$item_label <- factor(count_df$item, levels = rev(item_names))
 
+      group_sizes <- table(dif_factor)
+
       list(
         count_df       = count_df,
         all_categories = all_categories,
-        item_names     = item_names
+        item_names     = item_names,
+        group_sizes    = group_sizes
       )
     },
 
@@ -324,8 +399,26 @@ partgamdifClass <- R6::R6Class(
 
       ok         <- vapply(results_raw, is.data.frame, logical(1L))
       successful <- results_raw[ok]
-      if (length(successful) == 0L)
-        stop("All simulation iterations failed.")
+
+      # Guard against degenerate cutoffs: with very few successful
+      # iterations the HDCI collapses and every item is spuriously
+      # flagged. Require at least 20 successes and a 50% success rate;
+      # otherwise report the dominant failure reason.
+      n_ok <- length(successful)
+      if (n_ok < 20L || n_ok < iterations / 2) {
+        fail_msgs <- unlist(results_raw[!ok])
+        top_reason <- if (length(fail_msgs) > 0L) {
+          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+        } else NULL
+        stop(paste0(
+          "Only ", n_ok, " of ", iterations, " simulation iterations ",
+          "succeeded -- too few to estimate reliable cutoff intervals.",
+          if (!is.null(top_reason))
+            paste0(" Most common failure: ", top_reason, ".") else "",
+          " This typically happens when items have very low or very ",
+          "high endorsement rates relative to the sample size."
+        ), call. = FALSE)
+      }
 
       actual_iterations <- length(successful)
       iter_dfs <- lapply(seq_along(successful), function(i) {
@@ -395,8 +488,11 @@ partgamdifClass <- R6::R6Class(
       observed_df <- data.frame(
         Item           = item_names_data,
         observed_gamma = as.numeric(observed_gamma[item_names_data]),
+        observed_lower = as.numeric(state$observed_lower[item_names_data]),
+        observed_upper = as.numeric(state$observed_upper[item_names_data]),
         stringsAsFactors = FALSE
       )
+      observed_df$Item_f <- factor(observed_df$Item, levels = item_levels)
 
       gamma_sim <- data.frame(
         Item  = results_df$Item,
@@ -410,7 +506,8 @@ partgamdifClass <- R6::R6Class(
       caption_text <- er2_caption(paste0(
         "Results from ", actual_iterations,
         " simulated datasets with ", sample_n, " respondents.\n",
-        "Orange dots indicate observed partial gamma.\n",
+        "Orange diamonds indicate observed partial gamma, with the ",
+        "orange line showing its 95% Wald CI.\n",
         "Black dots indicate median gamma from simulations."
       ))
 
@@ -438,6 +535,13 @@ partgamdifClass <- R6::R6Class(
           data = lo_hi,
           ggplot2::aes(x = .data$median_gamma, y = .data$Item_f),
           size = 3.6
+        ) +
+        ggplot2::geom_segment(
+          data = observed_df,
+          ggplot2::aes(x = .data$observed_lower, xend = .data$observed_upper,
+                       y = .data$Item_f, yend = .data$Item_f),
+          color = "sienna2", linewidth = 0.8,
+          position = ggplot2::position_nudge(y = -0.1)
         ) +
         ggplot2::geom_point(
           ggplot2::aes(x = .data$observed_gamma),
@@ -508,16 +612,29 @@ partgamdifClass <- R6::R6Class(
         ggplot2::guides(color = "none") +
         ggplot2::scale_color_identity()
 
+      caption_text <- if (!is.null(state$group_sizes)) {
+        gs <- state$group_sizes
+        er2_caption(paste0(
+          "Response category counts by DIF group (",
+          paste0(names(gs), ": n = ", as.integer(gs), collapse = "; "),
+          "). Counts below ", cutoff, " are highlighted in red."
+        ))
+      } else NULL
+
       p <- p +
-        ggplot2::facet_wrap(~ group) +
-        ggplot2::labs(y = "Items") +
-        ggplot2::theme_minimal(base_size = 13) +
+        ggplot2::facet_wrap(~ group,
+                            labeller = ggplot2::labeller(
+                              group = er2_wrap_labels
+                            )) +
+        ggplot2::labs(y = "Items", caption = caption_text) +
+        ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(
-          axis.text.x   = ggplot2::element_text(size = 8),
+          axis.text.x   = ggplot2::element_text(size = 10),
           panel.grid    = ggplot2::element_blank(),
           panel.spacing = ggplot2::unit(0.7, "cm")
         ) +
-        er2_axis_margins()
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

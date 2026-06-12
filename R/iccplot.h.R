@@ -64,7 +64,8 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "iccplotResults",
     inherit = jmvcore::Group,
     active = list(
-        iccPlot = function() private$.items[["iccPlot"]]),
+        iccPlot = function() private$.items[["iccPlot"]],
+        iccNote = function() private$.items[["iccNote"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -87,7 +88,13 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "vars",
                     "thetaMin",
                     "thetaMax",
-                    "showLegend")))}))
+                    "showLegend")))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="iccNote",
+                title="",
+                clearWith=list(
+                    "vars")))}))
 
 iccplotBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "iccplotBase",
@@ -121,6 +128,7 @@ iccplotBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$iccPlot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$iccNote} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
 #' @export

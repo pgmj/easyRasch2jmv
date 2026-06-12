@@ -87,6 +87,10 @@ iteminfitmiClass <- R6::R6Class(
 
       validate_response_data(df_items)
 
+      sparse_msg <- sparse_note(df_items)
+      if (!is.null(sparse_msg))
+        self$results$infitTable$setNote("sparse", sparse_msg)
+
       for (col in names(df_items)) {
         unique_vals <- length(unique(stats::na.omit(df_items[[col]])))
         if (unique_vals < 2)

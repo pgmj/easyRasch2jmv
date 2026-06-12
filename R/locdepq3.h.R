@@ -9,6 +9,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             computeCutoff = FALSE,
             iterations = 100,
+            hdciWidth = 99,
             seed = 42,
             nPairs = 10, ...) {
 
@@ -23,10 +24,10 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 vars,
                 suggested=list(
                     "continuous",
-                    "nominal",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..computeCutoff <- jmvcore::OptionBool$new(
                 "computeCutoff",
                 computeCutoff,
@@ -37,6 +38,12 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 default=100,
                 min=50,
                 max=5000)
+            private$..hdciWidth <- jmvcore::OptionNumber$new(
+                "hdciWidth",
+                hdciWidth,
+                default=99,
+                min=50,
+                max=100)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,
@@ -52,6 +59,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..vars)
             self$.addOption(private$..computeCutoff)
             self$.addOption(private$..iterations)
+            self$.addOption(private$..hdciWidth)
             self$.addOption(private$..seed)
             self$.addOption(private$..nPairs)
         }),
@@ -59,12 +67,14 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         vars = function() private$..vars$value,
         computeCutoff = function() private$..computeCutoff$value,
         iterations = function() private$..iterations$value,
+        hdciWidth = function() private$..hdciWidth$value,
         seed = function() private$..seed$value,
         nPairs = function() private$..nPairs$value),
     private = list(
         ..vars = NA,
         ..computeCutoff = NA,
         ..iterations = NA,
+        ..hdciWidth = NA,
         ..seed = NA,
         ..nPairs = NA)
 )
@@ -75,7 +85,9 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     active = list(
         q3Table = function() private$.items[["q3Table"]],
         cutoffTable = function() private$.items[["cutoffTable"]],
-        q3Plot = function() private$.items[["q3Plot"]]),
+        q3Plot = function() private$.items[["q3Plot"]],
+        pairTable = function() private$.items[["pairTable"]],
+        q3Note = function() private$.items[["q3Note"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -102,7 +114,7 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$add(jmvcore::Table$new(
                 options=options,
                 name="cutoffTable",
-                title="Simulation-Based Q3 Cutoff",
+                title="Simulation-Based Global Q3 Cutoff",
                 visible="(computeCutoff)",
                 clearWith=list(
                     "vars",
@@ -133,7 +145,59 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "iterations",
                     "seed",
-                    "nPairs")))}))
+                    "nPairs")))
+            self$add(jmvcore::Table$new(
+                options=options,
+                name="pairTable",
+                title="Q3 by Item Pair",
+                rows=0,
+                visible="(computeCutoff)",
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed"),
+                columns=list(
+                    list(
+                        `name`="item1", 
+                        `title`="Item 1", 
+                        `type`="text"),
+                    list(
+                        `name`="item2", 
+                        `title`="Item 2", 
+                        `type`="text"),
+                    list(
+                        `name`="q3", 
+                        `title`="Observed Q3", 
+                        `type`="number", 
+                        `format`="zto"),
+                    list(
+                        `name`="q3Low", 
+                        `title`="Lower", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="q3High", 
+                        `title`="Upper", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="flagged", 
+                        `title`="Flagged", 
+                        `type`="text"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="q3Note",
+                title="",
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed")))}))
 
 locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "locdepq3Base",
@@ -167,6 +231,7 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param vars .
 #' @param computeCutoff .
 #' @param iterations .
+#' @param hdciWidth .
 #' @param seed .
 #' @param nPairs .
 #' @return A results object containing:
@@ -174,6 +239,8 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #'   \code{results$q3Table} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$cutoffTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$q3Plot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$pairTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$q3Note} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -188,6 +255,7 @@ locdepq3 <- function(
     vars,
     computeCutoff = FALSE,
     iterations = 100,
+    hdciWidth = 99,
     seed = 42,
     nPairs = 10) {
 
@@ -205,6 +273,7 @@ locdepq3 <- function(
         vars = vars,
         computeCutoff = computeCutoff,
         iterations = iterations,
+        hdciWidth = hdciWidth,
         seed = seed,
         nPairs = nPairs)
 

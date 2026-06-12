@@ -9,11 +9,21 @@ bootrestscoreClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if no variables selected
+      # 1. Return early / explain if requirements not met.
+      # Same minimum as the asymptotic item-restscore analysis: with 2
+      # items the restscore reduces to the other item of the pair and
+      # observed = expected by construction.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$bootstrapNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
+          "items the restscore (total score minus the item) reduces to the ",
+          "other item, making observed and expected correlations identical ",
+          "by construction. Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Extract data and convert to numeric
       data <- self$data
@@ -80,6 +90,10 @@ bootrestscoreClass <- R6::R6Class(
 
       validate_response_data(df)
 
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$bootstrapTable$setNote("sparse", sparse_msg)
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
@@ -135,9 +149,6 @@ bootrestscoreClass <- R6::R6Class(
                                     na.rm = TRUE)
         relative_item_avg_locations <- item_avg_locations - person_avg_location
 
-        cfit <- iarm::out_infit(erm_full)
-        n_complete_used <- nrow(stats::na.omit(df))
-
         # Per-iteration seeds for reproducibility
         set.seed(seed)
         boot_seeds <- sample.int(.Machine$integer.max, iterations)
@@ -155,9 +166,31 @@ bootrestscoreClass <- R6::R6Class(
 
         ok <- vapply(results_raw, is.data.frame, logical(1L))
         successful <- results_raw[ok]
-        if (length(successful) == 0L)
-          stop("All bootstrap iterations failed. Check your data.")
-        actual_iterations <- length(successful)
+
+        # Guard against misleading percentages: with few successful
+        # iterations the classification shares are based on tiny
+        # denominators. Require at least 20 successes and a 50% success
+        # rate; otherwise stop with the dominant failure reason (there
+        # is no observed-only fallback -- the bootstrap is the analysis).
+        n_ok <- length(successful)
+        if (n_ok < 20L || n_ok < iterations / 2) {
+          fail_msgs <- unlist(results_raw[!ok])
+          top_reason <- if (length(fail_msgs) > 0L) {
+            names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+          } else NULL
+          stop(paste0(
+            "Only ", n_ok, " of ", iterations, " bootstrap iterations ",
+            "succeeded -- too few for trustworthy classification ",
+            "percentages.",
+            if (!is.null(top_reason))
+              paste0(" Most common failure: ", top_reason, ".") else "",
+            " This typically happens when items have very low or very ",
+            "high endorsement rates, so that resampled datasets often ",
+            "contain items without response variation. Consider a larger ",
+            "bootstrap sample size."
+          ), call. = FALSE)
+        }
+        actual_iterations <- n_ok
 
         # Stack and tag with iteration index
         iter_dfs <- lapply(seq_along(successful), function(i) {
@@ -181,7 +214,9 @@ bootrestscoreClass <- R6::R6Class(
         per_item_total <- tapply(counts$n, counts$Item, sum)
         counts$percent <- round(counts$n * 100 / per_item_total[counts$Item], 1)
 
-        # Wide per-item summary
+        # Wide per-item summary. Pass raw numerics (no pre-rounding) so
+        # the jamovi frontend applies the user's "Number format"
+        # preferences.
         wide <- data.frame(
           Item = item_names,
           stringsAsFactors = FALSE
@@ -192,13 +227,25 @@ bootrestscoreClass <- R6::R6Class(
         }
         wide$pctOverfit   <- vapply(item_names, get_pct, numeric(1L), cls = "overfit")
         wide$pctUnderfit  <- vapply(item_names, get_pct, numeric(1L), cls = "underfit")
-        wide$pctNoMisfit  <- vapply(item_names, get_pct, numeric(1L), cls = "no misfit")
-        wide$infitMSQ     <- round(cfit$Infit, 2)
-        wide$relLocation  <- round(relative_item_avg_locations, 2)
-        wide$flagged      <- ifelse(
-          wide$pctOverfit > cutoff | wide$pctUnderfit > cutoff,
-          "yes", ""
-        )
+        wide$relLocation  <- relative_item_avg_locations
+        # Misfit labels mirror the asymptotic item-restscore analysis:
+        # an item is labelled when its classification share exceeds the
+        # display cutoff. If both shares exceed it (possible only with a
+        # cutoff below 50%), the more frequent classification wins.
+        over  <- wide$pctOverfit > cutoff
+        under <- wide$pctUnderfit > cutoff
+        wide$misfit <- ""
+        wide$misfit[over  & (!under | wide$pctOverfit >= wide$pctUnderfit)] <- "overfit"
+        wide$misfit[under & (!over  | wide$pctUnderfit > wide$pctOverfit)]  <- "underfit"
+
+        # Sort if requested (table and plot share the resulting order)
+        sort_by <- self$options$sortBy
+        if (sort_by == "overfit") {
+          wide <- wide[order(-wide$pctOverfit), , drop = FALSE]
+        } else if (sort_by == "underfit") {
+          wide <- wide[order(-wide$pctUnderfit), , drop = FALSE]
+        }
+        rownames(wide) <- NULL
 
         # 5. Populate the results table
         table <- self$results$bootstrapTable
@@ -207,12 +254,27 @@ bootrestscoreClass <- R6::R6Class(
             item        = wide$Item[i],
             pctOverfit  = wide$pctOverfit[i],
             pctUnderfit = wide$pctUnderfit[i],
-            pctNoMisfit = wide$pctNoMisfit[i],
-            infitMSQ    = wide$infitMSQ[i],
             relLocation = wide$relLocation[i],
-            flagged     = wide$flagged[i]
+            misfit      = wide$misfit[i]
           ))
         }
+
+        # Footnotes explaining classification, flagging, and location
+        table$setNote("cls", paste0(
+          "Items are classified per iteration as overfit (observed > ",
+          "expected restscore correlation) or underfit (observed < ",
+          "expected) when the BH-adjusted p-value < .05; the % columns ",
+          "give the percentage of bootstrap iterations with each ",
+          "classification."
+        ))
+        table$setNote("flag", paste0(
+          "Misfit = the item was classified as overfit (or underfit) in ",
+          "more than ", cutoff, "% of the bootstrap iterations."
+        ))
+        table$setNote("loc", paste0(
+          "Rel. location = item location relative to the mean person ",
+          "location (full sample)."
+        ))
 
         # 6. Caption note
         clamp_msg <- if (samplesize_clamped) {
@@ -222,23 +284,31 @@ bootrestscoreClass <- R6::R6Class(
         } else {
           ""
         }
+        missing_msg <- if (n_complete < nrow(df)) {
+          paste0(
+            " Note: ", nrow(df) - n_complete, " row(s) have missing ",
+            "responses; such rows can be drawn into bootstrap samples but ",
+            "are excluded when the model is refitted within each ",
+            "iteration, so the effective per-iteration n is smaller than ",
+            "the bootstrap sample size."
+          )
+        } else {
+          ""
+        }
         note_html <- paste0(
           "<p>Results based on ", actual_iterations,
           " successful bootstrap iterations with n = ", samplesize_used,
           " and ", n_items, " items.",
-          clamp_msg,
-          " Conditional MSQ infit based on complete responders only (n = ",
-          n_complete_used,
-          "). Items where % overfit or % underfit exceed the display cutoff (",
-          cutoff, "%) are marked as flagged.</p>"
+          clamp_msg, missing_msg, "</p>"
         )
         self$results$bootstrapNote$setContent(note_html)
 
-        # 7. Save state for plot (raw per-iteration data)
+        # 7. Save state for plot (raw per-iteration data; item order
+        # follows the table sort)
         if (isTRUE(self$options$showPlot)) {
           self$results$bootstrapPlot$setState(list(
             fit_all           = fit_all,
-            item_names        = item_names,
+            item_names        = wide$Item,
             actual_iterations = actual_iterations,
             samplesize_used   = samplesize_used
           ))
@@ -259,14 +329,19 @@ bootrestscoreClass <- R6::R6Class(
 
       state <- image$state
       d <- state$fit_all
-      d$Item <- factor(d$Item, levels = state$item_names)
+      # coord_flip() below puts items on the y-axis like the conditional
+      # infit plot; reversed levels place the first item at the top.
+      d$Item <- factor(d$Item, levels = rev(state$item_names))
       d$item_restscore <- factor(d$item_restscore,
                                  levels = c("overfit", "underfit", "no misfit"))
 
       caption_text <- er2_caption(paste0(
         state$actual_iterations,
         " bootstrap iterations with n = ", state$samplesize_used, " per draw.\n",
-        "Each point is one iteration; colour = per-iteration classification (BH-adj. p < .05)."
+        "Each point is one iteration, classified by BH-adjusted p < .05 ",
+        "and sign: blue = overfit, red = underfit, grey = no misfit.\n",
+        "Positive values indicate over-discrimination (overfit), negative ",
+        "values under-discrimination (underfit)."
       ))
 
       p <- ggplot2::ggplot(
@@ -278,7 +353,7 @@ bootrestscoreClass <- R6::R6Class(
         ggplot2::geom_violin(fill = "grey90", colour = NA) +
         ggplot2::geom_jitter(
           ggplot2::aes(colour = .data$item_restscore),
-          width = 0.15, alpha = 0.5, size = 0.9
+          width = 0.15, alpha = 0.5, size = 1.6
         ) +
         ggplot2::scale_colour_manual(
           values = c("overfit"   = "#377eb8",
@@ -287,15 +362,13 @@ bootrestscoreClass <- R6::R6Class(
           name = NULL,
           drop = FALSE
         ) +
+        ggplot2::coord_flip() +
         ggplot2::labs(
           x = NULL,
-          y = "Expected − observed restscore correlation",
+          y = "Observed − expected restscore correlation",
           caption = caption_text
         ) +
-        ggplot2::theme_minimal(base_size = 13) +
-        ggplot2::theme(
-          axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
-        ) +
+        ggplot2::theme_minimal(base_size = 15) +
         er2_axis_margins() +
         er2_plot_caption()
 
@@ -325,17 +398,22 @@ run_single_boot_restscore <- function(seed, data_list) {
       model_fit <- eRm::RM(d, se = FALSE)
     }
 
-    i1 <- as.data.frame(iarm::item_restscore(model_fit))
+    # iarm refits on complete cases when the resampled rows contain
+    # missing responses -- suppress its per-iteration console message;
+    # the behaviour is documented in the HTML note below the table.
+    i1 <- suppressMessages(as.data.frame(iarm::item_restscore(model_fit)))
     res_mat <- i1[[1L]]
     n_items <- length(data_list$item_names)
 
     observed <- as.numeric(res_mat[seq_len(n_items), 1L])
     expected <- as.numeric(res_mat[seq_len(n_items), 2L])
     p_adj    <- as.numeric(res_mat[seq_len(n_items), 5L])
-    diff_val <- expected - observed
+    # Signed as observed - expected so that overfit is positive,
+    # matching the Difference column in the item-restscore analysis.
+    diff_val <- observed - expected
 
-    cls <- ifelse(p_adj < 0.05 & diff_val < 0, "overfit",
-           ifelse(p_adj < 0.05 & diff_val > 0, "underfit", "no misfit"))
+    cls <- ifelse(p_adj < 0.05 & diff_val > 0, "overfit",
+           ifelse(p_adj < 0.05 & diff_val < 0, "underfit", "no misfit"))
 
     data.frame(
       Item           = data_list$item_names,

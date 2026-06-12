@@ -4,11 +4,17 @@ targetingClass <- R6::R6Class(
   inherit = targetingBase,
   private = list(
     .run = function() {
-      # Return early if no variables selected
+      # Return early / explain if requirements not met (eRm needs at
+      # least 2 items to fit a model).
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 2) {
+        self$results$targetingNote$setContent(paste0(
+          "<p>This analysis requires at least <b>2 items</b> to fit a ",
+          "Rasch model. Select at least 2 items.</p>"
+        ))
         return()
+      }
 
       # Extract and validate data
       data <- self$data
@@ -74,15 +80,25 @@ targetingClass <- R6::R6Class(
         item_names <- names(df)
         n_items    <- ncol(df)
 
-        # Fit eRm model
+        # Estimation method selection (mirrors easyRasch2::RMtargeting):
+        # CML (eRm) when all response categories have at least 3
+        # observations; MML (mirt) otherwise, which is more numerically
+        # stable under sparse-category conditions. Person parameters
+        # always come from the eRm fit.
+        sparse_items <- sparse_category_items(df, min_n = 3L)
+        use_mml      <- length(sparse_items) > 0L
+
+        # Fit eRm model (thresholds in the CML branch; person parameters
+        # in both branches)
         if (is_dicho) {
           erm_out <- eRm::RM(df)
         } else {
           erm_out <- eRm::PCM(df)
         }
 
-        # Extract item thresholds and per-threshold SEs (for optional CI bars)
-        if (is_dicho) {
+        if (use_mml) {
+          item_thresholds <- private$.thresholdsMML(df)
+        } else if (is_dicho) {
           item_locs <- stats::coef(erm_out, "beta") * -1
           item_ses  <- erm_out$se.beta
           item_thresholds <- data.frame(
@@ -170,6 +186,9 @@ targetingClass <- R6::R6Class(
           xlim[1] <- floor(min(all_values, na.rm = TRUE))
         }
 
+        # Rows with no valid responses contribute nothing to estimation
+        n_total <- sum(rowSums(!is.na(df)) > 0)
+
         # Save state for plot
         self$results$targetingPlot$setState(list(
           person_theta    = person_theta,
@@ -183,22 +202,85 @@ targetingClass <- R6::R6Class(
           is_dicho        = is_dicho,
           show_ci         = show_ci,
           ci_level        = ci_level,
-          n_persons       = nrow(df)
+          n_persons       = n_total
         ))
 
-        # Populate threshold table
+        # Populate threshold table.
+        # NOTE: rows are added here rather than in .init() because the
+        # number of rows equals the number of estimated thresholds, which
+        # depends on the observed response categories per item -- it
+        # cannot be derived from the options alone (defensible Level 3
+        # case).
         table <- self$results$thresholdTable
         for (i in seq_len(nrow(item_thresholds))) {
           table$addRow(rowKey = i, values = list(
             item      = item_thresholds$Item[i],
             threshold = item_thresholds$Threshold[i],
-            location  = item_thresholds$Location[i]
+            location  = item_thresholds$Location[i],
+            se        = item_thresholds$SE[i]
           ))
         }
+
+        # Estimation-method / sample-size note
+        method_clause <- if (use_mml) {
+          paste0(
+            "Item thresholds were estimated with <b>MML (mirt)</b> ",
+            "because item(s) ", paste(sparse_items, collapse = ", "),
+            " have at least one response category with fewer than 3 ",
+            "observations; MML is more numerically stable under sparse ",
+            "categories. Person locations come from the eRm (CML) model. ",
+            "This mirrors the estimation-method selection in ",
+            "easyRasch2::RMtargeting()."
+          )
+        } else {
+          paste0(
+            "Item thresholds and person locations estimated with CML ",
+            "(eRm); all response categories have at least 3 observations."
+          )
+        }
+        self$results$targetingNote$setContent(paste0(
+          "<p>Analysis based on N = ", n_total, " respondents (rows with ",
+          "partially missing responses are retained by the estimation). ",
+          method_clause, "</p>"
+        ))
 
       }, error = function(e) {
         stop(paste("Error in targeting plot analysis:", e$message))
       })
+    },
+
+    # ---------------------------------------------------------------------
+    # Item thresholds via MML (mirt), used when response categories are
+    # sparse. Ports easyRasch2:::.estimate_thresholds_mml(): IRT-pars
+    # b-values + SEs from mirt, centered to grand mean zero so they are
+    # comparable with the CML branch.
+    # ---------------------------------------------------------------------
+    .thresholdsMML = function(df) {
+      mirt_out <- mirt::mirt(df, model = 1, itemtype = "Rasch",
+                             SE = TRUE, verbose = FALSE)
+      item_coefs <- mirt::coef(mirt_out, IRTpars = TRUE, printSE = TRUE,
+                               simplify = FALSE)
+      n_items <- ncol(df)
+      thresh_list <- vector("list", n_items)
+      for (i in seq_len(n_items)) {
+        item_mat <- item_coefs[[i]]
+        b_cols <- grep("^b\\d*$", colnames(item_mat), value = TRUE)
+        if (length(b_cols) == 0L) b_cols <- "b"
+        thresh_list[[i]] <- data.frame(
+          Item      = names(df)[i],
+          Threshold = paste0("T", seq_along(b_cols)),
+          Location  = as.numeric(item_mat["par", b_cols]),
+          SE        = as.numeric(item_mat["SE",  b_cols]),
+          stringsAsFactors = FALSE
+        )
+      }
+      thresh_df <- do.call(rbind, thresh_list)
+      rownames(thresh_df) <- NULL
+
+      # Center thresholds (SEs are invariant to location shift)
+      thresh_df$Location <- thresh_df$Location -
+        mean(thresh_df$Location, na.rm = TRUE)
+      thresh_df
     },
 
     .targetingPlot = function(image, ggtheme, theme, ...) {

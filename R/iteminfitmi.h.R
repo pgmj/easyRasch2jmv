@@ -14,7 +14,7 @@ iteminfitmiOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             seed = 42,
             sortByInfit = FALSE,
             computeCutoff = FALSE,
-            hdciWidth = 99.9,
+            hdciWidth = 99,
             iterations = 500, ...) {
 
             super$initialize(
@@ -77,7 +77,7 @@ iteminfitmiOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99.9,
+                default=99,
                 min=50,
                 max=100)
             private$..iterations <- jmvcore::OptionInteger$new(
@@ -300,7 +300,7 @@ iteminfitmi <- function(
     seed = 42,
     sortByInfit = FALSE,
     computeCutoff = FALSE,
-    hdciWidth = 99.9,
+    hdciWidth = 99,
     iterations = 500) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))

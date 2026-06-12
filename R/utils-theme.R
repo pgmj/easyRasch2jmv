@@ -49,3 +49,21 @@ er2_caption <- function(text, width = 90L) {
   prefixed <- paste("Note.", text)
   paste(strwrap(prefixed, width = width), collapse = "\n")
 }
+
+#' Wrap long axis / facet labels onto multiple lines
+#'
+#' Base R only -- no stringr dependency. Width chosen so labels like
+#' "Elementary school" wrap to two lines without crowding. Used for
+#' DIF-group labels in the LR-DIF and partial gamma DIF plots.
+#'
+#' @param x Character vector (or factor) of labels.
+#' @param width Integer. Maximum characters per line; passed to
+#'   [strwrap()].
+#' @return Character vector with `\n` line breaks.
+#' @noRd
+er2_wrap_labels <- function(x, width = 10L) {
+  vapply(as.character(x), function(s) {
+    if (is.na(s) || !nzchar(s)) return(s)
+    paste(strwrap(s, width = width), collapse = "\n")
+  }, character(1L))
+}

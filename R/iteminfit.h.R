@@ -8,7 +8,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            hdciWidth = 99.9,
+            hdciWidth = 99,
             iterations = 200,
             seed = 42,
             sortByInfit = FALSE, ...) {
@@ -35,7 +35,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99.9,
+                default=99,
                 min=50,
                 max=100)
             private$..iterations <- jmvcore::OptionInteger$new(
@@ -106,7 +106,8 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed"),
+                    "seed",
+                    "sortByInfit"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -114,8 +115,9 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `type`="text"),
                     list(
                         `name`="infitMSQ", 
-                        `title`="Infit MSQ", 
-                        `type`="number"),
+                        `title`="Observed infit", 
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="infitLow", 
                         `title`="Lower", 
@@ -127,22 +129,23 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `name`="infitHigh", 
                         `title`="Upper", 
                         `type`="number", 
+                        `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
                     list(
-                        `name`="flagged", 
-                        `title`="Flagged", 
+                        `name`="misfit", 
+                        `title`="Misfit", 
                         `type`="text", 
                         `visible`="(computeCutoff)"),
                     list(
                         `name`="relLocation", 
-                        `title`="Relative location", 
-                        `type`="number"))))
+                        `title`="Rel. location", 
+                        `type`="number", 
+                        `format`="zto"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="cutoffNote",
                 title="",
-                visible="(computeCutoff)",
                 clearWith=list(
                     "vars",
                     "computeCutoff",
@@ -214,7 +217,7 @@ iteminfit <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    hdciWidth = 99.9,
+    hdciWidth = 99,
     iterations = 200,
     seed = 42,
     sortByInfit = FALSE) {

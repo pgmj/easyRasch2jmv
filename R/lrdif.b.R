@@ -10,11 +10,20 @@ lrdifClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early if requirements not met
+      # 1. Return early / explain if requirements not met (eRm needs at
+      # least 2 items; no DIF variable selected is the normal initial
+      # state and stays silent)
       vars   <- self$options$vars
       difVar <- self$options$difVar
-      if (is.null(vars) || length(vars) < 2 || is.null(difVar))
+      if (is.null(vars) || length(vars) == 0 || is.null(difVar))
         return()
+      if (length(vars) < 2) {
+        self$results$lrtNote$setContent(paste0(
+          "<p>This analysis requires at least <b>2 items</b> to fit a ",
+          "Rasch model in each DIF group. Select at least 2 items.</p>"
+        ))
+        return()
+      }
 
       # 2. Extract data + validate items
       data <- self$data
@@ -48,6 +57,7 @@ lrdifClass <- R6::R6Class(
       validate_response_data(df)
 
       # 3. DIF variable + joint complete-case handling
+      n_total    <- nrow(df)
       dif_raw    <- data[[difVar]]
       dif_factor <- droplevels(as.factor(dif_raw))
 
@@ -95,6 +105,17 @@ lrdifClass <- R6::R6Class(
             "the LR test."
           ))
         }
+      }
+
+      # Sparse-category warning per DIF group -- the relevant split for
+      # this analysis. Shown even when the tileplot is off, pointing
+      # users to it for visual inspection.
+      sparse_msg <- sparse_note_grouped(df, dif_factor)
+      if (!is.null(sparse_msg)) {
+        self$results$lrtTable$setNote("sparse", paste0(
+          sparse_msg, " Enable 'Show response distribution by DIF group' ",
+          "to inspect the counts."
+        ))
       }
 
       # 4. Read options
@@ -242,10 +263,27 @@ lrdifClass <- R6::R6Class(
           table$addRow(rowKey = i, values = vals)
         }
 
+        # Footnotes: MaxDiff definition + flagging rule
+        table$setNote("maxdiff", paste0(
+          "MaxDiff = difference between the highest and lowest group ",
+          "location (the All column is excluded)."
+        ))
+        if (cutoff_val > 0) {
+          table$setNote("flag", paste0(
+            "Flagged = TRUE when MaxDiff exceeds ", cutoff_val, " logits."
+          ))
+        }
+
         # 12. LR test note (p-value rounded to 3 digits)
         model_name <- if (is_polytomous) "Partial Credit Model" else "Rasch Model"
         p_round <- round(lrt$pvalue, 3)
         p_str   <- if (p_round == 0) "&lt; 0.001" else format(p_round, nsmall = 3)
+        n_excluded <- n_total - n_complete
+        excluded_clause <- if (n_excluded > 0L) {
+          paste0(" (", n_excluded, " of ", n_total, " row(s) excluded ",
+                 "due to missing item responses or a missing DIF value; ",
+                 "eRm::LRtest requires complete cases)")
+        } else ""
         lr_html <- paste0(
           "<p><b>Andersen LR test:</b> &chi;<sup>2</sup> = ",
           round(lrt$LR, 3),
@@ -254,7 +292,7 @@ lrdifClass <- R6::R6Class(
           ". ", model_name, " split by `", difVar,
           "` (", length(groups), " groups: ",
           paste(groups, collapse = ", "), "). n = ", n_complete,
-          " complete cases."
+          " complete cases", excluded_clause, "."
         )
         if (cutoff_val > 0) {
           lr_html <- paste0(
@@ -303,16 +341,6 @@ lrdifClass <- R6::R6Class(
       out <- gsub("[^A-Za-z0-9]", "_", as.character(g))
       if (!nzchar(out) || grepl("^[0-9]", out)) out <- paste0("g", out)
       out
-    },
-
-    # Wrap long DIF-group labels onto multiple lines for the x-axis.
-    # Base R only -- no stringr dependency. Width chosen so labels
-    # like "Elementary school" wrap to two lines without crowding.
-    .wrapLabels = function(x, width = 10L) {
-      vapply(as.character(x), function(s) {
-        if (is.na(s) || !nzchar(s)) return(s)
-        paste(strwrap(s, width = width), collapse = "\n")
-      }, character(1L))
     },
 
     # Pull per-fit thresholds + SEs into long-form
@@ -456,6 +484,8 @@ lrdifClass <- R6::R6Class(
       plot_df$DIFgroup <- factor(plot_df$DIFgroup, levels = groups)
 
       caption <- er2_caption(paste0(
+        if (level == "item" && state$is_polytomous)
+          "Item locations are means of threshold locations. " else "",
         "Error bars: ", round(conf * 100), "% CI. ",
         "n = ", state$n_complete, "."
       ))
@@ -482,14 +512,12 @@ lrdifClass <- R6::R6Class(
                          ymax = .data$Location + z * .data$SE),
             width = 0.1
           ) +
-          ggplot2::scale_x_discrete(labels = private$.wrapLabels) +
+          ggplot2::scale_x_discrete(labels = er2_wrap_labels) +
           ggplot2::facet_wrap(~ Item) +
           ggplot2::labs(
-            title    = "DIF: item locations by group",
-            subtitle = "Item locations are means of threshold locations",
-            x        = "DIF group",
-            y        = "Item location (logits)",
-            caption  = caption
+            x       = "DIF group",
+            y       = "Item location (logits)",
+            caption = caption
           ) +
           base_theme
       } else {
@@ -507,10 +535,9 @@ lrdifClass <- R6::R6Class(
                          ymax = .data$Location + z * .data$SE),
             width = 0.1
           ) +
-          ggplot2::scale_x_discrete(labels = private$.wrapLabels) +
+          ggplot2::scale_x_discrete(labels = er2_wrap_labels) +
           ggplot2::facet_wrap(~ Item) +
           ggplot2::labs(
-            title   = "DIF: threshold locations by group",
             x       = "DIF group",
             y       = "Threshold location (logits)",
             caption = caption
@@ -577,10 +604,13 @@ lrdifClass <- R6::R6Class(
       # Item ordering: top of y-axis = first column of df
       count_df$item_label <- factor(count_df$item, levels = rev(item_names))
 
+      group_sizes <- table(dif_factor)
+
       list(
         count_df       = count_df,
         all_categories = all_categories,
-        item_names     = item_names
+        item_names     = item_names,
+        group_sizes    = group_sizes
       )
     },
 
@@ -628,20 +658,30 @@ lrdifClass <- R6::R6Class(
         ggplot2::guides(color = "none") +
         ggplot2::scale_color_identity()
 
+      caption_text <- if (!is.null(state$group_sizes)) {
+        gs <- state$group_sizes
+        er2_caption(paste0(
+          "Response category counts by DIF group (",
+          paste0(names(gs), ": n = ", as.integer(gs), collapse = "; "),
+          "). Counts below ", cutoff, " are highlighted in red."
+        ))
+      } else NULL
+
       # Wrap long DIF-group facet labels
       p <- p +
         ggplot2::facet_wrap(~ group,
                             labeller = ggplot2::labeller(
-                              group = private$.wrapLabels
+                              group = er2_wrap_labels
                             )) +
-        ggplot2::labs(y = "Items") +
+        ggplot2::labs(y = "Items", caption = caption_text) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(
           axis.text.x   = ggplot2::element_text(size = 10),
           panel.grid    = ggplot2::element_blank(),
           panel.spacing = ggplot2::unit(0.7, "cm")
         ) +
-        er2_axis_margins()
+        er2_axis_margins() +
+        er2_plot_caption()
 
       print(p)
       TRUE

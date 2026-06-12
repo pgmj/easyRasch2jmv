@@ -30,7 +30,8 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "continuous",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..estim <- jmvcore::OptionList$new(
                 "estim",
                 estim,

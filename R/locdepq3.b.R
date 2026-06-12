@@ -8,10 +8,7 @@ locdepq3Class <- R6::R6Class(
     # so column headers appear instantly and don't flicker on re-run.
     .init = function() {
       vars <- self$options$vars
-      if (is.null(vars) || length(vars) == 0)
-        return()
-
-      if (length(self$options$vars) < 2)
+      if (is.null(vars) || length(vars) < 3)
         return()
 
       q3_table <- self$results$q3Table
@@ -37,7 +34,20 @@ locdepq3Class <- R6::R6Class(
         q3_table$addRow(rowKey = i, values = row_vals)
       }
 
-      # The cutoff summary table has a fixed 7-row structure determined by the
+      # Pre-create the item-pair table rows: one per pair, count known
+      # from the options (choose(k, 2)). The pair table is only shown
+      # when the simulation-based cutoff is computed.
+      if (isTRUE(self$options$computeCutoff)) {
+        k <- length(vars)
+        blank <- list(item1 = "", item2 = "", q3 = NA_real_,
+                      q3Low = NA_real_, q3High = NA_real_, flagged = "")
+        pt <- self$results$pairTable
+        for (i in seq_len(k * (k - 1L) / 2L)) {
+          pt$addRow(rowKey = i, values = blank)
+        }
+      }
+
+      # The cutoff summary table has a fixed 6-row structure determined by the
       # design (not by data), so build it here with NA placeholders. .run()
       # fills in the bootstrap results via setRow() once the simulation
       # finishes -- this avoids the blank-then-populated UI jump.
@@ -45,7 +55,6 @@ locdepq3Class <- R6::R6Class(
         ct <- self$results$cutoffTable
         ct$addRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = NA_real_))
         ct$addRow(rowKey = "p95",  values = list(parameter = "p95",                    value = NA_real_))
-        ct$addRow(rowKey = "p99",  values = list(parameter = "p99",                    value = NA_real_))
         ct$addRow(rowKey = "p995", values = list(parameter = "p99.5",                  value = NA_real_))
         ct$addRow(rowKey = "p999", values = list(parameter = "p99.9",                  value = NA_real_))
         ct$addRow(rowKey = "iter", values = list(parameter = "Actual iterations",      value = NA_real_))
@@ -54,8 +63,19 @@ locdepq3Class <- R6::R6Class(
     },
 
     .run = function() {
-      # Return early if not enough variables
-      if (is.null(self$options$vars) || length(self$options$vars) < 2) {
+      # Return early / explain if requirements not met. With 2 items the
+      # unidimensional mirt model is not estimable (too few degrees of
+      # freedom), so at least 3 items are required.
+      if (is.null(self$options$vars) || length(self$options$vars) == 0) {
+        return()
+      }
+      if (length(self$options$vars) < 3) {
+        self$results$q3Note$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
+          "items the unidimensional model cannot be estimated (too few ",
+          "degrees of freedom), so no Q3 residual correlations can be ",
+          "computed. Select at least 3 items.</p>"
+        ))
         return()
       }
 
@@ -102,6 +122,10 @@ locdepq3Class <- R6::R6Class(
       # Validate data (non-negative integers, min = 0)
       validate_response_data(df)
 
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$q3Table$setNote("sparse", sparse_msg)
+
       # Check for sufficient complete cases
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0) {
@@ -125,29 +149,57 @@ locdepq3Class <- R6::R6Class(
             accelerate = "squarem"
           )
 
-          resid_mat <- mirt::residuals(mirt_model, type = "Q3", digits = 2, verbose = FALSE)
+          # digits = 4 matches the precision used for the simulated Q3
+          # values (utils-simulation.R); the previous digits = 2 limited
+          # the table display and the cutoff computation to 2 decimals.
+          resid_mat <- mirt::residuals(mirt_model, type = "Q3", digits = 4, verbose = FALSE)
           diag(resid_mat) <- NA
           mean_resid <- mean(resid_mat, na.rm = TRUE)
 
           # --- Step 2: Simulation-based cutoff (optional) -------------------------
-          cutoff_val <- NULL
-          dyn_cutoff <- NULL
+          cutoff_val   <- NULL
+          dyn_cutoff   <- NULL
+          cutoff_res   <- NULL
+          sim_fail_msg <- NULL
 
           if (compute_cutoff) {
-            actual_seed <- if (seed_val == 0) NULL else as.integer(seed_val)
-            cutoff_res  <- private$.runCutoffSim(df, iterations, actual_seed)
+            # Seed is always applied (default 42) so results are
+            # reproducible by default, consistent with the other
+            # simulation-based analyses in this module. If the simulation
+            # cannot deliver reliable cutoffs (e.g. too few successful
+            # iterations), degrade gracefully: the Q3 matrix is still
+            # shown and the note below explains why the cutoff, pair
+            # table, and figure are unavailable.
+            cutoff_res <- tryCatch(
+              private$.runCutoffSim(df, iterations, as.integer(seed_val)),
+              error = function(e) {
+                sim_fail_msg <<- e$message
+                NULL
+              }
+            )
+          }
+
+          if (!is.null(cutoff_res)) {
             cutoff_val  <- cutoff_res$suggested_cutoff
             dyn_cutoff  <- mean_resid + cutoff_val
 
             # Fill cutoff summary table (rows created in .init())
             ct <- self$results$cutoffTable
-            ct$setRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = round(cutoff_res$suggested_cutoff, 4)))
-            ct$setRow(rowKey = "p95",  values = list(parameter = "p95",  value = round(cutoff_res$p95,  4)))
-            ct$setRow(rowKey = "p99",  values = list(parameter = "p99",  value = round(cutoff_res$p99,  4)))
-            ct$setRow(rowKey = "p995", values = list(parameter = "p99.5", value = round(cutoff_res$p995, 4)))
-            ct$setRow(rowKey = "p999", values = list(parameter = "p99.9", value = round(cutoff_res$p999, 4)))
+            ct$setRow(rowKey = "sug",  values = list(parameter = "Suggested cutoff (p99)", value = cutoff_res$suggested_cutoff))
+            ct$setRow(rowKey = "p95",  values = list(parameter = "p95",  value = cutoff_res$p95))
+            ct$setRow(rowKey = "p995", values = list(parameter = "p99.5", value = cutoff_res$p995))
+            ct$setRow(rowKey = "p999", values = list(parameter = "p99.9", value = cutoff_res$p999))
             ct$setRow(rowKey = "iter", values = list(parameter = "Actual iterations", value = cutoff_res$actual_iterations))
             ct$setRow(rowKey = "n",    values = list(parameter = "Sample N",          value = cutoff_res$sample_n))
+            ct$setNote("pctl", paste0(
+              "Global cutoff based on all item pairs: percentiles of ",
+              "(max Q3 - mean Q3), where the max and mean are taken over ",
+              "all pairs within each simulated dataset. The suggested ",
+              "cutoff (99th percentile) is added to the observed mean Q3 ",
+              "to give the dynamic cut-off applied in the correlation ",
+              "matrix above. See the item-pair table below for per-pair ",
+              "intervals."
+            ))
           }
 
           # --- Step 3: Determine above_cutoff flags using the lower triangle only
@@ -163,7 +215,7 @@ locdepq3Class <- R6::R6Class(
           }
 
           # --- Step 3b: Save state for the per-pair Q3 plot ----------------------
-          if (compute_cutoff) {
+          if (!is.null(cutoff_res)) {
             # Build observed_pair_df from the upper-triangle of the observed
             # mirt-fitted Q3 matrix, matching the pair labels used in the
             # simulated pair_results.
@@ -187,11 +239,98 @@ locdepq3Class <- R6::R6Class(
             ))
           }
 
-          # --- Step 4: Populate the Q3 table (structure set up in .init()) --------
-          q3_table <- self$results$q3Table
+          # --- Step 3c: Item-pair table (simulation-based) -------------------
+          if (!is.null(cutoff_res)) {
+            pairs_idx <- which(upper.tri(resid_mat), arr.ind = TRUE)
+            pair_df <- data.frame(
+              Item1 = colnames(resid_mat)[pairs_idx[, "row"]],
+              Item2 = colnames(resid_mat)[pairs_idx[, "col"]],
+              q3    = resid_mat[pairs_idx],
+              stringsAsFactors = FALSE
+            )
+            pair_df$expected <- NA_real_
+            pair_df$q3Low    <- NA_real_
+            pair_df$q3High   <- NA_real_
+            pair_df$flagged  <- ""
 
-          # Round for display
-          resid_rounded <- round(resid_mat, 3)
+            # Per-pair credible intervals from the simulated null
+            # distributions (same approach as easyRasch2's pair_cutoffs:
+            # HDCI over the per-pair simulated Q3 values).
+            hdci_width <- self$options$hdciWidth / 100
+            pr  <- cutoff_res$pair_results
+            prk <- paste(pr$Item1, pr$Item2, sep = "___")
+            pdk <- paste(pair_df$Item1, pair_df$Item2, sep = "___")
+            for (i in seq_len(nrow(pair_df))) {
+              sims <- pr$Q3[prk == pdk[i]]
+              sims <- sims[is.finite(sims)]
+              if (length(sims) >= 2L) {
+                iv <- ggdist::hdci(sims, .width = hdci_width)
+                pair_df$expected[i] <- stats::median(sims)
+                pair_df$q3Low[i]    <- iv[1L, 1L]
+                pair_df$q3High[i]   <- iv[1L, 2L]
+                if (!is.na(pair_df$q3[i])) {
+                  if (pair_df$q3[i] > pair_df$q3High[i]) {
+                    pair_df$flagged[i] <- "above"
+                  } else if (pair_df$q3[i] < pair_df$q3Low[i]) {
+                    pair_df$flagged[i] <- "below"
+                  }
+                }
+              }
+            }
+            # Sort by deviation from the simulated null, matching the
+            # ranking used by the per-pair plot.
+            pair_df <- pair_df[order(-abs(pair_df$q3 - pair_df$expected)), ,
+                               drop = FALSE]
+            rownames(pair_df) <- NULL
+
+            pt <- self$results$pairTable
+            for (i in seq_len(nrow(pair_df))) {
+              pt$setRow(rowNo = i, values = list(
+                item1    = pair_df$Item1[i],
+                item2    = pair_df$Item2[i],
+                q3       = pair_df$q3[i],
+                q3Low    = pair_df$q3Low[i],
+                q3High   = pair_df$q3High[i],
+                flagged  = pair_df$flagged[i]
+              ))
+            }
+            pt$setNote("flag", paste0(
+              "Expected range = ", self$options$hdciWidth, "% HDCI of the ",
+              "per-pair Q3 values simulated under local independence. ",
+              "Flagged: 'above' = stronger residual association than the ",
+              "model predicts (positive local dependence); 'below' = ",
+              "weaker than predicted (can indicate multidimensionality). ",
+              "These per-pair intervals complement the global cutoff used ",
+              "by the tables above. Pairs are sorted by deviation from ",
+              "the simulated per-pair median (the black dots in the ",
+              "figure), descending."
+            ))
+          }
+
+          # --- Step 3d: Sample-size note ------------------------------------
+          n_total <- sum(rowSums(!is.na(df)) > 0)
+          missing_clause <- if (n_total > n_complete) {
+            paste0(", of whom ", n_complete, " had complete responses; ",
+                   "rows with partially missing responses are retained by ",
+                   "MML estimation")
+          } else ""
+          fail_clause <- if (!is.null(sim_fail_msg)) {
+            paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
+                   sim_fail_msg)
+          } else ""
+          self$results$q3Note$setContent(paste0(
+            "<p>Q3 residual correlations from a unidimensional ",
+            if (max(as.matrix(df), na.rm = TRUE) > 1L) "partial credit"
+            else "Rasch",
+            " model estimated with MML (mirt) on N = ", n_total,
+            " respondents", missing_clause, ". Mean Q3 = ",
+            round(mean_resid, 3), ".", fail_clause, "</p>"
+          ))
+
+          # --- Step 4: Populate the Q3 table (structure set up in .init()) --------
+          # Raw (unrounded) values: the jamovi frontend applies the user's
+          # "Number format" preferences.
+          q3_table <- self$results$q3Table
 
           # Add note when cutoff is applied
           if (!is.null(dyn_cutoff)) {
@@ -202,7 +341,10 @@ locdepq3Class <- R6::R6Class(
                 " (mean Q3 = ", round(mean_resid, 3),
                 " + ", round(cutoff_val, 3),
                 " (p99 from simulation)). ",
-                "Rows marked * contain at least one value above the cut-off."
+                "Rows marked * contain at least one value above the ",
+                "cut-off. This is a global cut-off derived from all item ",
+                "pairs; the item-pair table below applies per-pair ",
+                "intervals instead."
               )
             )
           }
@@ -217,7 +359,7 @@ locdepq3Class <- R6::R6Class(
               } else if (j > i) {
                 row_vals[[ vars[j] ]] <- ""
               } else {
-                row_vals[[ vars[j] ]] <- resid_rounded[i, j]
+                row_vals[[ vars[j] ]] <- resid_mat[i, j]
               }
             }
             if (compute_cutoff) {
@@ -286,15 +428,28 @@ locdepq3Class <- R6::R6Class(
       ok         <- vapply(results_raw, function(x) is.list(x), logical(1L))
       successful <- results_raw[ok]
 
-      if (length(successful) == 0L) {
-        stop(
-          "All simulation iterations failed. Check your data: items must have ",
-          "sufficient response variation (at least 8 positive responses per item ",
-          "for dichotomous data; all response categories represented for ",
-          "polytomous data), and the sample must be large enough for stable ",
-          "Rasch model estimation.",
-          call. = FALSE
-        )
+      # Guard against degenerate cutoffs: with very few successful
+      # iterations the global percentiles and the per-pair HDCIs collapse
+      # and flagging becomes meaningless. Require at least 20 successes
+      # and a 50% success rate; otherwise report the dominant failure
+      # reason.
+      n_ok <- length(successful)
+      if (n_ok < 20L || n_ok < iterations / 2) {
+        fail_msgs <- unlist(results_raw[!ok])
+        top_reason <- if (length(fail_msgs) > 0L) {
+          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+        } else NULL
+        stop(paste0(
+          "Only ", n_ok, " of ", iterations, " simulation iterations ",
+          "succeeded -- too few to estimate reliable cutoffs.",
+          if (!is.null(top_reason))
+            paste0(" Most common failure: ", top_reason, ".") else "",
+          " Check your data: items must have sufficient response ",
+          "variation (at least 8 positive responses per item for ",
+          "dichotomous data; all response categories represented for ",
+          "polytomous data), and the sample must be large enough for ",
+          "stable Rasch model estimation."
+        ), call. = FALSE)
       }
 
       actual_iterations <- length(successful)
@@ -397,10 +552,12 @@ locdepq3Class <- R6::R6Class(
                       by = "Pair", sort = FALSE)
       q3_sim$Pair <- factor(q3_sim$Pair, levels = pair_levels)
 
+      # sample_n counts all rows used by the MML fit (rows with partially
+      # missing responses are retained), so it is the accurate n for both
+      # the observed and the simulated Q3 values.
       caption_text <- er2_caption(paste0(
-        "Observed and simulated Q3 are based on n = ",
-        if (!is.null(n_complete)) n_complete else sample_n,
-        " complete responses.\n",
+        "Observed and simulated Q3 are based on n = ", sample_n,
+        " respondents.\n",
         "Simulated distributions: ", actual_iterations,
         " parametric-bootstrap datasets using the same n.\n",
         "Orange diamonds: observed Q3. Black dots: simulation median."

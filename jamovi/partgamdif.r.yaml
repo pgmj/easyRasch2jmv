@@ -16,26 +16,32 @@ items:
         - hdciWidth
         - iterations
         - seed
+        - sortByGamma
       columns:
         - name: item
           title: Item
           type: text
         - name: gamma
-          title: Partial gamma
+          title: Observed gamma
           type: number
           format: zto
         - name: se
           title: SE
           type: number
           format: zto
+          visible: (showSE)
         - name: lower
-          title: Lower CI
+          title: Lower
           type: number
           format: zto
+          visible: (showSE)
+          superTitle: 95% CI
         - name: upper
-          title: Upper CI
+          title: Upper
           type: number
           format: zto
+          visible: (showSE)
+          superTitle: 95% CI
         - name: padjBH
           title: Adj. p-value (BH)
           type: number
@@ -44,15 +50,17 @@ items:
           title: p-value sign.
           type: text
         - name: gammaLow
-          title: Gamma low
+          title: Lower
           type: number
           format: zto
           visible: (computeCutoff)
+          superTitle: Expected range
         - name: gammaHigh
-          title: Gamma high
+          title: Upper
           type: number
           format: zto
           visible: (computeCutoff)
+          superTitle: Expected range
         - name: flagged
           title: Flagged
           type: text
@@ -61,7 +69,6 @@ items:
     - name: cutoffNote
       title: ''
       type: Html
-      visible: (computeCutoff)
       clearWith:
         - vars
         - difVar
@@ -69,6 +76,7 @@ items:
         - hdciWidth
         - iterations
         - seed
+        - showSE
 
     - name: pgdifPlot
       title: Simulated Partial Gamma Distribution

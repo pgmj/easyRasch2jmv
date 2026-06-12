@@ -38,4 +38,15 @@ items:
         - name: location
           title: Location
           type: number
+          format: zto
+        - name: se
+          title: SE
+          type: number
+          format: zto
+
+    - name: targetingNote
+      title: ''
+      type: Html
+      clearWith:
+        - vars
 ...

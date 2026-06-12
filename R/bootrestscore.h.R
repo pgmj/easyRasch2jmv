@@ -11,6 +11,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
             samplesize = 600,
             cutoff = 67,
             seed = 42,
+            sortBy = "none",
             showPlot = FALSE, ...) {
 
             super$initialize(
@@ -24,10 +25,10 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 vars,
                 suggested=list(
                     "continuous",
-                    "nominal",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
@@ -48,6 +49,14 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 "seed",
                 seed,
                 default=42)
+            private$..sortBy <- jmvcore::OptionList$new(
+                "sortBy",
+                sortBy,
+                options=list(
+                    "none",
+                    "overfit",
+                    "underfit"),
+                default="none")
             private$..showPlot <- jmvcore::OptionBool$new(
                 "showPlot",
                 showPlot,
@@ -58,6 +67,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
             self$.addOption(private$..samplesize)
             self$.addOption(private$..cutoff)
             self$.addOption(private$..seed)
+            self$.addOption(private$..sortBy)
             self$.addOption(private$..showPlot)
         }),
     active = list(
@@ -66,6 +76,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
         samplesize = function() private$..samplesize$value,
         cutoff = function() private$..cutoff$value,
         seed = function() private$..seed$value,
+        sortBy = function() private$..sortBy$value,
         showPlot = function() private$..showPlot$value),
     private = list(
         ..vars = NA,
@@ -73,6 +84,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
         ..samplesize = NA,
         ..cutoff = NA,
         ..seed = NA,
+        ..sortBy = NA,
         ..showPlot = NA)
 )
 
@@ -107,7 +119,8 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     "iterations",
                     "samplesize",
                     "seed",
-                    "cutoff"),
+                    "cutoff",
+                    "sortBy"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -116,26 +129,21 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     list(
                         `name`="pctOverfit", 
                         `title`="% Overfit", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="pctUnderfit", 
                         `title`="% Underfit", 
-                        `type`="number"),
-                    list(
-                        `name`="pctNoMisfit", 
-                        `title`="% No misfit", 
-                        `type`="number"),
-                    list(
-                        `name`="infitMSQ", 
-                        `title`="Cond. infit MSQ", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
                         `name`="relLocation", 
                         `title`="Rel. location", 
-                        `type`="number"),
+                        `type`="number", 
+                        `format`="zto"),
                     list(
-                        `name`="flagged", 
-                        `title`="Flagged", 
+                        `name`="misfit", 
+                        `title`="Misfit", 
                         `type`="text"))))
             self$add(jmvcore::Html$new(
                 options=options,
@@ -145,12 +153,11 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     "vars",
                     "iterations",
                     "samplesize",
-                    "seed",
-                    "cutoff")))
+                    "seed")))
             self$add(jmvcore::Image$new(
                 options=options,
                 name="bootstrapPlot",
-                title="Bootstrap Classification Percentages",
+                title="Bootstrap Item-Restscore Differences",
                 width=700,
                 height=600,
                 renderFun=".bootstrapPlot",
@@ -161,7 +168,7 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     "iterations",
                     "samplesize",
                     "seed",
-                    "cutoff")))}))
+                    "sortBy")))}))
 
 bootrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "bootrestscoreBase",
@@ -203,6 +210,7 @@ bootrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param samplesize .
 #' @param cutoff .
 #' @param seed .
+#' @param sortBy .
 #' @param showPlot .
 #' @return A results object containing:
 #' \tabular{llllll}{
@@ -225,6 +233,7 @@ bootrestscore <- function(
     samplesize = 600,
     cutoff = 67,
     seed = 42,
+    sortBy = "none",
     showPlot = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
@@ -243,6 +252,7 @@ bootrestscore <- function(
         samplesize = samplesize,
         cutoff = cutoff,
         seed = seed,
+        sortBy = sortBy,
         showPlot = showPlot)
 
     analysis <- bootrestscoreClass$new(

@@ -4,11 +4,21 @@ iteminfitClass <- R6::R6Class(
   inherit = iteminfitBase,
   private = list(
     .run = function() {
-      # 1. Return early if no variables selected
+      # 1. Return early / explain if requirements not met. With 2 items
+      # the conditional infit is ~1 for both items by construction (no
+      # degrees of freedom left for misfit once the total score is
+      # conditioned on), so at least 3 items are required.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
-      if (length(self$options$vars) < 2)
+      if (length(self$options$vars) < 3) {
+        self$results$cutoffNote$setContent(paste0(
+          "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
+          "items the conditional infit equals 1 for both items by ",
+          "construction and carries no information about item fit. ",
+          "Select at least 3 items.</p>"
+        ))
         return()
+      }
 
       # 2. Extract and validate data
       data <- self$data
@@ -66,6 +76,10 @@ iteminfitClass <- R6::R6Class(
 
       validate_response_data(df)
 
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$infitTable$setNote("sparse", sparse_msg)
+
       n_complete <- sum(complete.cases(df))
       n_total    <- nrow(df)
       n_excluded <- n_total - n_complete
@@ -110,21 +124,38 @@ iteminfitClass <- R6::R6Class(
         }
 
         relative_item_avg_locations <- item_avg_locations - person_avg_location
-        cfit <- iarm::out_infit(erm_out)
 
-        # Build results data.frame
+        # iarm refits the model on complete cases (na.omit) when any
+        # responses are missing -- suppress its console message; the
+        # behaviour is documented in the table footnote.
+        cfit <- suppressMessages(iarm::out_infit(erm_out))
+
+        # Build results data.frame. Raw values (no pre-rounding) so the
+        # jamovi frontend applies the user's "Number format" preferences.
         results <- data.frame(
           Item = names(df),
-          Infit_MSQ = round(cfit$Infit, 3),
-          Relative_location = round(relative_item_avg_locations, 2),
+          Infit_MSQ = cfit$Infit,
+          Relative_location = relative_item_avg_locations,
           stringsAsFactors = FALSE,
           row.names = NULL
         )
 
-        # 4. Optionally compute cutoffs
+        # 4. Optionally compute cutoffs. If the simulation cannot deliver
+        # reliable cutoffs (e.g. too few successful iterations), degrade
+        # gracefully: show the observed infit table without the expected
+        # range and explain why in the note below the table.
         cutoff_res <- NULL
         if (isTRUE(self$options$computeCutoff)) {
-          cutoff_res <- private$.runCutoffSim(df)
+          cutoff_res <- tryCatch(
+            private$.runCutoffSim(df),
+            error = function(e) {
+              self$results$cutoffNote$setContent(paste0(
+                "<p><b>Simulation-based cutoffs unavailable:</b> ",
+                e$message, "</p>"
+              ))
+              NULL
+            }
+          )
 
           if (!is.null(cutoff_res)) {
             cutoff_df <- cutoff_res$item_cutoffs
@@ -133,12 +164,18 @@ iteminfitClass <- R6::R6Class(
             results <- merge(results, cutoff_sub, by = "Item", sort = FALSE)
             results <- results[match(data_items, results$Item), ]
             rownames(results) <- NULL
-            results$Infit_low <- round(results$infit_low, 3)
-            results$Infit_high <- round(results$infit_high, 3)
+            results$Infit_low <- results$infit_low
+            results$Infit_high <- results$infit_high
             results$infit_low <- NULL
             results$infit_high <- NULL
-            results$Flagged <- results$Infit_MSQ < results$Infit_low | results$Infit_MSQ > results$Infit_high
-            results <- results[, c("Item", "Infit_MSQ", "Infit_low", "Infit_high", "Flagged", "Relative_location")]
+            # Misfit direction is inverted relative to the restscore
+            # analyses: infit BELOW the expected range = overfit (too
+            # predictable), ABOVE = underfit (noisy).
+            results$Misfit <- ifelse(
+              results$Infit_MSQ < results$Infit_low, "overfit",
+              ifelse(results$Infit_MSQ > results$Infit_high, "underfit", "")
+            )
+            results <- results[, c("Item", "Infit_MSQ", "Infit_low", "Infit_high", "Misfit", "Relative_location")]
           }
         }
 
@@ -159,17 +196,22 @@ iteminfitClass <- R6::R6Class(
           if (!is.null(cutoff_res)) {
             vals$infitLow <- results$Infit_low[i]
             vals$infitHigh <- results$Infit_high[i]
-            vals$flagged <- ifelse(results$Flagged[i], "TRUE", "")
+            vals$misfit <- results$Misfit[i]
           }
           table$setRow(rowNo = i, values = vals)
         }
 
-        # 7. Always-visible footnote on the table itself: complete-case basis
+        # 7. Always-visible footnotes: complete-case basis + column docs.
+        # When responses are missing, the infit statistics come from
+        # iarm's complete-case refit while Rel. location comes from the
+        # eRm fit on all available responses (CML retains partial rows).
         excluded_clause <- if (n_excluded > 0L) {
           paste0(
             " ", n_excluded, " of ", n_total,
             " row(s) had a missing response on at least one selected item ",
-            "and were excluded."
+            "and were excluded from the infit computation; item locations ",
+            "use all available responses via eRm's conditional maximum ",
+            "likelihood estimation."
           )
         } else {
           ""
@@ -182,6 +224,24 @@ iteminfitClass <- R6::R6Class(
             "selected items).", excluded_clause
           )
         )
+        table$setNote(
+          "loc",
+          paste0(
+            "Rel. location = mean item (threshold) location relative to ",
+            "the mean person location, in logits."
+          )
+        )
+        if (!is.null(cutoff_res)) {
+          table$setNote(
+            "misfit",
+            paste0(
+              "Misfit: infit below the expected range = overfit (item is ",
+              "more predictable than the model expects); above = underfit ",
+              "(noisier than expected). Note the direction is inverted ",
+              "relative to the item-restscore analyses."
+            )
+          )
+        }
 
         # 8. Set cutoff note (HTML element below the table)
         if (!is.null(cutoff_res)) {
@@ -267,8 +327,26 @@ iteminfitClass <- R6::R6Class(
 
       ok <- vapply(results_raw, is.list, logical(1L))
       successful <- results_raw[ok]
-      if (length(successful) == 0L)
-        stop("All simulation iterations failed.")
+
+      # Guard against degenerate cutoffs: with very few successful
+      # iterations the HDCI collapses (lower = upper) and every item is
+      # spuriously flagged. Require at least 20 successes and a 50%
+      # success rate; otherwise report the dominant failure reason.
+      n_ok <- length(successful)
+      if (n_ok < 20L || n_ok < iterations / 2) {
+        fail_msgs <- unlist(results_raw[!ok])
+        top_reason <- if (length(fail_msgs) > 0L) {
+          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
+        } else NULL
+        stop(paste0(
+          "Only ", n_ok, " of ", iterations, " simulation iterations ",
+          "succeeded -- too few to estimate reliable cutoff intervals.",
+          if (!is.null(top_reason))
+            paste0(" Most common failure: ", top_reason, ".") else "",
+          " This typically happens when items have very low or very ",
+          "high endorsement rates relative to the sample size."
+        ), call. = FALSE)
+      }
 
       actual_iterations <- length(successful)
       iter_dfs <- lapply(seq_along(successful), function(i) {
@@ -351,7 +429,7 @@ iteminfitClass <- R6::R6Class(
         " complete responses.\n",
         "Simulated distributions: ", actual_iterations,
         " parametric-bootstrap datasets using the same n.\n",
-        "Orange dots: observed conditional infit. Black dots: simulation median."
+        "Orange diamonds: observed conditional infit. Black dots: simulation median."
       ))
 
       p <- ggplot2::ggplot(infit_sim, ggplot2::aes(x = .data$Value, y = .data$Item)) +
@@ -388,7 +466,7 @@ iteminfitClass <- R6::R6Class(
           values = scales::brewer_pal()(3)[-1],
           aesthetics = "slab_fill", guide = "none"
         ) +
-        ggplot2::scale_x_continuous(breaks = seq(0.5, 1.5, 0.1), minor_breaks = NULL) +
+        ggplot2::scale_x_continuous(minor_breaks = NULL) +
         ggplot2::theme_minimal(base_size = 15) +
         ggplot2::theme(panel.spacing = ggplot2::unit(0.7, "cm")) +
         er2_axis_margins() +

@@ -2,7 +2,7 @@ title: Q3 Residual Correlation Matrix
 name: locdepq3
 jus: '3.0'
 stage: 0
-compilerMode: aggressive
+compilerMode: tame
 children:
   - type: VariableSupplier
     persistentItems: false
@@ -19,21 +19,20 @@ children:
     children:
       - type: CheckBox
         name: computeCutoff
-  - type: LayoutBox
-    margin: large
-    children:
-      - type: TextBox
-        name: iterations
-        format: number
-  - type: LayoutBox
-    margin: large
-    children:
-      - type: TextBox
-        name: seed
-        format: number
-  - type: LayoutBox
-    margin: large
-    children:
-      - type: TextBox
-        name: nPairs
-        format: number
+        children:
+          - type: LayoutBox
+            margin: large
+            children:
+              - type: TextBox
+                name: iterations
+                format: number
+              - type: TextBox
+                name: hdciWidth
+                format: number
+                suffix: "%"
+              - type: TextBox
+                name: seed
+                format: number
+              - type: TextBox
+                name: nPairs
+                format: number

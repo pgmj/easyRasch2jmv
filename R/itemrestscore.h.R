@@ -7,8 +7,7 @@ itemrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
     public = list(
         initialize = function(
             vars = NULL,
-            sortByDiff = FALSE,
-            pAdj = "BH", ...) {
+            sortByDiff = FALSE, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -21,42 +20,32 @@ itemrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 vars,
                 suggested=list(
                     "continuous",
-                    "nominal",
                     "ordinal"),
                 permitted=list(
-                    "numeric"))
+                    "numeric"),
+                rejectInf=TRUE)
             private$..sortByDiff <- jmvcore::OptionBool$new(
                 "sortByDiff",
                 sortByDiff,
                 default=FALSE)
-            private$..pAdj <- jmvcore::OptionList$new(
-                "pAdj",
-                pAdj,
-                options=list(
-                    "BH",
-                    "holm",
-                    "bonferroni"),
-                default="BH")
 
             self$.addOption(private$..vars)
             self$.addOption(private$..sortByDiff)
-            self$.addOption(private$..pAdj)
         }),
     active = list(
         vars = function() private$..vars$value,
-        sortByDiff = function() private$..sortByDiff$value,
-        pAdj = function() private$..pAdj$value),
+        sortByDiff = function() private$..sortByDiff$value),
     private = list(
         ..vars = NA,
-        ..sortByDiff = NA,
-        ..pAdj = NA)
+        ..sortByDiff = NA)
 )
 
 itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "itemrestscoreResults",
     inherit = jmvcore::Group,
     active = list(
-        restscoreTable = function() private$.items[["restscoreTable"]]),
+        restscoreTable = function() private$.items[["restscoreTable"]],
+        restscoreNote = function() private$.items[["restscoreNote"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -76,8 +65,7 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     "mair2007"),
                 clearWith=list(
                     "vars",
-                    "sortByDiff",
-                    "pAdj"),
+                    "sortByDiff"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -85,12 +73,12 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `type`="text"),
                     list(
                         `name`="observed", 
-                        `title`="Observed value", 
+                        `title`="Observed gamma", 
                         `type`="number", 
                         `format`="zto"),
                     list(
                         `name`="expected", 
-                        `title`="Expected value", 
+                        `title`="Expected gamma", 
                         `type`="number", 
                         `format`="zto"),
                     list(
@@ -100,7 +88,7 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `format`="zto"),
                     list(
                         `name`="pAdjusted", 
-                        `title`="Adj. p-value", 
+                        `title`="Adj. p-value (BH)", 
                         `type`="number", 
                         `format`="zto,pvalue"),
                     list(
@@ -108,14 +96,20 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `title`="p-value sign.", 
                         `type`="text"),
                     list(
-                        `name`="location", 
-                        `title`="Location", 
-                        `type`="number", 
-                        `format`="zto"),
+                        `name`="fit", 
+                        `title`="Misfit", 
+                        `type`="text"),
                     list(
                         `name`="relLocation", 
                         `title`="Rel. location", 
-                        `type`="number"))))}))
+                        `type`="number", 
+                        `format`="zto"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="restscoreNote",
+                title="",
+                clearWith=list(
+                    "vars")))}))
 
 itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "itemrestscoreBase",
@@ -151,10 +145,10 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param data .
 #' @param vars .
 #' @param sortByDiff .
-#' @param pAdj .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$restscoreTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$restscoreNote} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -167,8 +161,7 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 itemrestscore <- function(
     data,
     vars,
-    sortByDiff = FALSE,
-    pAdj = "BH") {
+    sortByDiff = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("itemrestscore requires jmvcore to be installed (restart may be required)")
@@ -182,8 +175,7 @@ itemrestscore <- function(
 
     options <- itemrestscoreOptions$new(
         vars = vars,
-        sortByDiff = sortByDiff,
-        pAdj = pAdj)
+        sortByDiff = sortByDiff)
 
     analysis <- itemrestscoreClass$new(
         options = options,

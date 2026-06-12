@@ -51,6 +51,10 @@ residualpcaClass <- R6::R6Class(
 
       validate_response_data(df)
 
+      sparse_msg <- sparse_note(df)
+      if (!is.null(sparse_msg))
+        self$results$pcaTable$setNote("sparse", sparse_msg)
+
       # Drop incomplete rows (prcomp does not handle NA)
       n_total     <- nrow(df)
       df_complete <- stats::na.omit(df)
