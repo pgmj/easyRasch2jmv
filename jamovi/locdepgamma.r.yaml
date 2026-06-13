@@ -5,7 +5,7 @@ jrs: '1.1'
 
 items:
     - name: dir1Table
-      title: 'Direction 1: Rest Score = Total − Item 2'
+      title: 'Direction 1: rest score = total − Item 2'
       type: Table
       rows: 0
       refs: [easyRasch2jmv, christensen2013, mueller2022]
@@ -52,7 +52,7 @@ items:
             type: text
 
     - name: dir2Table
-      title: 'Direction 2: Rest Score = Total − Item 1'
+      title: 'Direction 2: rest score = total − Item 2'
       type: Table
       rows: 0
       clearWith:

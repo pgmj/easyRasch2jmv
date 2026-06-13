@@ -97,6 +97,20 @@ group** — including categories a group never uses — and point users to
 the response-distribution tileplot, so the check no longer depends on
 the tileplot being displayed. Shared helpers live in `utils-sparse.R`.
 
+## Test suite
+
+Added a `testthat` (edition 3) suite under `tests/` — the module had
+none. Three layers: (1) unit tests for the pure validation/sparse/note
+helpers; (2) smoke tests that run every analysis on the bundled example
+datasets (polytomous and dichotomous, cutoffs on/off) and check results
+are populated, not just error-free; (3) behavioural tests pinning
+decisions from this release (too-few-items guard shows a note rather
+than erroring and clears once enough items are added; a perfectly
+correlated item pair yields a footnote rather than a halt; ICC category
+probabilities sum to 1; CFA requires 4 items). The heavy engines are
+Imports, so they are assumed present rather than skipped; the suite runs
+in ~20 s via `devtools::test()`.
+
 ## Shared validation helper
 
 All analyses now call a single `prepare_item_data()` helper

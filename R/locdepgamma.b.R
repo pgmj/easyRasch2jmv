@@ -186,6 +186,16 @@ locdepgammaClass <- R6::R6Class(
               "for multiple testing."
             )
           )
+          tables[[idx]]$setNote(
+            "direction",
+            paste0(
+              "Partial gamma between Item 1 and Item 2, controlling for ",
+              "the rest score (total score minus Item 2). Each item pair ",
+              "appears in both tables with the two items swapped, so the ",
+              "two tables together test both rest-score directions for ",
+              "every pair."
+            )
+          )
           if (nrow(d) == 0L) {
             tables[[idx]]$setNote(
               "empty",

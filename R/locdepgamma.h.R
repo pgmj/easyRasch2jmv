@@ -92,7 +92,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             self$add(jmvcore::Table$new(
                 options=options,
                 name="dir1Table",
-                title="Direction 1: Rest Score = Total \u2212 Item 2",
+                title="Direction 1: rest score = total \u2212 Item 2",
                 rows=0,
                 refs=list(
                     "easyRasch2jmv",
@@ -150,7 +150,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             self$add(jmvcore::Table$new(
                 options=options,
                 name="dir2Table",
-                title="Direction 2: Rest Score = Total \u2212 Item 1",
+                title="Direction 2: rest score = total \u2212 Item 2",
                 rows=0,
                 clearWith=list(
                     "vars",
