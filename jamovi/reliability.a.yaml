@@ -82,7 +82,7 @@ options:
       max: 20
 
     - name: bootAlpha
-      title: Bootstrap CI for Cronbach's alpha
+      title: Bootstrap CI (Cronbach's alpha)
       type: Bool
       default: false
 

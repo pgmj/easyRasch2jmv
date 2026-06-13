@@ -44,8 +44,6 @@ partgamdifClass <- R6::R6Class(
       n_complete <- sum(complete_mask)
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
 
       df <- df[complete_mask, , drop = FALSE]
       dif_vec <- dif_raw[complete_mask]
@@ -66,6 +64,10 @@ partgamdifClass <- R6::R6Class(
           "to inspect the counts."
         ))
       }
+
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$pgdifTable$setNote("duplicate", dup_msg)
 
       # rgl workaround
       old_rgl <- getOption("rgl.useNULL")
@@ -176,13 +178,14 @@ partgamdifClass <- R6::R6Class(
         } else ""
         se_clause <- if (isTRUE(self$options$showSE)) {
           paste0(" Confidence intervals are 95% Wald intervals ",
-                 "(gamma &plusmn; 1.96 &times; SE).")
+                 "(gamma ± 1.96 × SE).")
         } else ""
         cutoff_clause <- if (!is.null(cutoff_res)) {
           paste0(" Cutoff values based on ", cutoff_res$actual_iterations,
                  " simulation iterations (", cutoff_res$hdci_width * 100,
                  "% HDCI).",
-                 iteration_note(self$options$iterations, 250L))
+                 iteration_note(self$options$iterations, 250L),
+                 low_iteration_caveat(cutoff_res$actual_iterations))
         } else if (!is.null(sim_fail_msg)) {
           paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
                  sim_fail_msg)
@@ -357,7 +360,7 @@ partgamdifClass <- R6::R6Class(
       # flagged. Require at least 20 successes and a 50% success rate;
       # otherwise report the dominant failure reason.
       n_ok <- length(successful)
-      if (n_ok < 20L || n_ok < iterations / 2) {
+      if (n_ok < 20L) {
         fail_msgs <- unlist(results_raw[!ok])
         top_reason <- if (length(fail_msgs) > 0L) {
           names(sort(table(fail_msgs), decreasing = TRUE))[1L]

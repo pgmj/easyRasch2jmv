@@ -83,12 +83,12 @@ options:
       default: 42
 
     - name: sortByInfit
-      title: Sort by Infit MSQ (descending)
+      title: Sorted by Infit MSQ (descending)
       type: Bool
       default: false
 
     - name: computeCutoff
-      title: Compute simulation-based cutoffs
+      title: Simulation-based cutoffs
       type: Bool
       default: false
 

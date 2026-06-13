@@ -44,7 +44,7 @@ cfacutoffClass <- R6::R6Class(
         self$results$cfaNote$setContent(paste0(
           "<p>This analysis requires at least <b>4 items</b>. A one-factor ",
           "CFA with fewer indicators is just-identified (3 items, 0 degrees ",
-          "of freedom) or not identified (&le; 2 items), so the model fit is ",
+          "of freedom) or not identified (≤ 2 items), so the model fit is ",
           "perfect by construction and the simulated fit-index cutoffs carry ",
           "no information. Select at least 4 items.</p>"
         ))
@@ -65,11 +65,6 @@ cfacutoffClass <- R6::R6Class(
 
       if (n_complete == 0L)
         stop("No complete cases found. CFA requires at least one row with responses to all selected items.")
-      if (n_complete < 30L)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
 
       for (col in names(df_complete)) {
         if (length(unique(df_complete[[col]])) < 2L)
@@ -80,6 +75,10 @@ cfacutoffClass <- R6::R6Class(
       sparse_msg <- sparse_note(df_complete)
       if (!is.null(sparse_msg))
         self$results$cfaTable$setNote("sparse", sparse_msg)
+
+      dup_msg <- duplicate_items_note(df_complete)
+      if (!is.null(dup_msg))
+        self$results$cfaTable$setNote("duplicate", dup_msg)
 
       # 3. Read options
       estimator  <- toupper(self$options$estimator)
@@ -135,7 +134,7 @@ cfacutoffClass <- R6::R6Class(
         # explain the dominant failure reason (the observed lavaan fit
         # is independent of the simulation, so it remains valid).
         n_ok <- length(successful)
-        if (n_ok < 20L || n_ok < iterations / 2) {
+        if (n_ok < 20L) {
           fail_msgs <- unlist(results_raw[!ok])
           top_reason <- if (length(fail_msgs) > 0L) {
             names(sort(table(fail_msgs), decreasing = TRUE))[1L]
@@ -229,7 +228,8 @@ cfacutoffClass <- R6::R6Class(
           "worst ", round(100 - percentile, 1),
           "% of the simulated distribution in the unfavourable direction.",
           success_clause,
-          iteration_note(iterations, 250L), "</p>"
+          iteration_note(iterations, 250L),
+          low_iteration_caveat(actual_iterations), "</p>"
         )
         self$results$cfaNote$setContent(note_html)
 

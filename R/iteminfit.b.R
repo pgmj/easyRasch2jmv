@@ -31,15 +31,16 @@ iteminfitClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$infitTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$infitTable$setNote("duplicate", dup_msg)
+
       n_complete <- sum(complete.cases(df))
       n_total    <- nrow(df)
       n_excluded <- n_total - n_complete
 
       if (n_complete == 0)
         stop("No complete cases found in the data. Conditional infit requires at least one row with responses to all selected items.")
-      if (n_complete < 30)
-        jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
-
 
       # 3. Fit Rasch model and compute infit
       tryCatch({
@@ -189,7 +190,12 @@ iteminfitClass <- R6::R6Class(
           )
         }
 
-        # 8. Set cutoff note (HTML element below the table)
+        # 8. Set cutoff note (HTML element below the table). Always set
+        # non-empty content on the success path so a stale "requires at
+        # least 3 items" guard message is overwritten when enough items
+        # are selected -- jamovi does not clear set HTML content via
+        # setContent("") / clearWith, so the note must be actively
+        # rewritten with real text.
         if (!is.null(cutoff_res)) {
           method_label <- paste0(cutoff_res$hdci_width * 100, "% HDCI")
 
@@ -199,9 +205,17 @@ iteminfitClass <- R6::R6Class(
             method_label, ") drawn from the same n = ", n_complete,
             " complete cases.",
             iteration_note(self$options$iterations, 200L, infit = TRUE),
+            low_iteration_caveat(cutoff_res$actual_iterations),
             "</p>"
           )
           self$results$cutoffNote$setContent(note_html)
+        } else {
+          self$results$cutoffNote$setContent(paste0(
+            "<p>Conditional infit MSQ for n = ", n_complete,
+            " complete cases. Enable <i>Simulation-based cutoffs</i> to ",
+            "flag each item against a per-item expected range simulated ",
+            "under the fitted model.</p>"
+          ))
         }
 
         # 9. Save state for plot
@@ -281,7 +295,7 @@ iteminfitClass <- R6::R6Class(
       # spuriously flagged. Require at least 20 successes and a 50%
       # success rate; otherwise report the dominant failure reason.
       n_ok <- length(successful)
-      if (n_ok < 20L || n_ok < iterations / 2) {
+      if (n_ok < 20L) {
         fail_msgs <- unlist(results_raw[!ok])
         top_reason <- if (length(fail_msgs) > 0L) {
           names(sort(table(fail_msgs), decreasing = TRUE))[1L]

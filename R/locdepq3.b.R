@@ -94,16 +94,14 @@ locdepq3Class <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$q3Table$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$q3Table$setNote("duplicate", dup_msg)
+
       # Check for sufficient complete cases
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0) {
         stop("No complete cases found in the data. Each row must have responses for all selected items.")
-      }
-      if (n_complete < 30) {
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable with small samples.",
-          n = n_complete
-        )
       }
 
       tryCatch(
@@ -167,7 +165,8 @@ locdepq3Class <- R6::R6Class(
               "to give the dynamic cut-off applied in the correlation ",
               "matrix above. See the item-pair table below for per-pair ",
               "intervals.",
-              iteration_note(iterations, 100L)
+              iteration_note(iterations, 100L),
+              low_iteration_caveat(cutoff_res$actual_iterations)
             ))
           }
 
@@ -403,7 +402,7 @@ locdepq3Class <- R6::R6Class(
       # and a 50% success rate; otherwise report the dominant failure
       # reason.
       n_ok <- length(successful)
-      if (n_ok < 20L || n_ok < iterations / 2) {
+      if (n_ok < 20L) {
         fail_msgs <- unlist(results_raw[!ok])
         top_reason <- if (length(fail_msgs) > 0L) {
           names(sort(table(fail_msgs), decreasing = TRUE))[1L]

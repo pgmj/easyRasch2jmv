@@ -57,12 +57,6 @@
         `title`="easyRasch2jmv: Rasch Analysis for jamovi", 
         `publisher`="[jamovi module]", 
         `url`="https://github.com/pgmj/easyRasch2jmv"), 
-    `johansson2024_simcutoffs`=list(
-        `type`="website", 
-        `author`="Johansson, M.", 
-        `year`=2024, 
-        `title`="Simulation based cutoff values for Rasch item fit and residual correlations", 
-        `url`="https://pgmj.github.io/simcutoffs.html"), 
     `johansson2025_detecting`=list(
         `type`="article", 
         `author`="Johansson, M.", 

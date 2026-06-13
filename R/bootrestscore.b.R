@@ -36,15 +36,13 @@ bootrestscoreClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$bootstrapTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$bootstrapTable$setNote("duplicate", dup_msg)
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Bootstrap results may be unreliable.",
-          n = n_complete
-        )
-
 
       # 3. Read options
       iterations <- self$options$iterations
@@ -110,7 +108,7 @@ bootrestscoreClass <- R6::R6Class(
         # rate; otherwise stop with the dominant failure reason (there
         # is no observed-only fallback -- the bootstrap is the analysis).
         n_ok <- length(successful)
-        if (n_ok < 20L || n_ok < iterations / 2) {
+        if (n_ok < 20L) {
           fail_msgs <- unlist(results_raw[!ok])
           top_reason <- if (length(fail_msgs) > 0L) {
             names(sort(table(fail_msgs), decreasing = TRUE))[1L]
@@ -237,7 +235,8 @@ bootrestscoreClass <- R6::R6Class(
           " successful bootstrap iterations with n = ", samplesize_used,
           " and ", n_items, " items.",
           clamp_msg, missing_msg,
-          iteration_note(iterations, 200L), "</p>"
+          iteration_note(iterations, 200L),
+          low_iteration_caveat(actual_iterations), "</p>"
         )
         self$results$bootstrapNote$setContent(note_html)
 
@@ -308,7 +307,8 @@ bootrestscoreClass <- R6::R6Class(
         ) +
         ggplot2::theme_minimal(base_size = 15) +
         er2_axis_margins() +
-        er2_plot_caption()
+        er2_plot_caption() +
+        ggplot2::theme(legend.position = "none")
 
       print(p)
       TRUE

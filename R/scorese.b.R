@@ -32,15 +32,13 @@ scoreseClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$scoreTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$scoreTable$setNote("duplicate", dup_msg)
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
-
 
       # 3. Read options
       method        <- self$options$method

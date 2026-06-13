@@ -35,8 +35,6 @@ targetingClass <- R6::R6Class(
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
 
       tryCatch({
         data_mat  <- as.matrix(df)

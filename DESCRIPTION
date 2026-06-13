@@ -24,7 +24,7 @@ Imports:
     ggplot2,
     ggdist,
     scales,
-    rlang,
+    utils,
     patchwork,
     mice,
     ggrepel

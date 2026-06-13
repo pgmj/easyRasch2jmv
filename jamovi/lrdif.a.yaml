@@ -59,12 +59,12 @@ options:
       max: 5
 
     - name: sortByMaxDiff
-      title: Sort by MaxDiff (descending)
+      title: Sorted by MaxDiff (descending)
       type: Bool
       default: false
 
     - name: showFigure
-      title: Show panel figure
+      title: Panel figure
       type: Bool
       default: false
 
@@ -76,7 +76,7 @@ options:
       max: 99.9
 
     - name: showTileplot
-      title: Show response distribution by DIF group
+      title: Response distribution by DIF group
       type: Bool
       default: false
 
@@ -87,7 +87,7 @@ options:
       min: 1
 
     - name: tilePercent
-      title: Show percentages instead of counts
+      title: Percentages (instead of counts)
       type: Bool
       default: false
 ...

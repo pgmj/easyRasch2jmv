@@ -67,7 +67,7 @@ options:
       default: none
 
     - name: showPlot
-      title: Show classification plot
+      title: Classification plot
       type: Bool
       default: false
 

@@ -55,11 +55,6 @@ lrdifClass <- R6::R6Class(
       n_complete <- nrow(df)
       if (n_complete == 0L)
         stop("No complete cases remaining after dropping rows with NA in items or DIF variable.")
-      if (n_complete < 30L)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
 
       # Per-item variation check
       for (col in names(df)) {
@@ -88,10 +83,14 @@ lrdifClass <- R6::R6Class(
       sparse_msg <- sparse_note_grouped(df, dif_factor)
       if (!is.null(sparse_msg)) {
         self$results$lrtTable$setNote("sparse", paste0(
-          sparse_msg, " Enable 'Show response distribution by DIF group' ",
+          sparse_msg, " Enable 'Response distribution by DIF group' ",
           "to inspect the counts."
         ))
       }
+
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$lrtTable$setNote("duplicate", dup_msg)
 
       # 4. Read options
       level         <- self$options$level
@@ -260,7 +259,7 @@ lrdifClass <- R6::R6Class(
                  "eRm::LRtest requires complete cases)")
         } else ""
         lr_html <- paste0(
-          "<p><b>Andersen LR test:</b> &chi;<sup>2</sup> = ",
+          "<p><b>Andersen LR test:</b> χ<sup>2</sup> = ",
           round(lrt$LR, 3),
           ", <i>df</i> = ", lrt$df,
           ", <i>p</i> = ", p_str,

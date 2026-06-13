@@ -30,7 +30,7 @@ options:
       rejectInf: true
 
     - name: sortByDiff
-      title: Sort by absolute difference (largest first)
+      title: Sorted by absolute difference (largest first)
       type: Bool
       default: false
 

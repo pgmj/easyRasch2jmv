@@ -72,16 +72,14 @@ reliabilityClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$relTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$relTable$setNote("duplicate", dup_msg)
+
       n_complete <- sum(complete.cases(df))
       n_total    <- nrow(df)
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
-
 
       # 4. Read options
       estim       <- self$options$estim
@@ -172,7 +170,7 @@ reliabilityClass <- R6::R6Class(
           actual_boot <- length(alpha_vec)
           # Same robustness thresholds as the simulation analyses: a
           # CI from a handful of usable resamples would be misleading.
-          if (actual_boot >= 20L && actual_boot >= boot_iter / 2) {
+          if (actual_boot >= 20L) {
             alpha_int   <- ggdist::hdci(alpha_vec, .width = conf_int)
             alpha_lower <- alpha_int[1L, 1L]
             alpha_upper <- alpha_int[1L, 2L]
@@ -182,7 +180,7 @@ reliabilityClass <- R6::R6Class(
         # 11. Build result rows
         boot_note <- if (isTRUE(boot_alpha)) {
           if (!is.na(actual_boot) &&
-              actual_boot >= 20L && actual_boot >= boot_iter / 2) {
+              actual_boot >= 20L) {
             paste0(actual_boot, " bootstrap resamples")
           } else {
             paste0("bootstrap failed (only ", actual_boot, " of ",
@@ -238,7 +236,7 @@ reliabilityClass <- R6::R6Class(
             "HDCI width option; here ", round(conf_int * 100, 1),
             "%). Available for Cronbach's alpha (when bootstrapped) and ",
             "RMU; PSI and Empirical reliability are reported as point ",
-            "estimates only."
+            "estimates only. RMU = Relative Measurement Uncertainty."
           )
         )
 

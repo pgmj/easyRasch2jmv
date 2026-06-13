@@ -33,12 +33,11 @@ iccplotClass <- R6::R6Class(
       )
 
       sparse_msg <- sparse_note(df)
+      dup_msg    <- duplicate_items_note(df)
 
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject("Warning: Only {n} complete cases found. Results may be unreliable.", n = n_complete)
 
       # Get theta limits
       theta_min <- self$options$thetaMin
@@ -129,6 +128,7 @@ iccplotClass <- R6::R6Class(
           " estimated with CML (eRm) on N = ", n_total, " respondents ",
           "(rows with partially missing responses are retained).",
           if (!is.null(sparse_msg)) paste0(" ", sparse_msg) else "",
+          if (!is.null(dup_msg)) paste0(" ", dup_msg) else "",
           "</p>"
         ))
       }, error = function(e) {

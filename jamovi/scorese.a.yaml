@@ -60,7 +60,7 @@ options:
       max: 20
 
     - name: showFigure
-      title: Show figure
+      title: Figure
       type: Bool
       default: false
 

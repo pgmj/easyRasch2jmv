@@ -46,6 +46,9 @@ iteminfitmiClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$infitTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df_items)
+      if (!is.null(dup_msg))
+        self$results$infitTable$setNote("duplicate", dup_msg)
 
       # 4. Detect missingness
       n_missing_total <- sum(is.na(df_items))
@@ -350,7 +353,8 @@ iteminfitmiClass <- R6::R6Class(
             " total simulation iterations across ",
             cutoff_res$n_imputations, " imputed datasets (",
             round(hdci_width * 100, 1), "% HDCI).",
-            iteration_note(sim_iterations, 500L, infit = TRUE)
+            iteration_note(sim_iterations, 500L, infit = TRUE),
+            low_iteration_caveat(cutoff_res$actual_iterations)
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(
@@ -512,7 +516,7 @@ iteminfitmiClass <- R6::R6Class(
       # Guard against degenerate cutoffs: with very few successful
       # iterations in the stacked distribution the HDCI collapses.
       # Require at least 20 successes and a 50% success rate overall.
-      if (total_actual < 20L || total_actual < iterations / 2) {
+      if (total_actual < 20L) {
         sample_msgs <- utils::head(unique(error_messages), 3L)
         stop(paste0(
           "Only ", total_actual, " of ", iterations, " simulation ",

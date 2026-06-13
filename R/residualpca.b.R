@@ -57,6 +57,10 @@ residualpcaClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$pcaTable$setNote("sparse", sparse_msg)
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg))
+        self$results$pcaTable$setNote("duplicate", dup_msg)
+
       # Drop incomplete rows (prcomp does not handle NA)
       n_total     <- nrow(df)
       df_complete <- stats::na.omit(df)
@@ -65,11 +69,6 @@ residualpcaClass <- R6::R6Class(
 
       if (n_complete == 0L)
         stop("No complete cases found. PCA on residuals requires at least one row with responses to all selected items.")
-      if (n_complete < 30L)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
 
       for (col in names(df_complete)) {
         if (length(unique(df_complete[[col]])) < 2L)
@@ -173,7 +172,8 @@ residualpcaClass <- R6::R6Class(
             "unidimensional model at the same n. Suggested cutoff is the ",
             "99th percentile of the simulated first-contrast eigenvalues ",
             "(= ", round(cutoff_value, 3), ").",
-            iteration_note(self$options$iterations, 250L), "</p>"
+            iteration_note(self$options$iterations, 250L),
+            low_iteration_caveat(cutoff_iters), "</p>"
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(
@@ -377,7 +377,7 @@ residualpcaClass <- R6::R6Class(
       # values. Require at least 20 successes and a 50% success rate;
       # otherwise report the dominant failure reason.
       n_ok <- length(successful)
-      if (n_ok < 20L || n_ok < iterations / 2) {
+      if (n_ok < 20L) {
         fail_msgs <- unlist(results_raw[!ok])
         top_reason <- if (length(fail_msgs) > 0L) {
           names(sort(table(fail_msgs), decreasing = TRUE))[1L]

@@ -183,39 +183,62 @@ prepare_item_data <- function(data, vars) {
                   "Each item needs at least two different response values."))
   }
 
-  # Identical-items check (pairwise correlation == 1)
-  n_vars <- ncol(df)
-  if (n_vars >= 2L) {
-    identical_pairs <- list()
-    for (i in 1:(n_vars - 1)) {
-      for (j in (i + 1):n_vars) {
-        cor_val <- suppressWarnings(
-          stats::cor(df[[i]], df[[j]], use = "complete.obs")
-        )
-        if (!is.na(cor_val) && cor_val == 1) {
-          identical_pairs <- append(identical_pairs,
-                                    list(c(names(df)[i], names(df)[j])))
-        }
-      }
-    }
-    if (length(identical_pairs) > 0) {
-      pair_strings <- vapply(identical_pairs, function(p) {
-        paste0("'", p[1], "' and '", p[2], "'")
-      }, character(1L))
-      pair_msg <- paste(pair_strings, collapse = "; ")
-      if (n_vars == 2L) {
-        stop(paste("The two selected items are identical:", pair_msg,
-                   "- please select different items."))
-      } else {
-        jmvcore::reject(
-          "Warning: Some items appear to be identical ({pairs}). This may affect results.",
-          pairs = pair_msg
-        )
-      }
+  # Identical-items check. Two items are "identical" when they correlate
+  # perfectly (r = 1). With exactly two items this is genuinely fatal --
+  # there is effectively only one item to analyse -- so we stop. With
+  # three or more items the analysis can still run on the remaining items
+  # (verified: eRm/iarm/mirt all tolerate a perfectly-correlated pair), so
+  # that case is handled as a non-fatal footnote via duplicate_items_note()
+  # in each analysis, parallel to sparse_note().
+  if (ncol(df) == 2L) {
+    pairs <- identical_item_pairs(df)
+    if (length(pairs) > 0L) {
+      stop(paste("The two selected items are identical:", pairs,
+                 "- please select different items."))
     }
   }
 
   df
+}
+
+#' Find perfectly-correlated (r = 1) item pairs
+#'
+#' @param df data.frame of numeric item responses.
+#' @return Character scalar describing the pairs (e.g.
+#'   "'A' and 'B'; 'C' and 'D'"), or character(0) if none.
+#' @noRd
+identical_item_pairs <- function(df) {
+  n_vars <- ncol(df)
+  if (n_vars < 2L) return(character(0))
+  out <- character(0)
+  for (i in 1:(n_vars - 1)) {
+    for (j in (i + 1):n_vars) {
+      cor_val <- suppressWarnings(
+        stats::cor(df[[i]], df[[j]], use = "complete.obs")
+      )
+      if (!is.na(cor_val) && cor_val == 1) {
+        out <- c(out, paste0("'", names(df)[i], "' and '", names(df)[j], "'"))
+      }
+    }
+  }
+  if (length(out) == 0L) character(0) else paste(out, collapse = "; ")
+}
+
+#' Footnote text for perfectly-correlated item pairs, or NULL when none
+#'
+#' Non-fatal counterpart to the fatal two-item check in
+#' [prepare_item_data()]: with three or more items a perfectly-correlated
+#' pair is surfaced as a caveat rather than halting the analysis.
+#' @param df data.frame of numeric item responses.
+#' @noRd
+duplicate_items_note <- function(df) {
+  pairs <- identical_item_pairs(df)
+  if (length(pairs) == 0L) return(NULL)
+  paste0(
+    "Some items are perfectly correlated (", pairs, "). They may be ",
+    "duplicates or a re-entered item; this inflates apparent reliability ",
+    "and can distort the results."
+  )
 }
 
 #' Iteration-count advice for simulation notes
@@ -243,4 +266,26 @@ iteration_note <- function(iterations, default_iterations, infit = FALSE) {
     paste0(" More iterations are generally recommended for ",
            "publication-ready results.")
   }
+}
+
+#' Caveat for a simulation/bootstrap with few *successful* iterations
+#'
+#' Complements iteration_note() (which concerns the requested count): this
+#' fires on the number that actually succeeded, regardless of how many
+#' were requested -- e.g. when most iterations failed on sparse-category
+#' validation at small samples. Below `recommended` (default 100) the
+#' percentile/HDCI cutoffs rest on a thin tail and may be unstable, so a
+#' caveat is shown but the analysis still runs. Returns "" at or above the
+#' threshold. Leading space so it appends cleanly to an existing note.
+#'
+#' @param actual Number of successful iterations.
+#' @param recommended Threshold below which the caveat is shown.
+#' @noRd
+low_iteration_caveat <- function(actual, recommended = 100L) {
+  if (actual >= recommended) return("")
+  paste0(
+    " Note: only ", actual, " iterations succeeded, so the results rest on ",
+    "a small number of simulated/resampled datasets and may be unstable -- ",
+    "consider more iterations or checking for sparse response categories."
+  )
 }

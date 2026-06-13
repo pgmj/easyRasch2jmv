@@ -63,19 +63,28 @@ other item and the statistic is undefined).
 
 ## Simulation robustness guard (module-wide)
 
-All simulation-based analyses (conditional infit, partial gamma DIF,
-Q3, bootstrap item-restscore) now require **at least 20 successful
-iterations and a 50% success rate**. Previously a single successful
-iteration could silently produce degenerate cutoffs (HDCI lower =
-upper, flagging every item) or percentages over tiny denominators.
+All simulation/bootstrap analyses require **at least 20 successful
+iterations** before cutoffs/percentages are produced. Previously a
+single successful iteration could silently produce degenerate cutoffs
+(HDCI lower = upper, flagging every item) or percentages over tiny
+denominators.
 
-- Conditional infit, partial gamma DIF, Q3 degrade gracefully: the
-  observed statistics are still shown, and the note reports the
-  dominant failure reason (e.g. "fewer than 8 positive responses in at
-  least one item").
+- Conditional infit, partial gamma DIF, Q3, residual-PCA and the CFA
+  cutoff degrade gracefully below the floor: the observed statistics
+  are still shown and the note reports the dominant failure reason
+  (e.g. "fewer than 8 positive responses in at least one item").
 - Bootstrap item-restscore stops with an informative error (the
   bootstrap is the entire analysis; there is no observed-only
   fallback).
+- **No success-rate requirement.** An earlier version also required a
+  50% success rate, which blocked legitimate small-sample runs where
+  many simulated datasets fail sparse-category validation even though
+  the survivors form a usable null distribution. The rate condition was
+  the same "validity heuristic blocking a computable result" pattern
+  removed for the n < 30 gate, so it is gone. Instead, when fewer than
+  100 iterations succeed the result is shown with a caveat
+  (`low_iteration_caveat()`) noting the cutoffs rest on a small null
+  distribution and may be unstable — informing rather than blocking.
 
 ## Sparse-category warnings (module-wide)
 
@@ -122,6 +131,74 @@ definitions (added for conditional infit, item probability curves,
 targeting, partial gamma DIF, and partial gamma LD), summarising the
 method, estimation choices, and — where relevant — the iteration
 guidance above.
+
+## Removed the small-sample (n < 30) gate
+
+The "Warning: Only N complete cases found. Results may be unreliable."
+check — present in 13 analyses via `jmvcore::reject()` — has been
+removed. `reject()` is fatal (it halts the analysis and greys out the
+results pane), so despite the caveat-style wording it produced **no**
+output for any sample under 30, contradicting the message. More
+fundamentally, n = 30 is a generic small-sample heuristic, not a
+computational limit: the real adequacy floor depends on targeting and
+analysis type (and is generally higher), so a fixed gate was both too
+strict (blocking a computable 29-case analysis) and too lenient
+(passing an underpowered 35-case DIF analysis). Sample-size adequacy
+is left to the analyst. Genuinely fatal floors are unchanged
+(`n_complete == 0`; the per-analysis minimum-item guards), and any
+unworkably small n now surfaces the estimator's own error rather than a
+blanket block. The cell-size (sparse response category) warning is
+kept — it *is* tied to computational feasibility and is already a
+non-fatal footnote. (jamovi library audit, 2.0.0.)
+
+## Stale "requires at least N items" message cleared on re-run
+
+The minimum-item guard messages set an HTML note and returned early.
+When the user then added enough items the guard was skipped, and the
+stale "requires at least N items" text lingered — because jamovi clears
+HTML content neither via `clearWith` nor via `setContent("")` (an
+empty-string update is a no-op in the frontend); the only thing that
+replaces a note is a later write of *non-empty* content. Twelve of the
+analyses already rewrite their note with a real sample-size/result
+caption on every successful run, so they cleared correctly. Conditional
+item infit did not, when simulation-based cutoffs were off (its note is
+otherwise written only on the cutoff path), so it now always writes a
+brief base note in that case. The message disappears as soon as enough
+items are selected.
+
+## Checkbox labels as noun phrases
+
+The 25 checkbox / toggle labels across 12 analyses were rephrased from
+action-verb instructions ("Show ...", "Compute ...", "Use ...", "Sort by
+...", "Bootstrap ...") to noun phrases naming the feature or resulting
+state ("Classification plot", "Simulation-based cutoffs", "Robust
+statistics ...", "Sorted by ...", "Bootstrap CI (Cronbach's alpha)"),
+following jamovi's UI convention that a checkbox names the thing being
+toggled on. (jamovi library audit, 2.0.0.)
+
+## Identical-items check no longer halts the analysis
+
+When three or more items are selected and two are perfectly correlated
+(r = 1, e.g. a coincidentally duplicated or re-entered item), the
+analysis previously stopped via `jmvcore::reject()` despite the
+caveat-style wording — so it produced no output. Since all estimators
+(eRm, iarm, mirt) compute fine with such a pair, this is now a
+**non-fatal footnote** (`duplicate_items_note()`, parallel to the
+sparse-category footnote): the analysis runs and the table/note flags
+the correlated pair. The genuinely-degenerate two-item case (where the
+correlated pair leaves effectively one item) keeps its fatal `stop()`
+in `prepare_item_data()`. (jamovi library audit, 2.0.0.)
+
+## Output text: literal Unicode symbols
+
+Math/Greek symbols in results notes now use literal Unicode characters
+(≤, ≥, ±, ×, χ) instead of HTML named entities (`&le;`, `&ge;`,
+`&plusmn;`, `&times;`, `&chi;`). The named entities only rendered by
+side-effect of jamovi's current results renderer and already failed on
+non-HTML export (showing literal `&plusmn;` etc.); a documented upcoming
+renderer fix would have made them display literally everywhere. The
+genuinely HTML-special `&lt;`/`&gt;` escapes are kept as-is. (jamovi
+library audit, 2.0.0.)
 
 ## Per-analysis changes
 

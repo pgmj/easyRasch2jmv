@@ -72,15 +72,15 @@ locdepgammaClass <- R6::R6Class(
         self$results$dir2Table$setNote("sparse", sparse_msg)
       }
 
+      dup_msg <- duplicate_items_note(df)
+      if (!is.null(dup_msg)) {
+        self$results$dir1Table$setNote("duplicate", dup_msg)
+        self$results$dir2Table$setNote("duplicate", dup_msg)
+      }
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
-      if (n_complete < 30)
-        jmvcore::reject(
-          "Warning: Only {n} complete cases found. Results may be unreliable.",
-          n = n_complete
-        )
-
 
       # rgl workaround (iarm depends on vcdExtra -> rgl)
       old_rgl <- getOption("rgl.useNULL")
@@ -206,7 +206,7 @@ locdepgammaClass <- R6::R6Class(
         }
         if (gamma_thr > 0) {
           filter_clauses <- c(filter_clauses, paste0(
-            "Showing only pairs with |gamma| &ge; ", gamma_thr, "."
+            "Showing only pairs with |gamma| ≥ ", gamma_thr, "."
           ))
         }
         if (filter_applied) {
@@ -216,7 +216,7 @@ locdepgammaClass <- R6::R6Class(
           ))
         }
         se_clause <- if (isTRUE(self$options$showSE)) {
-          " Confidence intervals are 95% Wald intervals (gamma &plusmn; 1.96 &times; SE)."
+          " Confidence intervals are 95% Wald intervals (gamma ± 1.96 × SE)."
         } else ""
         self$results$ldNote$setContent(paste0(
           "<p>Partial gamma LD analysis (n = ", n_complete,

@@ -43,7 +43,7 @@ options:
         - factor
 
     - name: computeCutoff
-      title: Compute simulation-based cutoffs
+      title: Simulation-based cutoffs
       type: Bool
       default: false
 
@@ -66,17 +66,17 @@ options:
       default: 42
 
     - name: sortByGamma
-      title: Sort by |Partial gamma| (descending)
+      title: Sorted by |Partial gamma| (descending)
       type: Bool
       default: false
 
     - name: showSE
-      title: Show SE and 95% confidence interval
+      title: SE and 95% confidence interval
       type: Bool
       default: false
 
     - name: showTileplot
-      title: Show response distribution by DIF group
+      title: Response distribution by DIF group
       type: Bool
       default: false
 
@@ -87,7 +87,7 @@ options:
       min: 1
 
     - name: tilePercent
-      title: Show percentages instead of counts
+      title: Percentages (instead of counts)
       type: Bool
       default: false
 ...
