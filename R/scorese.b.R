@@ -90,10 +90,11 @@ scoreseClass <- R6::R6Class(
       # MML retain rows with partially missing responses).
       n_used <- sum(rowSums(!is.na(df)) > 0)
       method_text <- if (method == "WLE") {
-        paste0("Person locations via Warm's WLE (CML item parameters from eRm). ",
-               "Boundary scores searched within theta range [",
-               theta_min, ", ", theta_max,
-               "]; values outside that range are returned as Inf with NA SE.")
+        paste0("Person locations via Warm's WLE (CML item parameters from ",
+               "eRm). The standard error is the information-based ",
+               "1 / sqrt(I(theta)) evaluated at the estimate (as in catR / ",
+               "TAM); Warm's bias correction yields finite estimates even ",
+               "at the lowest and highest scores, where the SE is largest.")
       } else {
         paste0("Person locations via EAPsum (MML item parameters from mirt). ",
                "Estimates are bounded by the standard normal prior; SEs are ",
@@ -129,23 +130,26 @@ scoreseClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .scoreSE_wle  — eRm + patched iarm helpers (mirrors easyRasch2)
+    # .scoreSE_wle  — Warm's WLE with information-based SEM, via the shared
+    # utils-theta.R helpers (mirrors easyRasch2::RMscoreSE()). The SEM is
+    # 1 / sqrt(I(theta)) evaluated at the estimate, matching catR / TAM and
+    # RMpersonParameters(); this replaces the previous iarm "expected SEM"
+    # (point estimates unchanged; SEs differ -- larger -- at the score
+    # extremes). Item thresholds are CML (eRm), grand-mean-zero centred.
     # ---------------------------------------------------------------------
     .scoreSE_wle = function(df, theta_range) {
-      data_mat <- as.matrix(df)
-      if (max(data_mat, na.rm = TRUE) == 1L) {
-        erm_out <- eRm::RM(df)
-      } else {
-        erm_out <- eRm::PCM(df)
-      }
-      score_list <- iarm_person_estimates(
-        erm_out, properties = TRUE, sthetarange = theta_range
-      )
-      wle_mat <- score_list[[2L]]
+      thr_list  <- .wle_thresholds(df)
+      steps     <- vapply(thr_list, length, integer(1L))
+      max_score <- sum(steps)
+
+      est <- vapply(0:max_score, function(r) {
+        .theta_wle(.score_pattern(r, steps), thr_list, theta_range)
+      }, numeric(2L))
+
       data.frame(
-        raw_score   = as.integer(wle_mat[, "Raw Score"]),
-        logit_score = as.numeric(wle_mat[, "WLE"]),
-        logit_se    = as.numeric(wle_mat[, "SEM"]),
+        raw_score   = 0:max_score,
+        logit_score = est[1L, ],
+        logit_se    = est[2L, ],
         stringsAsFactors = FALSE,
         row.names = NULL
       )

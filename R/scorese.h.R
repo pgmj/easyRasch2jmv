@@ -181,12 +181,12 @@ scoreseBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' 
 #' Two estimation methods are available. WLE (default) fits the model
 #' with eRm (CML) and applies Warm's Weighted Likelihood correction for
-#' boundary-score bias. EAP fits the model with mirt (MML) and uses
-#' sum-score-based Expected A Posteriori estimates with their posterior
-#' SDs as standard errors. EAP estimates are finite at all score
-#' boundaries (the prior shrinks them inward); WLE may yield Inf at
-#' extremes when the boundary score cannot be solved within the
-#' configured theta range.
+#' boundary-score bias; its standard error is the information-based
+#' 1 / sqrt(I(theta)) (as in catR / TAM), and Warm's correction keeps
+#' the lowest and highest scores finite (with the largest SEs). EAP
+#' fits the model with mirt (MML) and uses sum-score-based Expected A
+#' Posteriori estimates with their posterior SDs as standard errors;
+#' EAP estimates are shrunk inward by the normal prior.
 #' 
 #' @param data .
 #' @param vars .

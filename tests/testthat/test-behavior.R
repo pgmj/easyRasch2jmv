@@ -53,6 +53,18 @@ test_that("iccplot category probabilities are valid (sum to 1 per theta point)",
   expect_true(all(abs(agg$Probability - 1) < 1e-8))
 })
 
+test_that("scorese WLE SEM is information-based: finite at extremes and larger there", {
+  d <- dich_data()
+  r  <- suppressWarnings(er2$scorese(data = d, vars = names(d), method = "WLE"))
+  df <- r$scoreTable$asDF
+  se <- df$logitSE
+  expect_true(all(is.finite(se)))                 # Warm correction -> finite extremes
+  n  <- length(se)
+  # the two extreme scores carry the largest SEs (least information)
+  expect_gt(se[1L], min(se))
+  expect_gt(se[n],  min(se))
+})
+
 test_that("CFA cutoff requires 4 items, with an explanatory message at 3", {
   d <- poly_data()
   r <- suppressWarnings(er2$cfacutoff(data = d, vars = names(d)[1:3]))

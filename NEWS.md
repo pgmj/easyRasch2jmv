@@ -1,3 +1,17 @@
+# easyRasch2jmv 2.0.1
+
+- **Sum score to logit transformation**: the WLE standard error is now
+  the information-based `1 / sqrt(I(theta))` evaluated at each estimate
+  (as in catR / TAM and `easyRasch2::RMscoreSE()`), replacing the iarm
+  "expected SEM" used previously. Point estimates are unchanged; the
+  standard errors differ — they are larger at the score extremes, which
+  is the more accurate behaviour, and Warm's bias correction keeps the
+  lowest and highest scores finite. The WLE solver and grand-mean-zero
+  threshold centring are now shared internal helpers ported from
+  `easyRasch2`, and the output reproduces `RMscoreSE()` exactly. Only the
+  score-to-logit WLE path is affected — no other analysis reports a
+  per-score WLE standard error.
+
 # easyRasch2jmv 2.0.0
 
 Major consistency and documentation release: every analysis was reviewed
@@ -21,10 +35,12 @@ highlights:
   in the infit and restscore analyses; HDCI width defaults unified at
   99%; BH p-adjustment hardcoded; seeds always applied (reproducible by
   default); raw values with jamovi number formatting throughout.
-- **Robustness**: all simulations now require >= 20 successful
-  iterations and a 50% success rate, with the dominant failure reason
-  reported -- degenerate cutoffs from near-total simulation failure are
-  no longer possible.
+- **Robustness**: simulations require >= 20 successful iterations before
+  producing cutoffs (degenerate cutoffs from near-total failure are no
+  longer possible), with graceful degradation and the dominant failure
+  reason reported; a caveat is shown when fewer than 100 succeed. There
+  is no success-rate gate, so legitimate small-sample runs are not
+  blocked.
 - **Sparse-data alerts**: every analysis warns when response categories
   have fewer than 3 observations; DIF analyses check within each group
   and point to the tileplot.
