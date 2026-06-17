@@ -88,7 +88,6 @@ itemrestscoreClass <- R6::R6Class(
           observed <- as.numeric(res_mat[seq_len(n_items), 1L])
           expected <- as.numeric(res_mat[seq_len(n_items), 2L])
           p_adjusted <- as.numeric(res_mat[seq_len(n_items), 5L])
-          significance <- trimws(as.character(res_mat[seq_len(n_items), 6L]))
 
           # Assemble result data.frame. `Difference` is signed (observed -
           # expected): positive = item over-discriminates (often LD),
@@ -108,7 +107,6 @@ itemrestscoreClass <- R6::R6Class(
             Expected          = expected,
             Difference        = difference,
             p_adjusted        = p_adjusted,
-            Significance      = significance,
             Fit               = fit_class,
             Relative_location = relative_item_avg_locations,
             stringsAsFactors  = FALSE,
@@ -132,7 +130,6 @@ itemrestscoreClass <- R6::R6Class(
               expected    = results$Expected[i],
               difference  = results$Difference[i],
               pAdjusted   = results$p_adjusted[i],
-              significance = results$Significance[i],
               fit         = results$Fit[i],
               relLocation = results$Relative_location[i]
             ))
@@ -144,12 +141,11 @@ itemrestscoreClass <- R6::R6Class(
             "over-discrimination (overfit, often local dependence); ",
             "negative: under-discrimination (underfit, often ",
             "multidimensionality or noise). Items are labelled in the ",
-            "Misfit column when the adjusted p-value < .05."
+            "Flagged column when the adjusted p-value < .05."
           ))
           table$setNote("sig", paste0(
             "P-values adjusted with the Benjamini-Hochberg (BH) ",
-            "false-discovery-rate method. ",
-            "*** p < .001, ** p < .01, * p < .05, . p < .10 (adjusted)."
+            "false-discovery-rate method."
           ))
           table$setNote("loc", paste0(
             "Rel. location = mean item (threshold) location relative to ",

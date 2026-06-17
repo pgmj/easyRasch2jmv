@@ -182,7 +182,7 @@ iteminfitClass <- R6::R6Class(
           table$setNote(
             "misfit",
             paste0(
-              "Misfit: infit below the expected range = overfit (item is ",
+              "Flagged: infit below the expected range = overfit (item is ",
               "more predictable than the model expects); above = underfit ",
               "(noisier than expected). Note the direction is inverted ",
               "relative to the item-restscore analyses."

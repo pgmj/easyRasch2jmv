@@ -143,7 +143,7 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `format`="zto"),
                     list(
                         `name`="misfit", 
-                        `title`="Misfit", 
+                        `title`="Flagged", 
                         `type`="text"))))
             self$add(jmvcore::Html$new(
                 options=options,

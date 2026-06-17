@@ -134,7 +134,7 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `superTitle`="Expected range"),
                     list(
                         `name`="misfit", 
-                        `title`="Misfit", 
+                        `title`="Flagged", 
                         `type`="text", 
                         `visible`="(computeCutoff)"),
                     list(

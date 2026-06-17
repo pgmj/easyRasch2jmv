@@ -25,7 +25,7 @@ test_that("a perfectly-correlated pair (>=3 items) yields a footnote, not a stop
   expect_match(notes$duplicate$note, "perfectly correlated")
 })
 
-test_that("item-restscore misfit column uses overfit/underfit labels", {
+test_that("item-restscore Flagged column uses overfit/underfit labels", {
   d <- dich_data()
   r <- suppressWarnings(er2$itemrestscore(data = d, vars = names(d)))
   # empty text cells come back as NA via asDF; non-blank labels must be
@@ -35,7 +35,7 @@ test_that("item-restscore misfit column uses overfit/underfit labels", {
   expect_true(any(fit_vals %in% c("overfit", "underfit")))   # at least one flagged
 })
 
-test_that("item-restscore Misfit uses inverted direction vs. infit (sanity)", {
+test_that("item-restscore Flagged uses inverted direction vs. infit (sanity)", {
   # Restscore: observed > expected => overfit. Infit: observed < expected
   # range => overfit. Just assert both analyses run and expose the column;
   # the directional rules are unit-tested via their own logic above.

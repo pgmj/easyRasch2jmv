@@ -322,7 +322,7 @@ iteminfitmiClass <- R6::R6Class(
         ))
         if (!is.null(cutoff_res)) {
           table$setNote("misfit", paste0(
-            "Misfit: pooled infit below the expected range = overfit ",
+            "Flagged: pooled infit below the expected range = overfit ",
             "(item is more predictable than the model expects); above = ",
             "underfit (noisier than expected). Note the direction is ",
             "inverted relative to the item-restscore analyses."

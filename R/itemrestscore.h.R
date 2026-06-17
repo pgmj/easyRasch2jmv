@@ -92,12 +92,8 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `type`="number", 
                         `format`="zto,pvalue"),
                     list(
-                        `name`="significance", 
-                        `title`="p-value sign.", 
-                        `type`="text"),
-                    list(
                         `name`="fit", 
-                        `title`="Misfit", 
+                        `title`="Flagged", 
                         `type`="text"),
                     list(
                         `name`="relLocation", 

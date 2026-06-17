@@ -45,7 +45,7 @@ items:
             visible: (computeCutoff)
             superTitle: Expected range
           - name: misfit
-            title: Misfit
+            title: Flagged
             type: text
             visible: (computeCutoff)
           - name: relLocation

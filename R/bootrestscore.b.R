@@ -203,7 +203,7 @@ bootrestscoreClass <- R6::R6Class(
           "classification."
         ))
         table$setNote("flag", paste0(
-          "Misfit = the item was classified as overfit (or underfit) in ",
+          "Flagged = the item was classified as overfit (or underfit) in ",
           "more than ", cutoff, "% of the bootstrap iterations."
         ))
         table$setNote("loc", paste0(

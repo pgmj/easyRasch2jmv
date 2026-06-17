@@ -32,11 +32,8 @@ items:
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
-          - name: significance
-            title: p-value sign.
-            type: text
           - name: fit
-            title: Misfit
+            title: Flagged
             type: text
           - name: relLocation
             title: Rel. location

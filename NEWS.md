@@ -1,5 +1,17 @@
 # easyRasch2jmv 2.0.1
 
+- **"Misfit" column renamed "Flagged"** in the item-restscore, bootstrap
+  item-restscore, conditional infit, and MI conditional infit tables, so
+  the flag column has a consistent header across the module (the Q3,
+  partial gamma DIF, CFA, residual-PCA and LR-DIF tables already used
+  "Flagged"). The cell content is unchanged — still "overfit"/"underfit"
+  for the restscore/infit analyses and "above"/"below" for Q3 — so the
+  direction of misfit remains visible; only the header and its footnote
+  wording changed.
+- **Item-restscore**: removed the "p-value sign." (significance stars)
+  column. It is redundant given the exact adjusted p-value is reported
+  and the Flagged column already marks significant deviations; the
+  footnote dropped the star-coding legend accordingly.
 - **Sum score to logit transformation**: the WLE standard error is now
   the information-based `1 / sqrt(I(theta))` evaluated at each estimate
   (as in catR / TAM and `easyRasch2::RMscoreSE()`), replacing the iarm
