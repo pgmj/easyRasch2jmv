@@ -60,9 +60,11 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 rows="(vars)",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "kreiner2011",
                     "mueller2022",
-                    "mair2007"),
+                    "zeileis2026",
+                    "warm1989"),
                 clearWith=list(
                     "vars",
                     "sortByDiff"),
@@ -131,12 +133,14 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Item-Restscore Correlations
 #'
 #' Computes observed and model-expected item-restscore correlations using
-#' Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
-#' (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
-#' then reports observed vs. expected restscore correlations, the signed
-#' difference (observed minus expected; positive = over-discrimination /
-#' often LD, negative = under-discrimination / often noise),
-#' adjusted p-values, and item locations.
+#' Goodman-Kruskal's gamma, via the easyRasch2 R package
+#' (iarm::item_restscore() on a conditional maximum likelihood fit from
+#' psychotools, with WLE person estimates for the relative item
+#' locations). Reports observed vs. expected restscore correlations, the
+#' signed difference (observed minus expected; positive =
+#' over-discrimination / often LD, negative = under-discrimination /
+#' often noise), BH-adjusted p-values, and item locations. Results match
+#' easyRasch2::RMitemRestscore().
 #' 
 #' @param data .
 #' @param vars .

@@ -79,7 +79,9 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 title="Item Probability Curves",
                 refs=list(
                     "easyRasch2jmv",
-                    "mair2007"),
+                    "easyRasch2",
+                    "zeileis2026",
+                    "warm1989"),
                 width=700,
                 height=600,
                 renderFun=".iccPlot",
@@ -120,12 +122,13 @@ iccplotBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Item Probability Curves
 #'
 #' Plots model-implied response probabilities as a function of the
-#' latent trait, using CML estimation via eRm (RM for dichotomous
-#' data, PCM for polytomous -- chosen automatically). Dichotomous
-#' data are shown as joint item characteristic curves (all items in
-#' one panel, one curve per item, cf. eRm::plotjointICC); polytomous
-#' data as category probability curves with one facet per item.
-#' Mirrors easyRasch2::RMitemCatProb().
+#' latent trait, computed by the easyRasch2 R package (CML estimation
+#' via psychotools; a dichotomous item is a 2-category partial credit
+#' model). Dichotomous data are shown as joint item characteristic
+#' curves (all items in one panel, one curve per item, cf.
+#' eRm::plotjointICC); polytomous data as category probability curves
+#' with one facet per item, drawn by easyRasch2::RMitemCatProb().
+#' Probabilities are identical to RMitemCatProb().
 #' 
 #' @param data .
 #' @param vars .

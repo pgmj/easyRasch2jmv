@@ -8,7 +8,7 @@ items:
       title: Reliability Estimates
       type: Table
       rows: 0
-      refs: [easyRasch2jmv, mair2007, chalmers2012, bignardi2025, mislevy1991, kay2025]
+      refs: [easyRasch2jmv, easyRasch2, zeileis2026, warm1989, green1984, chalmers2012, bignardi2025, mislevy1991, kay2025]
       clearWith:
           - vars
           - estim

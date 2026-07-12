@@ -40,6 +40,12 @@ bootrestscoreClass <- R6::R6Class(
       if (!is.null(dup_msg))
         self$results$bootstrapTable$setNote("duplicate", dup_msg)
 
+      # Respondents with no responses on any selected item are dropped up
+      # front: the bundled easyRasch2 release cannot fit all-NA rows
+      # (psychotools errors on polytomous and crashes on dichotomous data),
+      # and such rows would poison the bootstrap resampling pool.
+      df <- df[rowSums(!is.na(df)) > 0, , drop = FALSE]
+
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
         stop("No complete cases found in the data.")
@@ -50,93 +56,68 @@ bootrestscoreClass <- R6::R6Class(
       cutoff     <- self$options$cutoff
       seed       <- self$options$seed
 
-      # Clamp samplesize to nrow(df) instead of failing (Jamovi-friendly)
+      # Clamp samplesize to nrow(df) instead of failing (Jamovi-friendly;
+      # easyRasch2::RMitemRestscoreBoot errors when samplesize > nrow)
       samplesize_used <- min(samplesize, nrow(df))
       samplesize_clamped <- samplesize_used < samplesize
 
       # 4. Run analysis
       tryCatch({
-        data_mat      <- as.matrix(df)
-        item_names    <- colnames(data_mat)
-        n_items       <- ncol(data_mat)
-        is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
+        item_names <- colnames(df)
+        n_items    <- ncol(df)
 
-        # rgl workaround
-        old_rgl <- getOption("rgl.useNULL")
-        options(rgl.useNULL = TRUE)
-        on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
-
-        # Full-sample model: locations + conditional infit
-        if (is_polytomous) {
-          erm_full <- eRm::PCM(df)
-          thresh_table <- eRm::thresholds(erm_full)$threshtable[[1L]]
-          if ("Location" %in% colnames(thresh_table)) {
-            item_avg_locations <- thresh_table[, "Location"]
-          } else {
-            item_avg_locations <- rowMeans(thresh_table, na.rm = TRUE)
-          }
-        } else {
-          erm_full <- eRm::RM(df)
-          item_avg_locations <- stats::coef(erm_full, "beta") * -1
-        }
-        pp <- eRm::person.parameter(erm_full)
-        person_avg_location <- mean(pp$theta.table[["Person Parameter"]],
-                                    na.rm = TRUE)
-        relative_item_avg_locations <- item_avg_locations - person_avg_location
-
-        # Per-iteration seeds for reproducibility
-        set.seed(seed)
-        boot_seeds <- sample.int(.Machine$integer.max, iterations)
-
-        boot_data_list <- list(
-          data          = df,
-          samplesize    = samplesize_used,
-          is_polytomous = is_polytomous,
-          item_names    = item_names
-        )
-
-        results_raw <- run_boot_restscore_sequential(
-          iterations, boot_seeds, boot_data_list, verbose = FALSE
-        )
-
-        ok <- vapply(results_raw, is.data.frame, logical(1L))
-        successful <- results_raw[ok]
+        # --- Bootstrap via easyRasch2 ---------------------------------------
+        # output = "raw" returns the per-iteration long data (iteration,
+        # Item, item_restscore, diff, diff_abs) that both the percentage
+        # table and the violin plot are built from -- one bootstrap run,
+        # numerically identical to RMitemRestscoreBoot() with the same seed.
+        # (The package's summary output cannot feed the plot, so the
+        # counts-to-percentages aggregation stays module-side; percentages
+        # are computed unrounded from the raw counts.) Package warnings are
+        # suppressed -- the module surfaces its own footnotes.
+        fit_all <- suppressWarnings(suppressMessages(
+          easyRasch2::RMitemRestscoreBoot(
+            df,
+            iterations = iterations,
+            samplesize = samplesize_used,
+            parallel   = FALSE,
+            seed       = as.integer(seed),
+            output     = "raw"
+          )
+        ))
+        # Upstream signs diff as (expected - observed); the module's
+        # Difference convention (matching the asymptotic item-restscore
+        # analysis) is (observed - expected), so flip the sign here.
+        fit_all$diff <- -fit_all$diff
 
         # Guard against misleading percentages: with few successful
         # iterations the classification shares are based on tiny
-        # denominators. Require at least 20 successes and a 50% success
-        # rate; otherwise stop with the dominant failure reason (there
-        # is no observed-only fallback -- the bootstrap is the analysis).
-        n_ok <- length(successful)
-        if (n_ok < 20L) {
-          fail_msgs <- unlist(results_raw[!ok])
-          top_reason <- if (length(fail_msgs) > 0L) {
-            names(sort(table(fail_msgs), decreasing = TRUE))[1L]
-          } else NULL
+        # denominators (there is no observed-only fallback -- the
+        # bootstrap is the analysis). Failed iterations are discarded
+        # inside the package, so count what came back.
+        actual_iterations <- length(unique(fit_all$iteration))
+        if (actual_iterations < 20L) {
           stop(paste0(
-            "Only ", n_ok, " of ", iterations, " bootstrap iterations ",
-            "succeeded -- too few for trustworthy classification ",
-            "percentages.",
-            if (!is.null(top_reason))
-              paste0(" Most common failure: ", top_reason, ".") else "",
-            " This typically happens when items have very low or very ",
-            "high endorsement rates, so that resampled datasets often ",
-            "contain items without response variation. Consider a larger ",
-            "bootstrap sample size."
+            "Only ", actual_iterations, " of ", iterations, " bootstrap ",
+            "iterations succeeded -- too few for trustworthy ",
+            "classification percentages. This typically happens when ",
+            "items have very low or very high endorsement rates, so that ",
+            "resampled datasets often contain items without response ",
+            "variation. Consider a larger bootstrap sample size."
           ), call. = FALSE)
         }
-        actual_iterations <- n_ok
 
-        # Stack and tag with iteration index
-        iter_dfs <- lapply(seq_along(successful), function(i) {
-          d <- successful[[i]]
-          d$iteration <- i
-          d[, c("iteration", "Item", "item_restscore", "diff", "diff_abs")]
-        })
-        fit_all <- do.call(rbind, iter_dfs)
-        rownames(fit_all) <- NULL
+        # --- Full-sample relative locations ----------------------------------
+        # Same full-sample CML/WLE fit the package's own summary output
+        # reports (numerically identical to RMitemRestscoreBoot()'s
+        # Relative_location column).
+        obs_df <- suppressWarnings(suppressMessages(
+          easyRasch2::RMitemRestscore(df, output = "dataframe")
+        ))
+        relative_item_avg_locations <-
+          obs_df$Relative_location[match(item_names, obs_df$Item)]
 
-        # Per-item classification counts
+        # --- Per-item classification counts ----------------------------------
         classes <- c("overfit", "underfit", "no misfit")
         counts <- as.data.frame(
           table(Item = factor(fit_all$Item, levels = item_names),
@@ -147,7 +128,7 @@ bootrestscoreClass <- R6::R6Class(
         counts$Item           <- as.character(counts$Item)
         counts$item_restscore <- as.character(counts$item_restscore)
         per_item_total <- tapply(counts$n, counts$Item, sum)
-        counts$percent <- round(counts$n * 100 / per_item_total[counts$Item], 1)
+        counts$percent <- counts$n * 100 / per_item_total[counts$Item]
 
         # Wide per-item summary. Pass raw numerics (no pre-rounding) so
         # the jamovi frontend applies the user's "Number format"
@@ -208,7 +189,7 @@ bootrestscoreClass <- R6::R6Class(
         ))
         table$setNote("loc", paste0(
           "Rel. location = item location relative to the mean person ",
-          "location (full sample)."
+          "location (weighted likelihood estimates, WLE; full sample)."
         ))
 
         # 6. Caption note
@@ -235,7 +216,7 @@ bootrestscoreClass <- R6::R6Class(
           " successful bootstrap iterations with n = ", samplesize_used,
           " and ", n_items, " items.",
           clamp_msg, missing_msg,
-          iteration_note(iterations, 200L),
+          iteration_note(iterations, 250L),
           low_iteration_caveat(actual_iterations), "</p>"
         )
         self$results$bootstrapNote$setContent(note_html)
@@ -257,7 +238,7 @@ bootrestscoreClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # Plot: per-item violin + jitter of (expected - observed) across
+    # Plot: per-item violin + jitter of (observed - expected) across
     # bootstrap iterations, coloured by per-iteration classification
     # ---------------------------------------------------------------------
     .bootstrapPlot = function(image, ggtheme, theme, ...) {
@@ -315,64 +296,3 @@ bootrestscoreClass <- R6::R6Class(
     }
   )
 )
-
-# ---------------------------------------------------------------------------
-# Internal helpers (mirror easyRasch2::RMitemRestscoreBoot internals)
-# ---------------------------------------------------------------------------
-
-#' Run a single item-restscore bootstrap iteration
-#'
-#' @keywords internal
-#' @noRd
-run_single_boot_restscore <- function(seed, data_list) {
-  set.seed(seed)
-  idx <- sample.int(nrow(data_list$data), data_list$samplesize, replace = TRUE)
-  d   <- data_list$data[idx, , drop = FALSE]
-
-  tryCatch({
-    if (data_list$is_polytomous) {
-      model_fit <- psychotools::pcmodel(d, hessian = FALSE)
-    } else {
-      model_fit <- eRm::RM(d, se = FALSE)
-    }
-
-    # iarm refits on complete cases when the resampled rows contain
-    # missing responses -- suppress its per-iteration console message;
-    # the behaviour is documented in the HTML note below the table.
-    i1 <- suppressMessages(as.data.frame(iarm::item_restscore(model_fit)))
-    res_mat <- i1[[1L]]
-    n_items <- length(data_list$item_names)
-
-    observed <- as.numeric(res_mat[seq_len(n_items), 1L])
-    expected <- as.numeric(res_mat[seq_len(n_items), 2L])
-    p_adj    <- as.numeric(res_mat[seq_len(n_items), 5L])
-    # Signed as observed - expected so that overfit is positive,
-    # matching the Difference column in the item-restscore analysis.
-    diff_val <- observed - expected
-
-    cls <- ifelse(p_adj < 0.05 & diff_val > 0, "overfit",
-           ifelse(p_adj < 0.05 & diff_val < 0, "underfit", "no misfit"))
-
-    data.frame(
-      Item           = data_list$item_names,
-      item_restscore = cls,
-      diff           = diff_val,
-      diff_abs       = abs(diff_val),
-      stringsAsFactors = FALSE,
-      row.names = NULL
-    )
-  }, error = function(e) as.character(conditionMessage(e)))
-}
-
-#' Run item-restscore bootstrap iterations sequentially
-#'
-#' @keywords internal
-#' @noRd
-run_boot_restscore_sequential <- function(iterations, boot_seeds, boot_data_list,
-                                          verbose = FALSE) {
-  results <- vector("list", iterations)
-  for (i in seq_len(iterations)) {
-    results[[i]] <- run_single_boot_restscore(boot_seeds[i], boot_data_list)
-  }
-  results
-}

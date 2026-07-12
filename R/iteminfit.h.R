@@ -9,7 +9,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             computeCutoff = FALSE,
             hdciWidth = 99,
-            iterations = 200,
+            iterations = 250,
             seed = 42,
             sortByInfit = FALSE, ...) {
 
@@ -37,11 +37,11 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 hdciWidth,
                 default=99,
                 min=50,
-                max=100)
+                max=99.9)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=200,
+                default=250,
                 min=50)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
@@ -96,10 +96,12 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 rows="(vars)",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "mueller2020",
                     "johansson2025_detecting",
-                    "mair2007",
+                    "mueller2022",
                     "zeileis2026",
+                    "warm1989",
                     "kay2025"),
                 clearWith=list(
                     "vars",
@@ -191,15 +193,18 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Conditional Item Infit
 #'
-#' Computes conditional infit MSQ statistics for each item using
-#' iarm::out_infit() (CML item parameters from eRm; RM for dichotomous
-#' data, PCM for polytomous -- chosen automatically). Optionally
-#' determines simulation-based per-item cutoff intervals via parametric
-#' bootstrap: datasets are simulated under the fitted model (no misfit
-#' by construction) and the HDCI of each item's simulated infit forms
-#' the expected range. Items are labelled overfit (infit below the
-#' range; more predictable than the model expects) or underfit (above;
-#' noisier than expected).
+#' Computes conditional infit MSQ statistics for each item using the
+#' easyRasch2 R package (iarm::out_infit() on a conditional maximum
+#' likelihood fit via psychotools, with WLE person estimates for the
+#' relative item locations). Optionally determines simulation-based
+#' per-item cutoff intervals via parametric bootstrap: datasets are
+#' simulated under the fitted model (no misfit by construction) and
+#' the HDCI of each item's simulated infit forms the expected range.
+#' Items are labelled overfit (infit below the range; more predictable
+#' than the model expects) or underfit (above; noisier than expected).
+#' Results match easyRasch2::RMitemInfit(), RMitemInfitCutoff(), and
+#' RMitemInfitPlot() with the same seed and iterations. Single-core
+#' sequential processing is used.
 #' 
 #' Note on iterations: more simulation iterations are generally
 #' recommended for publication-ready results. Conditional infit is an
@@ -232,7 +237,7 @@ iteminfit <- function(
     vars,
     computeCutoff = FALSE,
     hdciWidth = 99,
-    iterations = 200,
+    iterations = 250,
     seed = 42,
     sortByInfit = FALSE) {
 

@@ -7,7 +7,7 @@ items:
     - name: targetingPlot
       title: Person-Item Targeting Plot
       type: Image
-      refs: [easyRasch2jmv, wright1979, mair2007]
+      refs: [easyRasch2jmv, easyRasch2, wright1979, zeileis2026, warm1989]
       width: 700
       height: 700
       renderFun: .targetingPlot
@@ -28,6 +28,7 @@ items:
       rows: 0
       clearWith:
         - vars
+        - ciLevel
       columns:
         - name: item
           title: Item
@@ -43,6 +44,18 @@ items:
           title: SE
           type: number
           format: zto
+        - name: ciLow
+          title: Lower
+          type: number
+          format: zto
+          visible: (showCi)
+          superTitle: CI
+        - name: ciHigh
+          title: Upper
+          type: number
+          format: zto
+          visible: (showCi)
+          superTitle: CI
 
     - name: targetingNote
       title: ''

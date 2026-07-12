@@ -70,3 +70,52 @@ test_that("CFA cutoff requires 4 items, with an explanatory message at 3", {
   r <- suppressWarnings(er2$cfacutoff(data = d, vars = names(d)[1:3]))
   expect_match(r$cfaNote$content, "at least <b>4 items</b>")
 })
+
+test_that("Q3 matches easyRasch2 directly and survives an all-NA respondent", {
+  # Regression for the 2.1.0 migration: the module delegates to easyRasch2
+  # (CML/WLE) and must (a) reproduce RMlocdepQ3() numerically and (b) drop
+  # all-NA respondents up front, because RMlocdepQ3Cutoff() errors on them
+  # (psychotools cannot fit all-NA rows).
+  m <- as.matrix(poly_data())
+  m[3, ] <- NA                                   # one fully-empty respondent
+  d <- as.data.frame(m)
+
+  expect_no_error(suppressWarnings(
+    r <- er2$locdepq3(data = d, vars = names(d),
+                      computeCutoff = TRUE, iterations = 50)))
+
+  # cutoff simulation ran (not the graceful-degradation path)
+  cut_df <- r$cutoffTable$asDF
+  expect_false(anyNA(cut_df$value))
+  expect_false(grepl("unavailable", r$q3Note$content))
+  expect_match(r$q3Note$content, "1 row\\(s\\) without any responses")
+
+  # numerical agreement with the R package (same seed defaults)
+  d_used <- d[rowSums(!is.na(d)) > 0, ]
+  pkg <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepQ3(d_used, output = "dataframe")))
+  mod <- suppressWarnings(
+    apply(as.matrix(r$q3Table$asDF[, names(d)]), 2, as.numeric))
+  expect_equal(unname(mod), unname(as.matrix(pkg[names(d)])), tolerance = 1e-12)
+})
+
+test_that("item-restscore matches easyRasch2 directly and survives an all-NA respondent", {
+  # Regression for the 2.1.0 migration: the module delegates to
+  # easyRasch2::RMitemRestscore() and pre-drops all-NA respondents
+  # (the bundled release cannot fit them).
+  m <- as.matrix(poly_data())
+  m[3, ] <- NA
+  d <- as.data.frame(m)
+
+  expect_no_error(suppressWarnings(
+    r <- er2$itemrestscore(data = d, vars = names(d))))
+  tab <- r$restscoreTable$asDF
+
+  d_used <- d[rowSums(!is.na(d)) > 0, ]
+  pkg <- suppressWarnings(suppressMessages(
+    easyRasch2::RMitemRestscore(d_used, output = "dataframe")))
+  expect_equal(tab$observed, pkg$Observed)
+  expect_equal(tab$difference, pkg$Difference)
+  expect_equal(tab$relLocation, pkg$Relative_location)
+  expect_match(r$restscoreNote$content, "1 row\\(s\\) without any responses")
+})

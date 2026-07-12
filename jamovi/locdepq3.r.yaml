@@ -7,13 +7,27 @@ items:
     - name: q3Table
       title: Q3 Residual Correlation Matrix
       type: Table
-      refs: [easyRasch2jmv, yen1984, christensen2017, chalmers2012, zeileis2026]
+      refs: [easyRasch2jmv, easyRasch2, yen1984, christensen2017, zeileis2026, warm1989]
       clearWith:
           - vars
           - computeCutoff
           - iterations
           - seed
       columns: []
+
+    - name: matrixPlot
+      title: Q3 Heatmap
+      type: Image
+      width: 550
+      height: 500
+      renderFun: .matrixPlot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
 
     - name: cutoffTable
       title: Simulation-Based Global Q3 Cutoff

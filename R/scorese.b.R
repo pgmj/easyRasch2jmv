@@ -9,8 +9,8 @@ scoreseClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early / explain if requirements not met (eRm CML needs
-      # at least 2 items)
+      # 1. Return early / explain if requirements not met (CML needs at
+      # least 2 items)
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
       if (length(self$options$vars) < 2) {
@@ -54,13 +54,21 @@ scoreseClass <- R6::R6Class(
       options(rgl.useNULL = TRUE)
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-      # 4. Compute the score-to-theta lookup
+      # 4. Compute the score-to-theta lookup via easyRasch2. The score
+      # table is a function of the item parameters only (one row per
+      # possible sum score), so the result is numerically identical to
+      # RMscoreSE() with the same method and theta range. The package
+      # drops respondents with no responses at all internally (its
+      # message is suppressed; the note below reports the sample).
       score_table <- tryCatch({
-        if (method == "WLE") {
-          private$.scoreSE_wle(df, c(theta_min, theta_max))
-        } else {
-          private$.scoreSE_eap(df)
-        }
+        suppressWarnings(suppressMessages(
+          easyRasch2::RMscoreSE(
+            df,
+            method      = method,
+            output      = "dataframe",
+            theta_range = c(theta_min, theta_max)
+          )
+        ))
       }, error = function(e) {
         hint <- if (grepl("degrees of freedom", e$message, fixed = TRUE)) {
           paste0(" With very few items the MML model cannot be estimated; ",
@@ -86,12 +94,12 @@ scoreseClass <- R6::R6Class(
       }
 
       # Footnote: estimation method + sample basis. Both estimation
-      # paths fit the model on all available responses (eRm CML / mirt
-      # MML retain rows with partially missing responses).
+      # paths fit the model on all available responses (CML / MML retain
+      # rows with partially missing responses).
       n_used <- sum(rowSums(!is.na(df)) > 0)
       method_text <- if (method == "WLE") {
-        paste0("Person locations via Warm's WLE (CML item parameters from ",
-               "eRm). The standard error is the information-based ",
+        paste0("Person locations via Warm's WLE (CML item parameters via ",
+               "psychotools). The standard error is the information-based ",
                "1 / sqrt(I(theta)) evaluated at the estimate (as in catR / ",
                "TAM); Warm's bias correction yields finite estimates even ",
                "at the lowest and highest scores, where the SE is largest.")
@@ -105,7 +113,8 @@ scoreseClass <- R6::R6Class(
         paste0(method_text,
                " Item parameters fitted on N = ", n_used,
                " respondents (rows with partially missing responses are ",
-               "retained by the estimation).")
+               "retained by the estimation). Identical to ",
+               "easyRasch2::RMscoreSE().")
       )
 
       # 6. Caption HTML (kept short; setNote already conveys most info)
@@ -130,72 +139,6 @@ scoreseClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .scoreSE_wle  — Warm's WLE with information-based SEM, via the shared
-    # utils-theta.R helpers (mirrors easyRasch2::RMscoreSE()). The SEM is
-    # 1 / sqrt(I(theta)) evaluated at the estimate, matching catR / TAM and
-    # RMpersonParameters(); this replaces the previous iarm "expected SEM"
-    # (point estimates unchanged; SEs differ -- larger -- at the score
-    # extremes). Item thresholds are CML (eRm), grand-mean-zero centred.
-    # ---------------------------------------------------------------------
-    .scoreSE_wle = function(df, theta_range) {
-      thr_list  <- .wle_thresholds(df)
-      steps     <- vapply(thr_list, length, integer(1L))
-      max_score <- sum(steps)
-
-      est <- vapply(0:max_score, function(r) {
-        .theta_wle(.score_pattern(r, steps), thr_list, theta_range)
-      }, numeric(2L))
-
-      data.frame(
-        raw_score   = 0:max_score,
-        logit_score = est[1L, ],
-        logit_se    = est[2L, ],
-        stringsAsFactors = FALSE,
-        row.names = NULL
-      )
-    },
-
-    # ---------------------------------------------------------------------
-    # .scoreSE_eap  — mirt EAPsum
-    # ---------------------------------------------------------------------
-    .scoreSE_eap = function(df) {
-      mirt_fit <- suppressMessages(
-        mirt::mirt(
-          data       = as.data.frame(df),
-          model      = 1,
-          itemtype   = "Rasch",
-          verbose    = FALSE,
-          accelerate = "squarem"
-        )
-      )
-      sscores <- mirt::fscores(
-        mirt_fit,
-        method         = "EAPsum",
-        full.scores    = FALSE,
-        full.scores.SE = TRUE
-      )
-      sscores <- as.data.frame(sscores)
-
-      raw_col   <- intersect(c("Sum.Scores", "Sum.Score"), names(sscores))[1L]
-      theta_col <- intersect(c("F1", "Theta", "EAP"),       names(sscores))[1L]
-      se_col    <- intersect(c("SE_F1", "SE", "SE_Theta"),  names(sscores))[1L]
-
-      if (is.na(raw_col) || is.na(theta_col) || is.na(se_col)) {
-        stop("Unexpected mirt::fscores() output structure; cannot locate ",
-             "score / theta / SE columns. Columns returned: ",
-             paste(names(sscores), collapse = ", "))
-      }
-
-      data.frame(
-        raw_score   = as.integer(sscores[[raw_col]]),
-        logit_score = as.numeric(sscores[[theta_col]]),
-        logit_se    = as.numeric(sscores[[se_col]]),
-        stringsAsFactors = FALSE,
-        row.names = NULL
-      )
-    },
-
-    # ---------------------------------------------------------------------
     # .scorePlot — points with horizontal CI bars
     # ---------------------------------------------------------------------
     .scorePlot = function(image, ggtheme, theme, ...) {
@@ -212,7 +155,7 @@ scoreseClass <- R6::R6Class(
 
       caption_text <- er2_caption(paste0(
         if (state$method == "WLE") {
-          "Warm's WLE (CML, eRm)."
+          "Warm's WLE (CML, psychotools)."
         } else {
           "EAPsum (MML, mirt)."
         },

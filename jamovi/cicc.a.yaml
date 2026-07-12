@@ -1,0 +1,91 @@
+---
+name: cicc
+title: Item Characteristic Curves (CICC)
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Conditional item characteristic curves (Buchardt, Christensen &
+        Jensen, 2023): the model-expected item score as a function of the
+        total score (the exact conditional expectation), with observed mean
+        item scores overlaid per total-score group. Groups are formed on
+        the total-score scale -- quantile-based (approximately equal
+        numbers of respondents), equal-width score intervals, or one group
+        per total score -- and observed means that deviate from the
+        expected curve indicate localized item misfit. Drawn by
+        easyRasch2::RMitemICCPlot() (CML item estimation via psychotools).
+
+        When a DIF variable is supplied, observed averages are drawn
+        separately per group so group-specific deviations from the common
+        expected curve can be inspected; panels are annotated with the
+        partial-gamma DIF statistic.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+      rejectInf: true
+
+    - name: difVar
+      title: DIF variable (optional)
+      type: Variable
+      suggested:
+        - nominal
+        - ordinal
+      permitted:
+        - factor
+      default: null
+
+    - name: method
+      title: Total-score grouping
+      type: List
+      options:
+          - title: Quantile groups (≈ equal numbers of respondents)
+            name: quantile
+          - title: Equal-width total-score intervals
+            name: width
+          - title: Each total score separately
+            name: score
+      default: quantile
+
+    - name: classIntervals
+      title: Number of class intervals
+      type: Integer
+      default: 4
+      min: 2
+      max: 10
+
+    - name: ci
+      title: Confidence intervals around observed means
+      type: Bool
+      default: true
+
+    - name: errorBand
+      title: Model-based band around the expected curve
+      type: Bool
+      default: false
+
+    - name: confLevel
+      title: Confidence level (%)
+      type: Number
+      default: 95
+      min: 50
+      max: 99.9
+
+    - name: minN
+      title: Min. observations per interval
+      type: Integer
+      default: 8
+      min: 1
+
+...

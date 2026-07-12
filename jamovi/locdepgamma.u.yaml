@@ -31,4 +31,23 @@ children:
         name: sortByGamma
       - type: CheckBox
         name: showSE
+      - type: CheckBox
+        name: computeCutoff
+        children:
+          - type: LayoutBox
+            margin: large
+            children:
+              - type: TextBox
+                name: iterations
+                format: number
+              - type: TextBox
+                name: hdciWidth
+                format: number
+                suffix: "%"
+              - type: TextBox
+                name: seed
+                format: number
+              - type: TextBox
+                name: plotPairs
+                format: number
 ...

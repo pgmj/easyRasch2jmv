@@ -11,6 +11,11 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             sigOnly = FALSE,
             gammaThreshold = 0,
             sortByGamma = FALSE,
+            computeCutoff = FALSE,
+            iterations = 250,
+            hdciWidth = 99,
+            seed = 42,
+            plotPairs = 10,
             showSE = FALSE, ...) {
 
             super$initialize(
@@ -47,6 +52,33 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 "sortByGamma",
                 sortByGamma,
                 default=FALSE)
+            private$..computeCutoff <- jmvcore::OptionBool$new(
+                "computeCutoff",
+                computeCutoff,
+                default=FALSE)
+            private$..iterations <- jmvcore::OptionInteger$new(
+                "iterations",
+                iterations,
+                default=250,
+                min=50,
+                max=5000)
+            private$..hdciWidth <- jmvcore::OptionNumber$new(
+                "hdciWidth",
+                hdciWidth,
+                default=99,
+                min=50,
+                max=99.9)
+            private$..seed <- jmvcore::OptionInteger$new(
+                "seed",
+                seed,
+                default=42,
+                min=0)
+            private$..plotPairs <- jmvcore::OptionInteger$new(
+                "plotPairs",
+                plotPairs,
+                default=10,
+                min=1,
+                max=50)
             private$..showSE <- jmvcore::OptionBool$new(
                 "showSE",
                 showSE,
@@ -57,6 +89,11 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             self$.addOption(private$..sigOnly)
             self$.addOption(private$..gammaThreshold)
             self$.addOption(private$..sortByGamma)
+            self$.addOption(private$..computeCutoff)
+            self$.addOption(private$..iterations)
+            self$.addOption(private$..hdciWidth)
+            self$.addOption(private$..seed)
+            self$.addOption(private$..plotPairs)
             self$.addOption(private$..showSE)
         }),
     active = list(
@@ -65,6 +102,11 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         sigOnly = function() private$..sigOnly$value,
         gammaThreshold = function() private$..gammaThreshold$value,
         sortByGamma = function() private$..sortByGamma$value,
+        computeCutoff = function() private$..computeCutoff$value,
+        iterations = function() private$..iterations$value,
+        hdciWidth = function() private$..hdciWidth$value,
+        seed = function() private$..seed$value,
+        plotPairs = function() private$..plotPairs$value,
         showSE = function() private$..showSE$value),
     private = list(
         ..vars = NA,
@@ -72,6 +114,11 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         ..sigOnly = NA,
         ..gammaThreshold = NA,
         ..sortByGamma = NA,
+        ..computeCutoff = NA,
+        ..iterations = NA,
+        ..hdciWidth = NA,
+        ..seed = NA,
+        ..plotPairs = NA,
         ..showSE = NA)
 )
 
@@ -81,6 +128,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
     active = list(
         dir1Table = function() private$.items[["dir1Table"]],
         dir2Table = function() private$.items[["dir2Table"]],
+        ldPlot = function() private$.items[["ldPlot"]],
         ldNote = function() private$.items[["ldNote"]]),
     private = list(),
     public=list(
@@ -96,14 +144,20 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 rows=0,
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "christensen2013",
-                    "mueller2022"),
+                    "mueller2022",
+                    "kay2025"),
                 clearWith=list(
                     "vars",
                     "nPairs",
                     "sigOnly",
                     "gammaThreshold",
-                    "sortByGamma"),
+                    "sortByGamma",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed"),
                 columns=list(
                     list(
                         `name`="item1", 
@@ -146,7 +200,26 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
-                        `type`="text"))))
+                        `type`="text"),
+                    list(
+                        `name`="gammaLow", 
+                        `title`="Lower", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="gammaHigh", 
+                        `title`="Upper", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="flagged", 
+                        `title`="Flagged", 
+                        `type`="text", 
+                        `visible`="(computeCutoff)"))))
             self$add(jmvcore::Table$new(
                 options=options,
                 name="dir2Table",
@@ -157,7 +230,11 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "nPairs",
                     "sigOnly",
                     "gammaThreshold",
-                    "sortByGamma"),
+                    "sortByGamma",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed"),
                 columns=list(
                     list(
                         `name`="item1", 
@@ -200,7 +277,41 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
-                        `type`="text"))))
+                        `type`="text"),
+                    list(
+                        `name`="gammaLow", 
+                        `title`="Lower", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="gammaHigh", 
+                        `title`="Upper", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="flagged", 
+                        `title`="Flagged", 
+                        `type`="text", 
+                        `visible`="(computeCutoff)"))))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="ldPlot",
+                title="Simulated Partial Gamma Distribution per Item Pair",
+                width=500,
+                height=600,
+                renderFun=".ldPlot",
+                visible="(computeCutoff)",
+                requiresData=TRUE,
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "seed",
+                    "plotPairs")))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="ldNote",
@@ -211,6 +322,10 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "sigOnly",
                     "gammaThreshold",
                     "sortByGamma",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed",
                     "showSE")))}))
 
 locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -237,12 +352,18 @@ locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Partial Gamma Local Dependence
 #'
 #' Computes partial gamma coefficients for Local Dependence (LD)
-#' assessment using iarm::partgam_LD(). Each pair of items is tested
-#' for residual association, controlling for the rest score (total
-#' score minus one of the items in the pair). Because it matters
-#' which item of a pair is subtracted from the total score, each pair
-#' is tested in both rest-score directions (two tables). Based on
-#' easyRasch2::RMlocdepGamma().
+#' assessment via the easyRasch2 R package (iarm::partgam_LD()). Each
+#' pair of items is tested for residual association, controlling for
+#' the rest score (total score minus one of the items in the pair).
+#' Because it matters which item of a pair is subtracted from the
+#' total score, each pair is tested in both rest-score directions
+#' (two tables). Optionally determines simulation-based per-pair
+#' expected ranges via parametric bootstrap (data simulated from the
+#' fitted model contain no true LD), with a plot of the simulated
+#' distributions and observed values. Results are identical to
+#' easyRasch2::RMlocdepGamma(), RMlocdepGammaCutoff(), and
+#' RMlocdepGammaPlot() with the same seed and iterations. Single-core
+#' sequential processing is used.
 #' 
 #' @param data .
 #' @param vars .
@@ -250,11 +371,17 @@ locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param sigOnly .
 #' @param gammaThreshold .
 #' @param sortByGamma .
+#' @param computeCutoff .
+#' @param iterations .
+#' @param hdciWidth .
+#' @param seed .
+#' @param plotPairs .
 #' @param showSE .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$dir1Table} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$dir2Table} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$ldPlot} \tab \tab \tab \tab \tab an image \cr
 #'   \code{results$ldNote} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
@@ -272,6 +399,11 @@ locdepgamma <- function(
     sigOnly = FALSE,
     gammaThreshold = 0,
     sortByGamma = FALSE,
+    computeCutoff = FALSE,
+    iterations = 250,
+    hdciWidth = 99,
+    seed = 42,
+    plotPairs = 10,
     showSE = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
@@ -290,6 +422,11 @@ locdepgamma <- function(
         sigOnly = sigOnly,
         gammaThreshold = gammaThreshold,
         sortByGamma = sortByGamma,
+        computeCutoff = computeCutoff,
+        iterations = iterations,
+        hdciWidth = hdciWidth,
+        seed = seed,
+        plotPairs = plotPairs,
         showSE = showSE)
 
     analysis <- locdepgammaClass$new(

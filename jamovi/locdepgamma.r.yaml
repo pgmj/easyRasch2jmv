@@ -8,13 +8,17 @@ items:
       title: 'Direction 1: rest score = total − Item 2'
       type: Table
       rows: 0
-      refs: [easyRasch2jmv, christensen2013, mueller2022]
+      refs: [easyRasch2jmv, easyRasch2, christensen2013, mueller2022, kay2025]
       clearWith:
           - vars
           - nPairs
           - sigOnly
           - gammaThreshold
           - sortByGamma
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
       columns:
           - name: item1
             title: Item 1
@@ -50,6 +54,22 @@ items:
           - name: sig
             title: p-value sign.
             type: text
+          - name: gammaLow
+            title: Lower
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: gammaHigh
+            title: Upper
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: flagged
+            title: Flagged
+            type: text
+            visible: (computeCutoff)
 
     - name: dir2Table
       title: 'Direction 2: rest score = total − Item 2'
@@ -61,6 +81,10 @@ items:
           - sigOnly
           - gammaThreshold
           - sortByGamma
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
       columns:
           - name: item1
             title: Item 1
@@ -96,6 +120,37 @@ items:
           - name: sig
             title: p-value sign.
             type: text
+          - name: gammaLow
+            title: Lower
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: gammaHigh
+            title: Upper
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: flagged
+            title: Flagged
+            type: text
+            visible: (computeCutoff)
+
+    - name: ldPlot
+      title: Simulated Partial Gamma Distribution per Item Pair
+      type: Image
+      width: 500
+      height: 600
+      renderFun: .ldPlot
+      visible: (computeCutoff)
+      requiresData: true
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
+          - plotPairs
 
     - name: ldNote
       title: ''
@@ -106,5 +161,9 @@ items:
           - sigOnly
           - gammaThreshold
           - sortByGamma
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
           - showSE
 ...

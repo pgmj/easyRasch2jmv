@@ -7,7 +7,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
     public = list(
         initialize = function(
             vars = NULL,
-            iterations = 200,
+            iterations = 250,
             samplesize = 600,
             cutoff = 67,
             seed = 42,
@@ -32,7 +32,7 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=200,
+                default=250,
                 min=50)
             private$..samplesize <- jmvcore::OptionInteger$new(
                 "samplesize",
@@ -109,10 +109,11 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 rows="(vars)",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "kreiner2011",
                     "mueller2022",
-                    "mair2007",
                     "zeileis2026",
+                    "warm1989",
                     "johansson2025_detecting"),
                 clearWith=list(
                     "vars",
@@ -193,16 +194,17 @@ bootrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Bootstrap Item-Restscore
 #'
-#' Non-parametric bootstrap of item-restscore fit using 
-#' iarm::item_restscore().
-#' For each iteration a sample of size \code{samplesize} is drawn from the 
-#' data
-#' with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
-#' psychotools::pcmodel for polytomous) is refitted, and items are classified
-#' as overfit, underfit, or no misfit based on the BH-adjusted p-value
-#' (< .05) and the sign of (expected - observed). Useful with large samples
-#' where the asymptotic test can flag items that are not practically
-#' misfitting.
+#' Non-parametric bootstrap of item-restscore fit via the easyRasch2 R
+#' package (RMitemRestscoreBoot). For each iteration a sample of size
+#' \code{samplesize} is drawn from the data with replacement, the Rasch /
+#' Partial Credit model is refitted by conditional maximum likelihood
+#' (psychotools::pcmodel), and items are classified as overfit,
+#' underfit, or no misfit based on the BH-adjusted p-value (< .05) from
+#' iarm::item_restscore() and the sign of (observed - expected). Useful
+#' with large samples where the asymptotic test can flag items that are
+#' not practically misfitting. The bootstrap is numerically identical
+#' to easyRasch2::RMitemRestscoreBoot() with the same seed and
+#' iterations. Single-core sequential processing is used.
 #' 
 #' @param data .
 #' @param vars .
@@ -229,7 +231,7 @@ bootrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 bootrestscore <- function(
     data,
     vars,
-    iterations = 200,
+    iterations = 250,
     samplesize = 600,
     cutoff = 67,
     seed = 42,

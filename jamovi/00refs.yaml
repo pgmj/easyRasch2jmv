@@ -49,12 +49,36 @@ refs:
         publisher: 'OSF Preprints'
         url: https://doi.org/10.31234/osf.io/47sah
 
+    buchardt2023:
+        type: article
+        author: Buchardt, A.-S., Christensen, K. B., & Jensen, S. N.
+        year: 2023
+        title: 'Visualizing Rasch item fit using conditional item characteristic curves in R'
+        publisher: 'Psychological Test and Assessment Modeling, 65(2), 206–219'
+        url: https://www.psychologie-aktuell.com/journale/psychological-test-and-assessment-modeling.html
+
     christensen2013:
         type: book
         author: Christensen, K. B., Kreiner, S., & Mesbah, M. (Eds.)
         year: 2013
         title: 'Rasch Models in Health'
         publisher: 'Iste and Wiley, pp. 133–135'
+
+    easyRasch2:
+        type: software
+        author: Johansson, M.
+        year: 2026
+        title: 'easyRasch2: Psychometric Analysis with Rasch Measurement Theory'
+        publisher: '[R package]'
+        url: https://CRAN.R-project.org/package=easyRasch2
+
+    green1984:
+        type: article
+        author: Green, B. F., Bock, R. D., Humphreys, L. G., Linn, R. L., & Reckase, M. D.
+        year: 1984
+        title: 'Technical guidelines for assessing computerized adaptive tests'
+        publisher: 'Journal of Educational Measurement, 21(4), 347–360'
+        url: https://doi.org/10.1111/j.1745-3984.1984.tb01039.x
 
     easyRasch2jmv:
         type: software

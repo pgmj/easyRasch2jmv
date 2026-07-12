@@ -7,14 +7,17 @@ jas: '1.2'
 
 description:
     main: |
-        Non-parametric bootstrap of item-restscore fit using iarm::item_restscore().
-        For each iteration a sample of size `samplesize` is drawn from the data
-        with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
-        psychotools::pcmodel for polytomous) is refitted, and items are classified
-        as overfit, underfit, or no misfit based on the BH-adjusted p-value
-        (< .05) and the sign of (expected - observed). Useful with large samples
-        where the asymptotic test can flag items that are not practically
-        misfitting.
+        Non-parametric bootstrap of item-restscore fit via the easyRasch2 R
+        package (RMitemRestscoreBoot). For each iteration a sample of size
+        `samplesize` is drawn from the data with replacement, the Rasch /
+        Partial Credit model is refitted by conditional maximum likelihood
+        (psychotools::pcmodel), and items are classified as overfit,
+        underfit, or no misfit based on the BH-adjusted p-value (< .05) from
+        iarm::item_restscore() and the sign of (observed - expected). Useful
+        with large samples where the asymptotic test can flag items that are
+        not practically misfitting. The bootstrap is numerically identical
+        to easyRasch2::RMitemRestscoreBoot() with the same seed and
+        iterations. Single-core sequential processing is used.
 
 options:
     - name: data
@@ -33,7 +36,7 @@ options:
     - name: iterations
       title: Number of bootstrap iterations
       type: Integer
-      default: 200
+      default: 250
       min: 50
 
     - name: samplesize

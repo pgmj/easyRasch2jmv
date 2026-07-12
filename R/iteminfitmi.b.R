@@ -138,152 +138,89 @@ iteminfitmiClass <- R6::R6Class(
 
       mids_object <- attempt$imp
 
-      # 9. Compute infit per imputation, pool with Rubin's rules
+      # 9. Pooled infit via easyRasch2. The imputation layer above (mice
+      # with optional auxiliary variables) stays in the module -- the R
+      # package takes a ready-made mids object instead of running mice
+      # itself -- but the mids handed over must contain the item columns
+      # only, so the auxiliary variables are stripped by round-tripping
+      # through mice's long format. Results are numerically identical to
+      # easyRasch2::RMitemInfitMI() / RMitemInfitCutoffMI() on the same
+      # mids object and seed.
       tryCatch({
         old_rgl <- getOption("rgl.useNULL")
         options(rgl.useNULL = TRUE)
         on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-        per_imp <- vector("list", m)
-        n_failed <- 0L
-        n_complete_first <- NULL
-
-        for (i in seq_len(m)) {
-          completed <- mice::complete(mids_object, action = i)
-          completed <- completed[, item_names, drop = FALSE]
-          for (col in item_names) {
-            if (is.factor(completed[[col]])) {
-              completed[[col]] <- as.numeric(as.character(completed[[col]]))
-            } else {
-              completed[[col]] <- as.numeric(completed[[col]])
-            }
-          }
-
-          result_i <- tryCatch({
-            data_mat <- as.matrix(completed)
-            n_complete <- nrow(completed)
-
-            if (max(data_mat, na.rm = TRUE) == 1L) {
-              erm_out <- eRm::RM(completed)
-              item_avg_locations <- stats::coef(erm_out, "beta") * -1
-            } else {
-              erm_out <- eRm::PCM(completed)
-              thresh_table <- eRm::thresholds(erm_out)$threshtable[[1L]]
-              if ("Location" %in% colnames(thresh_table)) {
-                item_avg_locations <- thresh_table[, "Location"]
-              } else {
-                item_avg_locations <- rowMeans(thresh_table, na.rm = TRUE)
-              }
-            }
-            pp <- eRm::person.parameter(erm_out)
-            person_avg_location <- mean(
-              pp$theta.table[["Person Parameter"]], na.rm = TRUE
-            )
-            relative_locations <- item_avg_locations - person_avg_location
-
-            cfit <- iarm::out_infit(erm_out)
-
-            list(
-              infit_msq         = cfit$Infit,
-              infit_se          = cfit$Infit.se,
-              relative_location = as.numeric(relative_locations),
-              n_complete        = n_complete
-            )
-          }, error = function(e) {
-            warning(sprintf("Model fitting failed for imputation %d: %s",
-                            i, conditionMessage(e)), call. = FALSE)
-            NULL
-          })
-
-          if (is.null(result_i)) {
-            n_failed <- n_failed + 1L
-            next
-          }
-          per_imp[[i]] <- result_i
-          if (is.null(n_complete_first))
-            n_complete_first <- result_i$n_complete
-        }
-
-        if (n_failed == m)
-          stop("Model fitting failed for all ", m, " imputed datasets.")
-
-        successful <- per_imp[!vapply(per_imp, is.null, logical(1L))]
-        m_ok <- length(successful)
-        if (m_ok < 2L)
-          stop("Only ", m_ok, " imputation(s) succeeded. ",
-               "At least 2 are required to estimate between-imputation variance.")
-
-        # Pool with Rubin's rules
-        n_items <- length(item_names)
-        msq_mat <- matrix(NA_real_, nrow = n_items, ncol = m_ok)
-        se_mat  <- matrix(NA_real_, nrow = n_items, ncol = m_ok)
-        loc_mat <- matrix(NA_real_, nrow = n_items, ncol = m_ok)
-        for (j in seq_len(m_ok)) {
-          msq_mat[, j] <- successful[[j]]$infit_msq
-          se_mat[, j]  <- successful[[j]]$infit_se
-          loc_mat[, j] <- successful[[j]]$relative_location
-        }
-        pooled_msq      <- rowMeans(msq_mat)
-        within_var      <- rowMeans(se_mat^2)
-        between_var     <- apply(msq_mat, 1, stats::var)
-        total_var       <- within_var + (1 + 1 / m_ok) * between_var
-        pooled_se       <- sqrt(total_var)
-        pooled_location <- rowMeans(loc_mat)
-
-        # Raw values (no pre-rounding) so the jamovi frontend applies
-        # the user's "Number format" preferences.
-        results <- data.frame(
-          Item              = item_names,
-          Infit_MSQ         = pooled_msq,
-          Infit_SE          = pooled_se,
-          Relative_location = pooled_location,
-          stringsAsFactors  = FALSE,
-          row.names         = NULL
+        long_completed <- mice::complete(mids_object, action = "long",
+                                         include = TRUE)
+        mids_items <- mice::as.mids(
+          long_completed[, c(".imp", ".id", item_names), drop = FALSE]
         )
+        n_complete_first <- nrow(df_items)
 
-        # 10. Optional: simulation-based cutoffs across imputations. If
-        # the simulation cannot deliver reliable cutoffs, degrade
-        # gracefully: pooled estimates are shown without the expected
-        # range, and the note explains why.
+        # 10. Optional: simulation-based cutoffs across imputations.
+        # RMitemInfitCutoffMI() distributes the iterations over the imputed
+        # datasets and stacks the simulated distributions, so the HDCI
+        # bounds reflect both sampling and imputation uncertainty. If the
+        # simulation cannot deliver reliable cutoffs, degrade gracefully:
+        # pooled estimates are shown without the expected range, and the
+        # note explains why.
         cutoff_res <- NULL
         sim_fail_msg <- NULL
         if (compute_cutoff) {
           cutoff_res <- tryCatch(
-            private$.runCutoffSimMI(
-              mids_object  = mids_object,
-              item_names   = item_names,
-              iterations   = sim_iterations,
-              hdci_width   = hdci_width,
-              seed         = seed
-            ),
+            suppressWarnings(suppressMessages(
+              easyRasch2::RMitemInfitCutoffMI(
+                mids_items,
+                iterations = sim_iterations,
+                parallel   = FALSE,
+                seed       = as.integer(seed),
+                hdci_width = hdci_width
+              )
+            )),
             error = function(e) {
               sim_fail_msg <<- e$message
               NULL
             }
           )
-          if (!is.null(cutoff_res)) {
-            cutoff_df <- cutoff_res$item_cutoffs
-            data_items <- results$Item
-            cutoff_sub <- cutoff_df[, c("Item", "infit_low", "infit_high")]
-            results <- merge(results, cutoff_sub, by = "Item", sort = FALSE)
-            results <- results[match(data_items, results$Item), ]
-            rownames(results) <- NULL
-            results$Infit_low  <- results$infit_low
-            results$Infit_high <- results$infit_high
-            results$infit_low  <- NULL
-            results$infit_high <- NULL
-            # Misfit direction is inverted relative to the restscore
-            # analyses: infit BELOW the expected range = overfit (too
-            # predictable), ABOVE = underfit (noisy).
-            results$Misfit <- ifelse(
-              results$Infit_MSQ < results$Infit_low, "overfit",
-              ifelse(results$Infit_MSQ > results$Infit_high, "underfit", "")
+          # Guard against degenerate cutoffs: with very few successful
+          # iterations in the stacked distribution the HDCI collapses.
+          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
+            sim_fail_msg <- paste0(
+              "Only ", cutoff_res$actual_iterations, " of ", sim_iterations,
+              " simulation iterations succeeded across the imputed ",
+              "datasets -- too few to estimate reliable cutoff intervals. ",
+              "This typically happens when items have very low or very ",
+              "high endorsement rates relative to the sample size."
             )
-            results <- results[, c("Item", "Infit_MSQ", "Infit_SE",
-                                   "Infit_low", "Infit_high", "Misfit",
-                                   "Relative_location")]
+            cutoff_res <- NULL
           }
         }
+
+        # Per-imputation CML fits + Rubin pooling. Failed imputations are
+        # tolerated upstream (one warning per failure, at least 2 successes
+        # required); the per-imputation warnings are counted here so the
+        # note below can report them, matching the previous module
+        # behaviour. Values are as reported by RMitemInfitMI(): pooled
+        # infit and SE to 3 decimals, Rel. location to 2.
+        n_failed <- 0L
+        results <- withCallingHandlers(
+          suppressMessages(
+            easyRasch2::RMitemInfitMI(mids_items, cutoff = cutoff_res,
+                                      output = "dataframe")
+          ),
+          warning = function(w) {
+            if (grepl("^Model fitting failed for imputation",
+                      conditionMessage(w)))
+              n_failed <<- n_failed + 1L
+            invokeRestart("muffleWarning")
+          }
+        )
+        m_ok <- m - n_failed
+
+        # Pooled observed infit per item, aligned to the item order, for
+        # the plot overlay (extracted before any sorting below).
+        pooled_msq <- results$Infit_MSQ[match(item_names, results$Item)]
 
         # 11. Sort if requested
         if (isTRUE(sort_by_infit)) {
@@ -303,7 +240,7 @@ iteminfitmiClass <- R6::R6Class(
           if (!is.null(cutoff_res)) {
             vals$infitLow  <- results$Infit_low[i]
             vals$infitHigh <- results$Infit_high[i]
-            vals$misfit    <- results$Misfit[i]
+            vals$misfit    <- results$Flagged[i]
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -318,7 +255,8 @@ iteminfitmiClass <- R6::R6Class(
         ))
         table$setNote("loc", paste0(
           "Rel. location = pooled mean item (threshold) location ",
-          "relative to the mean person location, in logits."
+          "relative to the mean person location (weighted likelihood ",
+          "estimates, WLE), in logits."
         ))
         if (!is.null(cutoff_res)) {
           table$setNote("misfit", paste0(
@@ -421,218 +359,6 @@ iteminfitmiClass <- R6::R6Class(
       }, error = function(e) {
         list(ok = FALSE, imp = NULL, message = conditionMessage(e))
       })
-    },
-
-    # ---------------------------------------------------------------------
-    # .runCutoffSimMI — parametric bootstrap on each imputed dataset,
-    # stack results, compute per-item HDCI bounds
-    # ---------------------------------------------------------------------
-    .runCutoffSimMI = function(mids_object, item_names, iterations,
-                               hdci_width, seed) {
-
-      m <- mids_object$m
-
-      # Distribute iterations across imputations
-      base_iter <- iterations %/% m
-      remainder <- iterations %% m
-      iters_per_imp <- rep(base_iter, m)
-      if (remainder > 0L) {
-        iters_per_imp[seq_len(remainder)] <-
-          iters_per_imp[seq_len(remainder)] + 1L
-      }
-
-      # Per-imputation seeds
-      set.seed(seed)
-      imp_seeds <- sample.int(.Machine$integer.max, m)
-
-      all_results          <- vector("list", m)
-      actual_per_imp       <- integer(m)
-      sample_n             <- NULL
-      n_failed             <- 0L
-      error_messages       <- character()
-
-      for (i in seq_len(m)) {
-        completed <- mice::complete(mids_object, action = i)
-        completed <- completed[, item_names, drop = FALSE]
-        for (col in item_names) {
-          if (is.factor(completed[[col]])) {
-            completed[[col]] <- as.numeric(as.character(completed[[col]]))
-          } else {
-            completed[[col]] <- as.numeric(completed[[col]])
-          }
-        }
-        completed <- stats::na.omit(completed)
-        if (nrow(completed) == 0L) {
-          n_failed <- n_failed + 1L
-          error_messages <- c(error_messages,
-                              sprintf("imp %d: no complete cases", i))
-          next
-        }
-
-        sim_res <- tryCatch({
-          private$.runOneCutoffSim(
-            data_complete = completed,
-            iterations    = iters_per_imp[i],
-            seed          = imp_seeds[i]
-          )
-        }, error = function(e) {
-          error_messages <<- c(
-            error_messages,
-            sprintf("imp %d: %s", i, conditionMessage(e))
-          )
-          NULL
-        })
-
-        if (is.null(sim_res)) {
-          n_failed <- n_failed + 1L
-          next
-        }
-
-        sim_res$results_df$imputation <- i
-        all_results[[i]]   <- sim_res$results_df
-        actual_per_imp[i]  <- sim_res$actual_iterations
-        if (is.null(sample_n)) sample_n <- sim_res$sample_n
-      }
-
-      if (n_failed == m) {
-        # Surface the first few error messages so the failure isn't opaque
-        sample_msgs <- utils::head(error_messages, 3L)
-        stop(
-          "Cutoff simulation failed for all ", m, " imputed datasets. ",
-          "First error(s): ",
-          paste(sample_msgs, collapse = " | ")
-        )
-      }
-
-      stacked_df <- do.call(
-        rbind,
-        all_results[!vapply(all_results, is.null, logical(1L))]
-      )
-      rownames(stacked_df) <- NULL
-
-      total_actual <- sum(actual_per_imp)
-      n_imputations <- m - n_failed
-
-      # Guard against degenerate cutoffs: with very few successful
-      # iterations in the stacked distribution the HDCI collapses.
-      # Require at least 20 successes and a 50% success rate overall.
-      if (total_actual < 20L) {
-        sample_msgs <- utils::head(unique(error_messages), 3L)
-        stop(paste0(
-          "Only ", total_actual, " of ", iterations, " simulation ",
-          "iterations succeeded across the imputed datasets -- too few ",
-          "to estimate reliable cutoff intervals.",
-          if (length(sample_msgs) > 0L)
-            paste0(" Example failure(s): ",
-                   paste(sample_msgs, collapse = " | "), ".") else "",
-          " This typically happens when items have very low or very ",
-          "high endorsement rates relative to the sample size."
-        ), call. = FALSE)
-      }
-
-      # Per-item HDCI cutoffs from stacked distribution
-      unique_items <- unique(stacked_df$Item)
-      item_cutoffs <- do.call(rbind, lapply(unique_items, function(item) {
-        sub <- stacked_df[stacked_df$Item == item, ]
-        infit_interval  <- ggdist::hdci(sub$InfitMSQ,  .width = hdci_width)
-        outfit_interval <- ggdist::hdci(sub$OutfitMSQ, .width = hdci_width)
-        data.frame(
-          Item        = item,
-          infit_low   = infit_interval[1L, 1L],
-          infit_high  = infit_interval[1L, 2L],
-          outfit_low  = outfit_interval[1L, 1L],
-          outfit_high = outfit_interval[1L, 2L],
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-      }))
-      rownames(item_cutoffs) <- NULL
-
-      list(
-        results           = stacked_df,
-        item_cutoffs      = item_cutoffs,
-        actual_iterations = total_actual,
-        sample_n          = sample_n,
-        item_names        = item_names,
-        n_imputations     = n_imputations,
-        hdci_width        = hdci_width
-      )
-    },
-
-    # ---------------------------------------------------------------------
-    # .runOneCutoffSim — RMitemInfitCutoff()-style sequential simulation on a
-    # single completed dataset, mirroring iteminfit.b.R$.runCutoffSim
-    # ---------------------------------------------------------------------
-    .runOneCutoffSim = function(data_complete, iterations, seed) {
-
-      set.seed(seed)
-      sim_seeds <- sample.int(.Machine$integer.max, iterations)
-
-      data_mat       <- as.matrix(data_complete)
-      sample_n       <- nrow(data_mat)
-      is_polytomous  <- max(data_mat, na.rm = TRUE) > 1L
-      item_names_vec <- colnames(data_mat)
-
-      if (is_polytomous) {
-        pcm_fit <- eRm::PCM(data_mat)
-        pp <- eRm::person.parameter(pcm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        thresh_mat <- extract_item_thresholds(data_mat)
-        deltaslist <- lapply(seq_len(nrow(thresh_mat)), function(i) {
-          as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
-        })
-        sim_data_list <- list(
-          type = "polytomous", thetas = thetas, deltaslist = deltaslist,
-          n_items = ncol(data_mat), sample_n = sample_n,
-          item_names = item_names_vec
-        )
-      } else {
-        rm_fit <- eRm::RM(data_mat)
-        pp <- eRm::person.parameter(rm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        item_params <- -rm_fit$betapar
-        sim_data_list <- list(
-          type = "dichotomous", thetas = thetas, item_params = item_params,
-          n_items = ncol(data_mat), sample_n = sample_n,
-          item_names = item_names_vec
-        )
-      }
-
-      results_raw <- run_infit_sim_sequential(
-        iterations, sim_seeds, sim_data_list, verbose = FALSE
-      )
-
-      ok <- vapply(results_raw, is.data.frame, logical(1L))
-      successful <- results_raw[ok]
-      if (length(successful) == 0L) {
-        # Failed iterations come back as character strings (the error message)
-        failed_msgs <- unlist(results_raw[!ok])
-        sample_msg  <- if (length(failed_msgs) > 0L) {
-          unique(failed_msgs)[1L]
-        } else {
-          "(no message captured)"
-        }
-        stop("all sim iterations failed; example: ", sample_msg)
-      }
-
-      actual_iterations <- length(successful)
-      iter_dfs <- lapply(seq_along(successful), function(i) {
-        d <- successful[[i]]
-        d$iteration <- i
-        d
-      })
-      results_df <- do.call(rbind, iter_dfs)
-      rownames(results_df) <- NULL
-
-      list(
-        results_df        = results_df,
-        actual_iterations = actual_iterations,
-        sample_n          = sample_n
-      )
     },
 
     # ---------------------------------------------------------------------

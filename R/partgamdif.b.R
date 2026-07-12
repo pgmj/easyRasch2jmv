@@ -75,55 +75,62 @@ partgamdifClass <- R6::R6Class(
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
       tryCatch({
-        # Compute partial gamma DIF (suppress iarm console output; the
-        # finally handler guarantees the sink is removed exactly once)
-        sink(nullfile())
-        pgam_raw <- tryCatch(
-          iarm::partgam_DIF(as.data.frame(df), dif_vec),
-          finally = sink()
-        )
+        # All computation is delegated to the easyRasch2 package
+        # (iarm::partgam_DIF() for the observed statistics; parametric
+        # bootstrap with a randomly reassigned DIF variable for the
+        # expected ranges). Results are numerically identical to
+        # RMdifGamma() / RMdifGammaCutoff() with the same seed and
+        # iterations. Package warnings are suppressed -- the module
+        # surfaces its own footnotes.
 
-        pgam_df <- data.frame(
-          Item    = as.character(pgam_raw$Item),
-          gamma   = as.numeric(pgam_raw$gamma),
-          se      = as.numeric(pgam_raw$se),
-          pvalue  = as.numeric(pgam_raw$pvalue),
-          # Column 6 is the BH-adjusted p-value; iarm does not always give it
-          # a stable name, so positional access matches easyRasch2 source behaviour.
-          padj_bh = as.numeric(pgam_raw[[6]]),
-          sig     = as.character(pgam_raw$sig),
-          lower   = as.numeric(pgam_raw$lower),
-          upper   = as.numeric(pgam_raw$upper),
-          stringsAsFactors = FALSE
-        )
-
-        n_complete_used <- n_complete
-
-        # Optionally compute cutoffs. If the simulation cannot deliver
-        # reliable cutoffs (e.g. too few successful iterations), degrade
-        # gracefully: show the observed gammas without the expected range
-        # and explain why in the note below the table.
+        # Optionally compute cutoffs first (they feed RMdifGamma). If the
+        # simulation cannot deliver reliable cutoffs, degrade gracefully:
+        # show the observed gammas without the expected range and explain
+        # why in the note below the table.
         cutoff_res <- NULL
         sim_fail_msg <- NULL
         if (isTRUE(self$options$computeCutoff)) {
           cutoff_res <- tryCatch(
-            private$.runCutoffSim(df, dif_vec),
+            suppressWarnings(suppressMessages(
+              easyRasch2::RMdifGammaCutoff(
+                df,
+                dif_var    = dif_vec,
+                iterations = self$options$iterations,
+                parallel   = FALSE,
+                seed       = as.integer(self$options$seed),
+                hdci_width = self$options$hdciWidth / 100
+              )
+            )),
             error = function(e) {
               sim_fail_msg <<- e$message
               NULL
             }
           )
-
-          if (!is.null(cutoff_res)) {
-            cutoff_df <- cutoff_res$item_cutoffs
-            data_items <- pgam_df$Item
-            cutoff_sub <- cutoff_df[, c("Item", "gamma_low", "gamma_high")]
-            pgam_df <- merge(pgam_df, cutoff_sub, by = "Item", sort = FALSE)
-            pgam_df <- pgam_df[match(data_items, pgam_df$Item), ]
-            rownames(pgam_df) <- NULL
-            pgam_df$Flagged <- pgam_df$gamma < pgam_df$gamma_low | pgam_df$gamma > pgam_df$gamma_high
+          # Guard against degenerate cutoffs: with very few successful
+          # iterations the HDCI collapses and flagging becomes
+          # meaningless.
+          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
+            sim_fail_msg <- paste0(
+              "Only ", cutoff_res$actual_iterations, " of ",
+              self$options$iterations, " simulation iterations succeeded ",
+              "-- too few to estimate reliable expected ranges. This ",
+              "typically happens when items have very low or very high ",
+              "endorsement rates relative to the sample size."
+            )
+            cutoff_res <- NULL
           }
         }
+
+        pgam_df <- suppressWarnings(suppressMessages(
+          easyRasch2::RMdifGamma(
+            df,
+            dif_var = dif_vec,
+            cutoff  = cutoff_res,
+            output  = "dataframe"
+          )
+        ))
+
+        n_complete_used <- n_complete
 
         # Sort if requested
         if (isTRUE(self$options$sortByGamma)) {
@@ -141,13 +148,12 @@ partgamdifClass <- R6::R6Class(
             lower  = pgam_df$lower[i],
             upper  = pgam_df$upper[i],
             padjBH = pgam_df$padj_bh[i],
-            # iarm's sig column is padded with leading spaces; trim for display.
-            sig    = trimws(pgam_df$sig[i])
+            sig    = pgam_df$Significance[i]
           )
           if (!is.null(cutoff_res)) {
             vals$gammaLow  <- pgam_df$gamma_low[i]
             vals$gammaHigh <- pgam_df$gamma_high[i]
-            vals$flagged   <- ifelse(pgam_df$Flagged[i], "TRUE", "")
+            vals$flagged   <- ifelse(isTRUE(pgam_df$flagged[i]), "TRUE", "")
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -161,10 +167,10 @@ partgamdifClass <- R6::R6Class(
         if (!is.null(cutoff_res)) {
           table$setNote("flag", paste0(
             "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI of ",
-            "partial gamma values simulated under no DIF (the DIF ",
-            "variable is randomly reassigned, preserving group ",
-            "proportions). Flagged = TRUE when the observed gamma falls ",
-            "outside the expected range."
+            "partial gamma values simulated under no DIF (data simulated ",
+            "from the fitted model; the DIF variable is randomly ",
+            "reassigned, preserving group proportions). Flagged = TRUE ",
+            "when the observed gamma falls outside the expected range."
           ))
         }
 
@@ -183,7 +189,9 @@ partgamdifClass <- R6::R6Class(
         cutoff_clause <- if (!is.null(cutoff_res)) {
           paste0(" Cutoff values based on ", cutoff_res$actual_iterations,
                  " simulation iterations (", cutoff_res$hdci_width * 100,
-                 "% HDCI).",
+                 "% HDCI). Results are identical to ",
+                 "easyRasch2::RMdifGamma() and RMdifGammaCutoff() with ",
+                 "the same seed.",
                  iteration_note(self$options$iterations, 250L),
                  low_iteration_caveat(cutoff_res$actual_iterations))
         } else if (!is.null(sim_fail_msg)) {
@@ -218,12 +226,10 @@ partgamdifClass <- R6::R6Class(
           ))
         }
 
-        # Tileplot: per-item × category × DIF-group response counts
+        # Tileplot: per-item × category × DIF-group response counts,
+        # drawn by easyRasch2::RMplotTile() in the render function.
         if (isTRUE(self$options$showTileplot)) {
-          tile_state <- private$.computeTileCounts(df, dif_vec)
-          tile_state$cutoff   <- self$options$tileCutoff
-          tile_state$percent  <- isTRUE(self$options$tilePercent)
-          self$results$tileplot$setState(tile_state)
+          self$results$tileplot$setState(list(df = df, dif = dif_vec))
         }
 
       }, error = function(e) {
@@ -232,182 +238,12 @@ partgamdifClass <- R6::R6Class(
     },
 
     # ------------------------------------------------------------------
-    # Build per-(item × category × group) counts for the tileplot.
-    # `df` is numeric, complete-cases item data; `dif_vec` is the
-    # corresponding DIF variable values (length = nrow(df)).
+    # Simulated-gamma dot plot -- module-drawn: easyRasch2's plot shows
+    # the observed diamonds but not the observed gamma's 95% Wald CI
+    # segment, which is a module convention worth keeping. The simulated
+    # distributions come from RMdifGammaCutoff()$results and the observed
+    # values from RMdifGamma(), so the numbers match the package exactly.
     # ------------------------------------------------------------------
-    .computeTileCounts = function(df, dif_vec) {
-      item_names <- names(df)
-
-      all_vals       <- unlist(df, use.names = FALSE)
-      all_vals       <- all_vals[!is.na(all_vals)]
-      min_val        <- min(all_vals)
-      max_val        <- max(all_vals)
-      all_categories <- seq(min_val, max_val)
-
-      dif_factor <- if (is.factor(dif_vec)) {
-        droplevels(dif_vec)
-      } else {
-        as.factor(dif_vec)
-      }
-
-      parts <- lapply(levels(dif_factor), function(g) {
-        mask <- !is.na(dif_factor) & dif_factor == g
-        sub  <- df[mask, , drop = FALSE]
-        rows <- lapply(item_names, function(it) {
-          vals <- sub[[it]]
-          vals <- vals[!is.na(vals)]
-          tab  <- table(factor(vals, levels = all_categories))
-          data.frame(
-            item     = it,
-            category = as.integer(names(tab)),
-            n        = as.integer(tab),
-            group    = g,
-            stringsAsFactors = FALSE
-          )
-        })
-        do.call(rbind, rows)
-      })
-      count_df <- do.call(rbind, parts)
-      rownames(count_df) <- NULL
-      count_df$group <- factor(count_df$group, levels = levels(dif_factor))
-
-      totals <- stats::aggregate(
-        count_df$n,
-        by  = count_df[, c("item", "group"), drop = FALSE],
-        FUN = sum
-      )
-      colnames(totals)[ncol(totals)] <- "total"
-      count_df <- merge(count_df, totals, by = c("item", "group"), sort = FALSE)
-      count_df$percentage <- round(count_df$n / count_df$total * 100, 1)
-
-      # Item ordering: top of y-axis = first column of df
-      count_df$item_label <- factor(count_df$item, levels = rev(item_names))
-
-      group_sizes <- table(dif_factor)
-
-      list(
-        count_df       = count_df,
-        all_categories = all_categories,
-        item_names     = item_names,
-        group_sizes    = group_sizes
-      )
-    },
-
-    .runCutoffSim = function(df, dif_vec) {
-      # Implements RMdifGammaCutoff() logic (sequential only)
-      hdci_width  <- self$options$hdciWidth / 100
-      iterations  <- self$options$iterations
-      seed        <- self$options$seed
-
-      if (!requireNamespace("ggdist", quietly = TRUE)) {
-        stop("Package 'ggdist' is required for HDCI cutoff method. Install with: install.packages(\"ggdist\")")
-      }
-
-      data_complete <- stats::na.omit(df)
-      if (nrow(data_complete) == 0L)
-        stop("No complete cases for simulation.")
-
-      set.seed(seed)
-      sim_seeds <- sample.int(.Machine$integer.max, iterations)
-
-      data_mat   <- as.matrix(data_complete)
-      sample_n   <- nrow(data_mat)
-      is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
-      item_names_vec <- colnames(data_mat)
-
-      # DIF group structure
-      dif_levels_sim      <- sort(unique(dif_vec))
-      dif_table           <- table(dif_vec)
-      dif_proportions_sim <- as.numeric(dif_table[as.character(dif_levels_sim)]) / length(dif_vec)
-
-      if (is_polytomous) {
-        pcm_fit    <- eRm::PCM(data_mat)
-        pp         <- eRm::person.parameter(pcm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas     <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        thresh_mat <- extract_item_thresholds(data_mat)
-        deltaslist <- lapply(seq_len(nrow(thresh_mat)), function(i) {
-          as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
-        })
-        sim_data_list <- list(
-          type = "polytomous", thetas = thetas, deltaslist = deltaslist,
-          n_items = ncol(data_mat), sample_n = sample_n, item_names = item_names_vec,
-          dif_levels = dif_levels_sim, dif_proportions = dif_proportions_sim
-        )
-      } else {
-        rm_fit  <- eRm::RM(data_mat)
-        pp      <- eRm::person.parameter(rm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores <- rowSums(data_mat, na.rm = TRUE)
-        thetas     <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        item_params <- -rm_fit$betapar
-        sim_data_list <- list(
-          type = "dichotomous", thetas = thetas, item_params = item_params,
-          n_items = ncol(data_mat), sample_n = sample_n, item_names = item_names_vec,
-          dif_levels = dif_levels_sim, dif_proportions = dif_proportions_sim
-        )
-      }
-
-      results_raw <- run_partgam_sim_sequential(iterations, sim_seeds, sim_data_list, verbose = FALSE)
-
-      ok         <- vapply(results_raw, is.data.frame, logical(1L))
-      successful <- results_raw[ok]
-
-      # Guard against degenerate cutoffs: with very few successful
-      # iterations the HDCI collapses and every item is spuriously
-      # flagged. Require at least 20 successes and a 50% success rate;
-      # otherwise report the dominant failure reason.
-      n_ok <- length(successful)
-      if (n_ok < 20L) {
-        fail_msgs <- unlist(results_raw[!ok])
-        top_reason <- if (length(fail_msgs) > 0L) {
-          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
-        } else NULL
-        stop(paste0(
-          "Only ", n_ok, " of ", iterations, " simulation iterations ",
-          "succeeded -- too few to estimate reliable cutoff intervals.",
-          if (!is.null(top_reason))
-            paste0(" Most common failure: ", top_reason, ".") else "",
-          " This typically happens when items have very low or very ",
-          "high endorsement rates relative to the sample size."
-        ), call. = FALSE)
-      }
-
-      actual_iterations <- length(successful)
-      iter_dfs <- lapply(seq_along(successful), function(i) {
-        d <- successful[[i]]
-        d$iteration <- i
-        d
-      })
-      results_df <- do.call(rbind, iter_dfs)
-      rownames(results_df) <- NULL
-
-      item_names <- unique(results_df$Item)
-      item_cutoffs <- do.call(rbind, lapply(item_names, function(item) {
-        sub <- results_df[results_df$Item == item, ]
-        gamma_interval <- ggdist::hdci(sub$gamma, .width = hdci_width)
-        data.frame(
-          Item       = item,
-          gamma_low  = gamma_interval[1L, 1L],
-          gamma_high = gamma_interval[1L, 2L],
-          stringsAsFactors = FALSE,
-          row.names = NULL
-        )
-      }))
-      rownames(item_cutoffs) <- NULL
-
-      list(
-        results           = results_df,
-        item_cutoffs      = item_cutoffs,
-        actual_iterations = actual_iterations,
-        sample_n          = sample_n,
-        item_names        = item_names_vec,
-        hdci_width        = hdci_width
-      )
-    },
-
     .pgDIFplot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
 
@@ -522,74 +358,22 @@ partgamdifClass <- R6::R6Class(
     },
 
     # ------------------------------------------------------------------
-    # Faceted tileplot of item × category response counts, faceted by
-    # the DIF grouping variable. Diagnostic to inspect subgroup
-    # response distributions before / alongside the DIF analysis.
-    # Mirrors easyRasch2::RMplotTile logic.
+    # Faceted tileplot of item × category response counts by DIF group,
+    # drawn by easyRasch2::RMplotTile() (the function the module's
+    # previous hand-rolled version was ported from).
     # ------------------------------------------------------------------
     .tileplot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
-      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      state          <- image$state
-      count_df       <- state$count_df
-      all_categories <- state$all_categories
-      cutoff         <- state$cutoff
-      use_pct        <- isTRUE(state$percent)
-
-      p <- ggplot2::ggplot(
-        count_df,
-        ggplot2::aes(x = .data$category,
-                     y = .data$item_label,
-                     fill = .data$n)
-      ) +
-        ggplot2::geom_tile() +
-        ggplot2::scale_fill_viridis_c(
-          expression(italic(n)),
-          limits = c(0, NA)
-        ) +
-        ggplot2::scale_x_continuous(
-          "Response category",
-          expand = c(0, 0),
-          breaks = all_categories
+      p <- suppressWarnings(suppressMessages(
+        easyRasch2::RMplotTile(
+          image$state$df,
+          group   = image$state$dif,
+          cutoff  = self$options$tileCutoff,
+          percent = isTRUE(self$options$tilePercent)
         )
-
-      # Cell labels (counts or percentages) with low-count highlighting
-      label_aes <- if (use_pct) {
-        ggplot2::aes(label = paste0(.data$percentage, "%"),
-                     color = ifelse(.data$n < cutoff, "red", "orange"))
-      } else {
-        ggplot2::aes(label = .data$n,
-                     color = ifelse(.data$n < cutoff, "red", "orange"))
-      }
-      p <- p +
-        ggplot2::geom_text(label_aes) +
-        ggplot2::guides(color = "none") +
-        ggplot2::scale_color_identity()
-
-      caption_text <- if (!is.null(state$group_sizes)) {
-        gs <- state$group_sizes
-        er2_caption(paste0(
-          "Response category counts by DIF group (",
-          paste0(names(gs), ": n = ", as.integer(gs), collapse = "; "),
-          "). Counts below ", cutoff, " are highlighted in red."
-        ))
-      } else NULL
-
-      p <- p +
-        ggplot2::facet_wrap(~ group,
-                            labeller = ggplot2::labeller(
-                              group = er2_wrap_labels
-                            )) +
-        ggplot2::labs(y = "Items", caption = caption_text) +
-        ggplot2::theme_minimal(base_size = 15) +
-        ggplot2::theme(
-          axis.text.x   = ggplot2::element_text(size = 10),
-          panel.grid    = ggplot2::element_blank(),
-          panel.spacing = ggplot2::unit(0.7, "cm")
-        ) +
-        er2_axis_margins() +
-        er2_plot_caption()
+      ))
+      p <- er2_bump_text(p)
 
       print(p)
       TRUE

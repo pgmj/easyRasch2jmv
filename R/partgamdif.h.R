@@ -142,6 +142,7 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 rows="(vars)",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "bjorner1998",
                     "henninger2024",
                     "mueller2022",
@@ -281,13 +282,17 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Partial Gamma DIF
 #'
 #' Computes partial gamma coefficients for Differential Item
-#' Functioning (DIF) using iarm::partgam_DIF(): the association
-#' between each item and the DIF variable, controlling for the rest
-#' score. Optionally determines simulation-based expected ranges via
-#' parametric bootstrap (the DIF variable is randomly reassigned with
-#' preserved group proportions, so the simulated data contain no true
-#' DIF). A response-distribution tileplot is available for inspecting
-#' per-group category counts.
+#' Functioning (DIF) via the easyRasch2 R package
+#' (iarm::partgam_DIF()): the association between each item and the
+#' DIF variable, controlling for the rest score. Optionally
+#' determines simulation-based expected ranges via parametric
+#' bootstrap (data are simulated from the fitted model and the DIF
+#' variable is randomly reassigned with preserved group proportions,
+#' so the simulated data contain no true DIF). Results are identical
+#' to easyRasch2::RMdifGamma() and RMdifGammaCutoff() with the same
+#' seed and iterations. A response-distribution tileplot
+#' (easyRasch2::RMplotTile()) is available for inspecting per-group
+#' category counts. Single-core sequential processing is used.
 #' 
 #' More simulation iterations are generally recommended for
 #' publication-ready results.

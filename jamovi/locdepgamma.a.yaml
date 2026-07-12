@@ -8,12 +8,18 @@ jas: '1.2'
 description:
     main: |
         Computes partial gamma coefficients for Local Dependence (LD)
-        assessment using iarm::partgam_LD(). Each pair of items is tested
-        for residual association, controlling for the rest score (total
-        score minus one of the items in the pair). Because it matters
-        which item of a pair is subtracted from the total score, each pair
-        is tested in both rest-score directions (two tables). Based on
-        easyRasch2::RMlocdepGamma().
+        assessment via the easyRasch2 R package (iarm::partgam_LD()). Each
+        pair of items is tested for residual association, controlling for
+        the rest score (total score minus one of the items in the pair).
+        Because it matters which item of a pair is subtracted from the
+        total score, each pair is tested in both rest-score directions
+        (two tables). Optionally determines simulation-based per-pair
+        expected ranges via parametric bootstrap (data simulated from the
+        fitted model contain no true LD), with a plot of the simulated
+        distributions and observed values. Results are identical to
+        easyRasch2::RMlocdepGamma(), RMlocdepGammaCutoff(), and
+        RMlocdepGammaPlot() with the same seed and iterations. Single-core
+        sequential processing is used.
 
 options:
     - name: data
@@ -51,6 +57,38 @@ options:
       title: Sorted by |Partial gamma| (descending)
       type: Bool
       default: false
+
+    - name: computeCutoff
+      title: Simulation-based expected ranges
+      type: Bool
+      default: false
+
+    - name: iterations
+      title: Number of simulation iterations
+      type: Integer
+      default: 250
+      min: 50
+      max: 5000
+
+    - name: hdciWidth
+      title: HDCI width for item-pair intervals
+      type: Number
+      default: 99
+      min: 50
+      max: 99.9
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+      min: 0
+
+    - name: plotPairs
+      title: Max. number of item pairs to plot
+      type: Integer
+      default: 10
+      min: 1
+      max: 50
 
     - name: showSE
       title: SE and 95% confidence interval

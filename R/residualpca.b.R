@@ -61,72 +61,96 @@ residualpcaClass <- R6::R6Class(
       if (!is.null(dup_msg))
         self$results$pcaTable$setNote("duplicate", dup_msg)
 
-      # Drop incomplete rows (prcomp does not handle NA)
+      # Complete-case counts for the notes (easyRasch2 drops incomplete
+      # rows internally -- prcomp does not handle NA)
       n_total     <- nrow(df)
-      df_complete <- stats::na.omit(df)
-      n_complete  <- nrow(df_complete)
+      n_complete  <- sum(complete.cases(df))
       n_excluded  <- n_total - n_complete
 
       if (n_complete == 0L)
         stop("No complete cases found. PCA on residuals requires at least one row with responses to all selected items.")
-
-      for (col in names(df_complete)) {
-        if (length(unique(df_complete[[col]])) < 2L)
-          stop(paste0("Item '", col, "' has no variation in responses."))
-      }
 
       # 3. Read options
       n_components   <- self$options$nComponents
       coord_flip     <- isTRUE(self$options$coordFlip)
       compute_cutoff <- isTRUE(self$options$computeCutoff)
 
-      # rgl workaround for any eRm dependency chains
+      # rgl workaround
       old_rgl <- getOption("rgl.useNULL")
       options(rgl.useNULL = TRUE)
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-      # 4. Run analysis (logic inlined from easyRasch2::RMdimResidualPCA)
+      # 4. Run analysis via easyRasch2 (WLE-based standardized residuals
+      # + unrotated PCA; results are numerically identical to
+      # RMdimResidualPCA() / RMdimResidualPCACutoff() with the same seed
+      # and iterations). Package warnings are suppressed -- the module
+      # surfaces its own footnotes.
       tryCatch({
-        pca_res <- private$.runResidualPCA(df_complete, n_components)
 
         # 5. Optional simulation-based cutoff. Seed is always applied
         # (default 42) so results are reproducible by default. If the
         # simulation cannot deliver a reliable cutoff, degrade
         # gracefully: eigenvalues are shown without the cutoff/flag and
         # the note explains why.
-        cutoff_value <- NULL
-        cutoff_iters <- NULL
+        cutoff_res   <- NULL
         sim_fail_msg <- NULL
         if (compute_cutoff) {
           cutoff_res <- tryCatch(
-            private$.runCutoffSim(df_complete,
-                                  self$options$iterations,
-                                  as.integer(self$options$seed)),
+            suppressWarnings(suppressMessages(
+              easyRasch2::RMdimResidualPCACutoff(
+                df,
+                iterations = self$options$iterations,
+                parallel   = FALSE,
+                seed       = as.integer(self$options$seed)
+              )
+            )),
             error = function(e) {
               sim_fail_msg <<- e$message
               NULL
             }
           )
-          if (!is.null(cutoff_res)) {
-            cutoff_value <- cutoff_res$suggested_cutoff
-            cutoff_iters <- cutoff_res$actual_iterations
-            pca_res$result_df$Flagged <-
-              pca_res$result_df$Eigenvalue > cutoff_value
+          # Guard against a degenerate cutoff: with very few successful
+          # iterations the 99th percentile collapses onto a handful of
+          # values.
+          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
+            sim_fail_msg <- paste0(
+              "Only ", cutoff_res$actual_iterations, " of ",
+              self$options$iterations, " simulation iterations succeeded ",
+              "-- too few to estimate a reliable cutoff. Check your data: ",
+              "items must have sufficient response variation, and the ",
+              "sample must be large enough for stable Rasch model ",
+              "estimation."
+            )
+            cutoff_res <- NULL
           }
         }
+
+        result_df <- suppressWarnings(suppressMessages(
+          easyRasch2::RMdimResidualPCA(
+            df,
+            cutoff       = cutoff_res,
+            n_components = n_components,
+            output       = "dataframe"
+          )
+        ))
+        vp <- attr(result_df, "variance_partition")
+
+        cutoff_value <- if (!is.null(cutoff_res)) {
+          as.numeric(cutoff_res$suggested_cutoff)
+        } else NULL
 
         # 6. Populate eigenvalue table (rows created in .init(); raw
         # values so jamovi's Number format preferences apply)
         table <- self$results$pcaTable
-        for (i in seq_len(nrow(pca_res$result_df))) {
+        for (i in seq_len(nrow(result_df))) {
           vals <- list(
-            component  = pca_res$result_df$Component[i],
-            eigenvalue = pca_res$result_df$Eigenvalue[i],
-            propVar    = pca_res$result_df$Proportion_of_variance[i]
+            component  = result_df$Component[i],
+            eigenvalue = result_df$Eigenvalue[i],
+            propVar    = result_df$Proportion_of_variance[i]
           )
           if (!is.null(cutoff_value)) {
             vals$cutoff  <- cutoff_value
-            vals$flagged <- if (isTRUE(pca_res$result_df$Flagged[i])) "TRUE" else ""
+            vals$flagged <- if (isTRUE(result_df$Flagged[i])) "TRUE" else ""
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -146,8 +170,8 @@ residualpcaClass <- R6::R6Class(
         )
 
         # 7. Variance partition + cutoff note (HTML)
-        vp <- pca_res$variance_partition
-        var_text <- if (isTRUE(vp$available)) {
+        partition_avail <- !is.null(vp) && is.finite(vp$pct_explained)
+        var_text <- if (partition_avail) {
           paste0(
             "<p><b>Variance partition.</b> ",
             round(vp$pct_explained * 100, 1),
@@ -155,7 +179,8 @@ residualpcaClass <- R6::R6Class(
             "Rasch model; ",
             round(vp$pct_unexplained * 100, 1),
             "% is unexplained (residual) and is what the PCA above ",
-            "decomposes (n = ", vp$n_persons, " non-extreme cases).</p>"
+            "decomposes (n = ", vp$n_persons, " respondents; weighted ",
+            "likelihood person estimates retain extreme scorers).</p>"
           )
         } else {
           paste0(
@@ -167,13 +192,13 @@ residualpcaClass <- R6::R6Class(
         cutoff_text <- if (!is.null(cutoff_value)) {
           paste0(
             "<p><b>Simulation-based cutoff.</b> ",
-            cutoff_iters,
+            cutoff_res$actual_iterations,
             " parametric-bootstrap datasets drawn from the fitted ",
             "unidimensional model at the same n. Suggested cutoff is the ",
             "99th percentile of the simulated first-contrast eigenvalues ",
             "(= ", round(cutoff_value, 3), ").",
             iteration_note(self$options$iterations, 250L),
-            low_iteration_caveat(cutoff_iters), "</p>"
+            low_iteration_caveat(cutoff_res$actual_iterations), "</p>"
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(
@@ -186,11 +211,31 @@ residualpcaClass <- R6::R6Class(
 
         self$results$pcaNote$setContent(paste0(var_text, cutoff_text))
 
-        # 8. Save state for the loadings plot
+        # 8. Save state for the loadings plot. The PC1 loadings and item
+        # locations are not part of the dataframe output, so they are
+        # taken from the data underlying the package's own loadings plot
+        # (RMdimResidualPCA(output = "ggplot")); the module keeps its own
+        # rendering (coloured labels + optional coord_flip).
+        loadings_df <- suppressWarnings(suppressMessages(
+          easyRasch2::RMdimResidualPCA(df, output = "ggplot")
+        ))$data
+
+        variance_text <- if (partition_avail) {
+          paste0(
+            "Total observed variance: ",
+            round(vp$pct_explained * 100, 1), "% explained by measures, ",
+            round(vp$pct_unexplained * 100, 1),
+            "% unexplained\n(basis for PCA; n = ", vp$n_persons,
+            " respondents, WLE)."
+          )
+        } else {
+          "Variance partition unavailable."
+        }
+
         self$results$pcaPlot$setState(list(
-          loadings        = pca_res$loadings_df,
-          variance_text   = vp$text,
-          coord_flip      = coord_flip
+          loadings      = loadings_df,
+          variance_text = variance_text,
+          coord_flip    = coord_flip
         ))
       }, error = function(e) {
         stop(paste("Error in residual PCA:", e$message))
@@ -198,219 +243,10 @@ residualpcaClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # .runResidualPCA  -- inlined from easyRasch2::RMdimResidualPCA()
-    # ---------------------------------------------------------------------
-    .runResidualPCA = function(df, n_components) {
-
-      data_mat      <- as.matrix(df)
-      is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
-
-      if (is_polytomous) {
-        erm_fit      <- eRm::PCM(df)
-        thresh_table <- eRm::thresholds(erm_fit)$threshtable[[1L]]
-        if ("Location" %in% colnames(thresh_table)) {
-          item_locations <- thresh_table[, "Location"]
-        } else {
-          item_locations <- rowMeans(thresh_table, na.rm = TRUE)
-        }
-        # rownames are already item names for PCM, but be defensive
-        names(item_locations) <- sub("^beta\\s+", "", names(item_locations))
-      } else {
-        erm_fit        <- eRm::RM(df)
-        item_locations <- stats::coef(erm_fit, "beta") * -1
-        # `coef(fit, "beta")` names items as "beta I1", "beta I2", ...
-        # Strip the prefix so `item_locations[item_name]` lookups work.
-        names(item_locations) <- sub("^beta\\s+", "", names(item_locations))
-      }
-
-      pp        <- eRm::person.parameter(erm_fit)
-      ifit      <- eRm::itemfit(pp)
-      st_resids <- ifit$st.res
-
-      if (anyNA(st_resids)) {
-        keep_rows <- stats::complete.cases(st_resids)
-        st_resids <- st_resids[keep_rows, , drop = FALSE]
-      }
-
-      # --- Variance partition (Linacre-style; CML item params, MLE thetas) ---
-      thetas_all    <- pp$theta.table[["Person Parameter"]]
-      finite_thetas <- is.finite(thetas_all)
-
-      if (sum(finite_thetas) >= 2L) {
-        if (is_polytomous) {
-          thresh_only <- if ("Location" %in% colnames(thresh_table)) {
-            thresh_table[, colnames(thresh_table) != "Location", drop = FALSE]
-          } else {
-            thresh_table
-          }
-          expected_mat <- pcm_expected_scores(
-            thetas_all[finite_thetas],
-            as.matrix(thresh_only)
-          )
-        } else {
-          expected_mat <- outer(
-            thetas_all[finite_thetas],
-            as.numeric(item_locations),
-            function(t, b) stats::plogis(t - b)
-          )
-        }
-        data_finite     <- data_mat[finite_thetas, , drop = FALSE]
-        var_total       <- sum(apply(data_finite,  2L, stats::var, na.rm = TRUE))
-        var_explained   <- sum(apply(expected_mat, 2L, stats::var, na.rm = TRUE))
-        var_unexplained <- max(var_total - var_explained, 0)
-        pct_explained   <- if (var_total > 0) var_explained   / var_total else NA_real_
-        pct_unexplained <- if (var_total > 0) var_unexplained / var_total else NA_real_
-        n_partition     <- sum(finite_thetas)
-        partition_avail <- TRUE
-      } else {
-        var_total <- var_explained <- var_unexplained <- NA_real_
-        pct_explained <- pct_unexplained <- NA_real_
-        n_partition <- 0L
-        partition_avail <- FALSE
-      }
-
-      partition_text <- if (partition_avail) {
-        paste0(
-          "Total observed variance: ",
-          round(pct_explained * 100, 1), "% explained by measures, ",
-          round(pct_unexplained * 100, 1),
-          "% unexplained\n(basis for PCA; n = ", n_partition,
-          " non-extreme cases)."
-        )
-      } else {
-        "Variance partition unavailable (too few persons with finite theta MLEs)."
-      }
-
-      # --- Run unrotated PCA ----------------------------------------------
-      pca_fit  <- stats::prcomp(st_resids)
-      eigvals  <- pca_fit$sdev^2
-      total    <- sum(eigvals)
-      prop_var <- eigvals / total
-
-      k_show <- min(as.integer(n_components), length(eigvals))
-      result_df <- data.frame(
-        Component              = paste0("PC", seq_len(k_show)),
-        Eigenvalue             = eigvals[seq_len(k_show)],
-        Proportion_of_variance = prop_var[seq_len(k_show)],
-        stringsAsFactors       = FALSE,
-        row.names              = NULL
-      )
-
-      # --- Loadings data.frame (PC1 loading + item location) --------------
-      loadings_df <- as.data.frame(pca_fit$rotation[, 1L, drop = FALSE])
-      colnames(loadings_df) <- "PC1"
-      loadings_df$Item     <- rownames(loadings_df)
-      loadings_df$Location <- as.numeric(item_locations[loadings_df$Item])
-      rownames(loadings_df) <- NULL
-
-      list(
-        result_df          = result_df,
-        loadings_df        = loadings_df,
-        variance_partition = list(
-          available       = partition_avail,
-          total           = var_total,
-          explained       = var_explained,
-          unexplained     = var_unexplained,
-          pct_explained   = pct_explained,
-          pct_unexplained = pct_unexplained,
-          n_persons       = n_partition,
-          text            = partition_text
-        )
-      )
-    },
-
-    # ---------------------------------------------------------------------
-    # .runCutoffSim  -- inlined from easyRasch2::RMdimResidualPCACutoff()
-    # ---------------------------------------------------------------------
-    .runCutoffSim = function(df, iterations, seed) {
-      if (!is.null(seed)) set.seed(seed)
-
-      sim_seeds <- sample.int(.Machine$integer.max, iterations)
-      data_mat  <- as.matrix(df)
-      sample_n  <- nrow(data_mat)
-      is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
-      item_names_vec <- colnames(data_mat)
-
-      if (is_polytomous) {
-        pcm_fit     <- eRm::PCM(data_mat)
-        pp          <- eRm::person.parameter(pcm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
-        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        thresh_mat  <- extract_item_thresholds(data_mat)
-        deltaslist  <- lapply(seq_len(nrow(thresh_mat)), function(i) {
-          as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
-        })
-        sim_data_list <- list(
-          type       = "polytomous",
-          thetas     = thetas,
-          deltaslist = deltaslist,
-          n_items    = ncol(data_mat),
-          sample_n   = sample_n,
-          item_names = item_names_vec
-        )
-      } else {
-        rm_fit      <- eRm::RM(data_mat)
-        pp          <- eRm::person.parameter(rm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
-        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        item_params <- -rm_fit$betapar
-        sim_data_list <- list(
-          type        = "dichotomous",
-          thetas      = thetas,
-          item_params = item_params,
-          n_items     = ncol(data_mat),
-          sample_n    = sample_n,
-          item_names  = item_names_vec
-        )
-      }
-
-      results_raw <- run_pca_sim_sequential(iterations, sim_seeds,
-                                            sim_data_list, verbose = FALSE)
-
-      ok         <- vapply(results_raw, is.numeric, logical(1L))
-      successful <- results_raw[ok]
-
-      # Guard against a degenerate cutoff: with very few successful
-      # iterations the 99th percentile collapses onto a handful of
-      # values. Require at least 20 successes and a 50% success rate;
-      # otherwise report the dominant failure reason.
-      n_ok <- length(successful)
-      if (n_ok < 20L) {
-        fail_msgs <- unlist(results_raw[!ok])
-        top_reason <- if (length(fail_msgs) > 0L) {
-          names(sort(table(fail_msgs), decreasing = TRUE))[1L]
-        } else NULL
-        stop(paste0(
-          "Only ", n_ok, " of ", iterations, " simulation iterations ",
-          "succeeded -- too few to estimate a reliable cutoff.",
-          if (!is.null(top_reason))
-            paste0(" Most common failure: ", top_reason, ".") else "",
-          " Check your data: items must have sufficient response ",
-          "variation, and the sample must be large enough for stable ",
-          "Rasch model estimation."
-        ), call. = FALSE)
-      }
-
-      actual_iterations <- length(successful)
-      eig_vec <- as.numeric(unlist(successful))
-
-      list(
-        actual_iterations = actual_iterations,
-        sample_n          = sample_n,
-        p95               = stats::quantile(eig_vec, 0.95,  na.rm = TRUE),
-        p99               = stats::quantile(eig_vec, 0.99,  na.rm = TRUE),
-        p995              = stats::quantile(eig_vec, 0.995, na.rm = TRUE),
-        p999              = stats::quantile(eig_vec, 0.999, na.rm = TRUE),
-        max               = max(eig_vec, na.rm = TRUE),
-        suggested_cutoff  = as.numeric(stats::quantile(eig_vec, 0.99,
-                                                       na.rm = TRUE))
-      )
-    },
-
-    # ---------------------------------------------------------------------
-    # .pcaPlot -- loadings plot, optionally with coord_flip
+    # .pcaPlot -- loadings plot, optionally with coord_flip. The loadings
+    # and item locations come from easyRasch2::RMdimResidualPCA(); the
+    # rendering (coloured, repelled labels; optional flip) is
+    # module-specific.
     # ---------------------------------------------------------------------
     .pcaPlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)

@@ -80,7 +80,7 @@ iteminfitmiOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 hdciWidth,
                 default=99,
                 min=50,
-                max=100)
+                max=99.9)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
@@ -143,11 +143,13 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 rows="(vars)",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "mueller2020",
                     "johansson2025_detecting",
-                    "mair2007",
                     "mueller2022",
                     "vanbuuren2011",
+                    "zeileis2026",
+                    "warm1989",
                     "kay2025"),
                 clearWith=list(
                     "vars",
@@ -257,11 +259,12 @@ iteminfitmiBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Conditional Item Infit (Multiple Imputation)
 #'
 #' Computes pooled conditional infit MSQ statistics for items with missing
-#' responses. Internally runs mice::mice() to generate \code{m} imputed 
-#' datasets,
-#' fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
-#' each, computes conditional infit MSQ via iarm::out_infit(), and pools
-#' per-item estimates and standard errors using Rubin's rules.
+#' responses. Internally runs mice::mice() to generate \code{m} imputed
+#' datasets, then delegates the per-imputation model fitting (conditional
+#' maximum likelihood via psychotools, with WLE person estimates),
+#' conditional infit computation (iarm::out_infit()), and Rubin's-rules
+#' pooling to easyRasch2::RMitemInfitMI(). Results match RMitemInfitMI()
+#' and RMitemInfitCutoffMI() run on the same imputed datasets and seed.
 #' 
 #' Imputation method defaults to 'polr' (proportional-odds logistic
 #' regression — appropriate for ordinal Likert data). 'pmm' (predictive

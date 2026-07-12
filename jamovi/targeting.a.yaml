@@ -9,12 +9,14 @@ description:
     main: |
         Person-item targeting plot (Wright map): back-to-back histograms
         of person locations and item threshold locations, plus a dot plot
-        of individual item thresholds with optional confidence intervals.
-        Item thresholds are estimated with CML (eRm); when any response
-        category has fewer than 3 observations the analysis falls back to
-        MML (mirt), which is more numerically stable under sparse
-        categories. Person locations always come from the eRm model.
-        Mirrors easyRasch2::RMtargeting().
+        of individual item thresholds with optional confidence intervals,
+        drawn by the easyRasch2 R package. Item thresholds are estimated
+        with CML (psychotools); when any response category has fewer than
+        3 observations the analysis falls back to MML (mirt), which is
+        more numerically stable under sparse categories. Person locations
+        are weighted likelihood estimates (WLE), finite at extreme scores.
+        Results are identical to easyRasch2::RMtargeting() and the
+        threshold table to easyRasch2::RMitemParameters().
 
 options:
     - name: data

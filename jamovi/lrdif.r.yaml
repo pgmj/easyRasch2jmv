@@ -8,7 +8,7 @@ items:
       title: Per-group Item Locations
       type: Table
       rows: 0
-      refs: [easyRasch2jmv, mair2007]
+      refs: [easyRasch2jmv, easyRasch2, mair2007]
       clearWith:
           - vars
           - difVar

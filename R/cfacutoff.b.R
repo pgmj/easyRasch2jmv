@@ -57,7 +57,8 @@ cfacutoffClass <- R6::R6Class(
       # response validation, per-item variation, identical-items check
       df <- prepare_item_data(data, vars)
 
-      # Drop incomplete rows -- lavaan + simulation both need complete cases
+      # Complete-case counts for the notes (easyRasch2 drops incomplete
+      # rows internally -- lavaan + the simulation need complete cases)
       n_total     <- nrow(df)
       df_complete <- stats::na.omit(df)
       n_complete  <- nrow(df_complete)
@@ -95,51 +96,59 @@ cfacutoffClass <- R6::R6Class(
       options(rgl.useNULL = TRUE)
       on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-      # 4. Fit observed and run simulation
+      # 4. Simulate cutoffs + compare observed fit via easyRasch2.
+      # Results are numerically identical to RMdimCFACutoff() / RMdimCFA()
+      # with the same seed, iterations, percentile, and estimator. Package
+      # warnings are suppressed -- the module surfaces its own footnotes.
       tryCatch({
-        sim_data_list <- private$.buildSimDataList(df_complete, estimator)
-
-        observed <- run_observed_cfa_fit(df_complete, estimator)
-        if (!is.numeric(observed)) {
-          stop(paste0(
-            "Observed CFA fit failed (", observed, "). ",
-            "lavaan WLSMV / ULSMV typically fails when items have ",
-            "very rare or empty response categories. Inspect the response ",
-            "distribution per item (e.g., the descriptives module) before ",
-            "running this analysis."
-          ))
-        }
-        names(observed) <- c("cfi", "rmsea", "srmr")
-
-        # Seed is always applied (default 42) so results are reproducible
-        # by default, consistent with the other simulation-based analyses.
-        set.seed(as.integer(seed_val))
-        sim_seeds <- sample.int(.Machine$integer.max, iterations)
-
-        # Sequential only -- jamovi runs single-threaded
-        results_raw <- run_cfa_sim_sequential(
-          iterations    = iterations,
-          sim_seeds     = sim_seeds,
-          sim_data_list = sim_data_list,
-          verbose       = FALSE
+        sim_fail_msg <- NULL
+        cutoff_res <- tryCatch(
+          suppressWarnings(suppressMessages(
+            easyRasch2::RMdimCFACutoff(
+              df,
+              iterations = iterations,
+              percentile = percentile,
+              output     = "list",
+              parallel   = FALSE,
+              seed       = as.integer(seed_val),
+              estimator  = estimator
+            )
+          )),
+          error = function(e) {
+            sim_fail_msg <<- e$message
+            NULL
+          }
         )
-
-        ok         <- vapply(results_raw, is.numeric, logical(1L))
-        successful <- results_raw[ok]
-
         # Guard against degenerate cutoffs: with very few successful
         # iterations the percentile cutoffs collapse onto a handful of
-        # values. Require at least 20 successes and a 50% success rate;
-        # otherwise show the observed fit indices without cutoffs and
-        # explain the dominant failure reason (the observed lavaan fit
-        # is independent of the simulation, so it remains valid).
-        n_ok <- length(successful)
-        if (n_ok < 20L) {
-          fail_msgs <- unlist(results_raw[!ok])
-          top_reason <- if (length(fail_msgs) > 0L) {
-            names(sort(table(fail_msgs), decreasing = TRUE))[1L]
-          } else NULL
+        # values.
+        if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
+          sim_fail_msg <- paste0(
+            "Only ", cutoff_res$actual_iterations, " of ", iterations,
+            " simulation iterations succeeded -- too few to estimate ",
+            "reliable cutoffs. Often this indicates very sparse items; ",
+            "inspect the per-item response distribution."
+          )
+          cutoff_res <- NULL
+        }
 
+        # Graceful degradation: the observed lavaan fit is independent of
+        # the simulation, so it remains valid and is shown without
+        # cutoffs. easyRasch2::RMdimCFA() deliberately refuses to run
+        # without the simulated reference distribution, so this fallback
+        # uses the module's retained observed-fit helper.
+        if (is.null(cutoff_res)) {
+          observed <- run_observed_cfa_fit(df_complete, estimator)
+          if (!is.numeric(observed)) {
+            stop(paste0(
+              "Observed CFA fit failed (", observed, "). ",
+              "lavaan WLSMV / ULSMV typically fails when items have ",
+              "very rare or empty response categories. Inspect the ",
+              "response distribution per item before running this ",
+              "analysis."
+            ))
+          }
+          names(observed) <- c("cfi", "rmsea", "srmr")
           table <- self$results$cfaTable
           idx_names <- c("CFI", "RMSEA", "SRMR")
           for (i in seq_len(3L)) {
@@ -152,51 +161,59 @@ cfacutoffClass <- R6::R6Class(
             ))
           }
           self$results$cfaNote$setContent(paste0(
-            "<p><b>Simulation-based cutoffs unavailable:</b> Only ", n_ok,
-            " of ", iterations, " simulation iterations succeeded -- too ",
-            "few to estimate reliable cutoffs.",
-            if (!is.null(top_reason))
-              paste0(" Most common failure: ", top_reason, ".") else "",
-            " Often this indicates very sparse items; inspect the ",
-            "per-item response distribution. The observed fit indices ",
-            "are shown without cutoffs.</p>"
+            "<p><b>Simulation-based cutoffs unavailable:</b> ",
+            sim_fail_msg,
+            " The observed fit indices are shown without cutoffs.</p>"
           ))
           return()
         }
 
-        actual_iterations <- length(successful)
-        sim_mat <- do.call(rbind, successful)
-        colnames(sim_mat) <- c("cfi", "rmsea", "srmr")
-        simulated_df <- data.frame(
-          iteration = seq_len(actual_iterations),
-          cfi       = as.numeric(sim_mat[, "cfi"]),
-          rmsea     = as.numeric(sim_mat[, "rmsea"]),
-          srmr      = as.numeric(sim_mat[, "srmr"]),
-          stringsAsFactors = FALSE
-        )
+        # Observed fit + loadings against the simulated reference
+        res <- suppressWarnings(suppressMessages(
+          easyRasch2::RMdimCFA(df, cutoff = cutoff_res,
+                               output = "dataframe")
+        ))
+        fit_df  <- res$fit       # Index, Observed, Cutoff, Direction, Flagged
+        load_df <- res$loadings  # Item, Observed, Expected_low/high, Flagged
 
-        cutoffs <- private$.computeCfaCutoffs(simulated_df, percentile)
-        flagged <- private$.computeCfaFlagged(observed, cutoffs)
+        is_polytomous <- max(as.matrix(df), na.rm = TRUE) > 1L
+        actual_iterations <- cutoff_res$actual_iterations
 
-        is_polytomous <- sim_data_list$type == "polytomous"
-
-        # 5. Populate the table (3 fixed rows, set in r.yaml)
+        # 5. Populate the fit-index table (3 fixed rows, set in r.yaml)
         table <- self$results$cfaTable
-
-        idx_names <- c("CFI", "RMSEA", "SRMR")
         for (i in seq_len(3L)) {
-          k <- c("cfi", "rmsea", "srmr")[i]
           table$setRow(rowNo = i, values = list(
-            index    = idx_names[i],
-            observed = observed[[k]],
-            cutoff   = cutoffs[[k]],
-            flagged  = if (isTRUE(flagged[[k]])) "TRUE" else ""
+            index    = fit_df$Index[i],
+            observed = fit_df$Observed[i],
+            cutoff   = fit_df$Cutoff[i],
+            flagged  = fit_df$Flagged[i]
           ))
         }
         table$setNote("flag", paste0(
           "Flagged = TRUE when the observed value lies beyond the cutoff ",
           "in the unfavourable direction (CFI below the cutoff; RMSEA ",
           "and SRMR above)."
+        ))
+
+        # 5b. Loadings table: observed standardized loadings vs the
+        # per-item expected range from the same simulation.
+        lt <- self$results$loadingsTable
+        for (i in seq_len(nrow(load_df))) {
+          lt$addRow(rowKey = i, values = list(
+            item     = load_df$Item[i],
+            observed = load_df$Observed[i],
+            low      = load_df$Expected_low[i],
+            high     = load_df$Expected_high[i],
+            flagged  = load_df$Flagged[i]
+          ))
+        }
+        lt$setNote("flag", paste0(
+          "Expected range = central ", percentile, "% interval of each ",
+          "item's simulated standardized loadings (tails of ",
+          round((100 - percentile) / 2, 2), "% each). Flagged: 'below' = ",
+          "the item loads weaker on the common factor than ",
+          "unidimensionality predicts; 'above' = stronger. Deviating ",
+          "loadings point to the items driving multidimensionality."
         ))
 
         # 6. Caption note (HTML below the table)
@@ -224,180 +241,59 @@ cfacutoffClass <- R6::R6Class(
           "th percentile of the simulated distribution: CFI is flagged ",
           "when below the (", round(100 - percentile, 1),
           "th) lower-tail cutoff; RMSEA / SRMR are flagged when above ",
-          "the upper-tail cutoff. An item flagged 'TRUE' lies in the ",
-          "worst ", round(100 - percentile, 1),
-          "% of the simulated distribution in the unfavourable direction.",
+          "the upper-tail cutoff. Results are identical to ",
+          "easyRasch2::RMdimCFACutoff() and RMdimCFA() with the same ",
+          "seed.",
           success_clause,
           iteration_note(iterations, 250L),
           low_iteration_caveat(actual_iterations), "</p>"
         )
         self$results$cfaNote$setContent(note_html)
 
-        # 7. Save state for the plot
-        self$results$cfaPlot$setState(list(
-          simulated         = simulated_df,
-          observed          = observed,
-          cutoffs           = cutoffs,
-          flagged           = flagged,
-          percentile        = percentile,
-          actual_iterations = actual_iterations,
-          n_complete        = n_complete,
-          is_polytomous     = is_polytomous,
-          estimator         = estimator
-        ))
+        # 7. Save state for the plots. Both figures are drawn by
+        # easyRasch2::RMdimCFAPlot() inside the render functions (the
+        # observed lavaan refit it performs there is a single fit).
+        plot_state <- list(df = df, cutoff_res = cutoff_res)
+        self$results$cfaPlot$setState(plot_state)
+        self$results$cfaLoadingsPlot$setState(plot_state)
       }, error = function(e) {
         stop(paste("Error in CFA-cutoff analysis:", e$message))
       })
     },
 
     # ---------------------------------------------------------------------
-    # .buildSimDataList -- inlined from easyRasch2::RMdimCFACutoff
-    # ---------------------------------------------------------------------
-    .buildSimDataList = function(df, estimator) {
-      data_mat       <- as.matrix(df)
-      sample_n       <- nrow(data_mat)
-      is_polytomous  <- max(data_mat, na.rm = TRUE) > 1L
-      item_names_vec <- colnames(data_mat)
-      if (is.null(item_names_vec))
-        item_names_vec <- paste0("V", seq_len(ncol(data_mat)))
-
-      if (is_polytomous) {
-        pcm_fit     <- eRm::PCM(data_mat)
-        pp          <- eRm::person.parameter(pcm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
-        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        thresh_mat  <- extract_item_thresholds(data_mat)
-        deltaslist  <- lapply(seq_len(nrow(thresh_mat)), function(i) {
-          as.numeric(thresh_mat[i, !is.na(thresh_mat[i, ])])
-        })
-        list(type       = "polytomous",
-             thetas     = thetas,
-             deltaslist = deltaslist,
-             n_items    = ncol(data_mat),
-             sample_n   = sample_n,
-             item_names = item_names_vec,
-             estimator  = estimator)
-      } else {
-        rm_fit      <- eRm::RM(data_mat)
-        pp          <- eRm::person.parameter(rm_fit)
-        theta_table <- pp$theta.table[["Person Parameter"]]
-        raw_scores  <- rowSums(data_mat, na.rm = TRUE)
-        thetas      <- as.numeric(stats::na.omit(theta_table[raw_scores]))
-        item_params <- -rm_fit$betapar
-        list(type        = "dichotomous",
-             thetas      = thetas,
-             item_params = item_params,
-             n_items     = ncol(data_mat),
-             sample_n    = sample_n,
-             item_names  = item_names_vec,
-             estimator   = estimator)
-      }
-    },
-
-    # ---------------------------------------------------------------------
-    # Cutoff + flag computation -- one-sided, directional
-    # ---------------------------------------------------------------------
-    .computeCfaCutoffs = function(simulated_df, percentile) {
-      pct <- percentile / 100
-      # Filter to finite values -- lavaan can return Inf for RMSEA when
-      # chi-square is exactly 0 (degenerate near-perfect fit), which
-      # would otherwise propagate into the cutoff.
-      cfi_v   <- simulated_df$cfi[is.finite(simulated_df$cfi)]
-      rmsea_v <- simulated_df$rmsea[is.finite(simulated_df$rmsea)]
-      srmr_v  <- simulated_df$srmr[is.finite(simulated_df$srmr)]
-      c(
-        cfi   = as.numeric(stats::quantile(cfi_v,   1 - pct, na.rm = TRUE)),
-        rmsea = as.numeric(stats::quantile(rmsea_v, pct,     na.rm = TRUE)),
-        srmr  = as.numeric(stats::quantile(srmr_v,  pct,     na.rm = TRUE))
-      )
-    },
-
-    .computeCfaFlagged = function(observed, cutoffs) {
-      c(
-        cfi   = !is.na(observed[["cfi"]])   && observed[["cfi"]]   < cutoffs[["cfi"]],
-        rmsea = !is.na(observed[["rmsea"]]) && observed[["rmsea"]] > cutoffs[["rmsea"]],
-        srmr  = !is.na(observed[["srmr"]])  && observed[["srmr"]]  > cutoffs[["srmr"]]
-      )
-    },
-
-    # ---------------------------------------------------------------------
-    # .cfaPlot -- faceted histogram with diamond marker and cutoff line
+    # .cfaPlot -- observed fit indices vs the simulated null distributions
+    # (easyRasch2::RMdimCFAPlot()$fit)
     # ---------------------------------------------------------------------
     .cfaPlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
-      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      state <- image$state
-
-      # Long-format data for faceting
-      sim_long <- data.frame(
-        Index = factor(rep(c("CFI", "RMSEA", "SRMR"),
-                           each = nrow(state$simulated)),
-                       levels = c("CFI", "RMSEA", "SRMR")),
-        Value = c(state$simulated$cfi,
-                  state$simulated$rmsea,
-                  state$simulated$srmr),
-        stringsAsFactors = FALSE
-      )
-      sim_long <- sim_long[is.finite(sim_long$Value), , drop = FALSE]
-
-      obs_df <- data.frame(
-        Index    = factor(c("CFI", "RMSEA", "SRMR"),
-                          levels = c("CFI", "RMSEA", "SRMR")),
-        Observed = c(state$observed[["cfi"]],
-                     state$observed[["rmsea"]],
-                     state$observed[["srmr"]]),
-        Cutoff   = c(state$cutoffs[["cfi"]],
-                     state$cutoffs[["rmsea"]],
-                     state$cutoffs[["srmr"]]),
-        Flagged  = c(state$flagged[["cfi"]],
-                     state$flagged[["rmsea"]],
-                     state$flagged[["srmr"]]),
-        stringsAsFactors = FALSE
-      )
-      obs_df$Color <- ifelse(obs_df$Flagged, "red", "black")
-
-      cfi_pct_lbl <- 100 - state$percentile
-      caption <- er2_caption(paste0(
-        "Histograms: ", state$actual_iterations,
-        " parametric-bootstrap datasets simulated under ",
-        if (state$is_polytomous) "PCM" else "RM",
-        " unidimensionality at n = ", state$n_complete, ",\n",
-        "refitted with lavaan::cfa(ordered = TRUE, estimator = \"",
-        state$estimator, "\").\n",
-        "Diamond: observed value (red = flagged at the ", state$percentile,
-        "th percentile in the unfavourable direction).\n",
-        "Dashed line: cutoff (CFI: ", round(cfi_pct_lbl, 1),
-        "th pct; RMSEA / SRMR: ", state$percentile, "th pct)."
+      plots <- suppressWarnings(suppressMessages(
+        easyRasch2::RMdimCFAPlot(
+          image$state$cutoff_res,
+          data = image$state$df
+        )
       ))
+      if (is.null(plots$fit)) return(FALSE)
+      print(er2_bump_text(plots$fit))
+      TRUE
+    },
 
-      p <- ggplot2::ggplot(sim_long,
-                           ggplot2::aes(x = .data$Value)) +
-        ggplot2::geom_histogram(bins = 30, fill = "grey80",
-                                colour = "white") +
-        ggplot2::geom_vline(
-          data = obs_df,
-          ggplot2::aes(xintercept = .data$Cutoff),
-          linetype = "dashed", colour = "grey40"
-        ) +
-        ggplot2::geom_point(
-          data = obs_df,
-          ggplot2::aes(x = .data$Observed, colour = .data$Color),
-          y = 0, size = 6, shape = 18
-        ) +
-        ggplot2::scale_colour_identity() +
-        ggplot2::facet_wrap(~ Index, scales = "free", nrow = 1) +
-        ggplot2::labs(
-          x       = "Fit index value",
-          y       = "Count of simulated datasets",
-          caption = caption
-        ) +
-        ggplot2::theme_bw(base_size = 13) +
-        er2_axis_margins() +
-        er2_plot_caption()
+    # ---------------------------------------------------------------------
+    # .cfaLoadingsPlot -- observed standardized loadings vs their simulated
+    # expected ranges (easyRasch2::RMdimCFAPlot()$loadings)
+    # ---------------------------------------------------------------------
+    .cfaLoadingsPlot = function(image, ggtheme, theme, ...) {
+      if (is.null(image$state)) return(FALSE)
 
-      print(p)
+      plots <- suppressWarnings(suppressMessages(
+        easyRasch2::RMdimCFAPlot(
+          image$state$cutoff_res,
+          data = image$state$df
+        )
+      ))
+      if (is.null(plots$loadings)) return(FALSE)
+      print(er2_bump_text(plots$loadings))
       TRUE
     }
   )

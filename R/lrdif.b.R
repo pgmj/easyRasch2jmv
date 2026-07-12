@@ -10,8 +10,8 @@ lrdifClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .run = function() {
 
-      # 1. Return early / explain if requirements not met (eRm needs at
-      # least 2 items; no DIF variable selected is the normal initial
+      # 1. Return early / explain if requirements not met (the model needs
+      # at least 2 items; no DIF variable selected is the normal initial
       # state and stays silent)
       vars   <- self$options$vars
       difVar <- self$options$difVar
@@ -99,77 +99,54 @@ lrdifClass <- R6::R6Class(
       show_figure   <- isTRUE(self$options$showFigure)
       conf_level    <- self$options$confLevel / 100
 
-      # 5. Fit + LRtest
+      # 5. Run analysis via easyRasch2 (eRm::LRtest inside; RMdifLR()
+      # deliberately remains eRm-based upstream as well, so the module and
+      # the R package are identical by construction). Package messages are
+      # suppressed -- the module pre-drops NA rows itself so the notes can
+      # report the counts.
       tryCatch({
         # rgl workaround
         old_rgl <- getOption("rgl.useNULL")
         options(rgl.useNULL = TRUE)
         on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-        data_mat      <- as.matrix(df)
-        is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
+        is_polytomous <- max(as.matrix(df), na.rm = TRUE) > 1L
 
-        fit_full <- if (is_polytomous) eRm::PCM(df) else eRm::RM(df)
-
-        lrt <- tryCatch(
-          eRm::LRtest(fit_full, splitcr = dif_factor),
+        table_df <- tryCatch(
+          suppressWarnings(suppressMessages(
+            easyRasch2::RMdifLR(
+              df,
+              dif_var = dif_factor,
+              level   = level,
+              cutoff  = if (cutoff_val > 0) cutoff_val else NULL,
+              output  = "dataframe"
+            )
+          )),
           error = function(e) {
             stop(paste0(
-              "eRm::LRtest() failed: ", conditionMessage(e),
-              ". This often indicates an empty response category in one ",
+              conditionMessage(e),
+              " This often indicates an empty response category in one ",
               "subgroup. Inspect the response distribution per group ",
               "before running the LR test."
             ))
           }
         )
+        lr_summary <- attr(table_df, "lr_test")
 
-        # 6. Long-form data: per-group + overall
-        per_group <- private$.extractLrLocations(lrt, groups, names(df))
-        overall   <- private$.oneFitLong(fit_full, "All", names(df))
-        long_df   <- rbind(per_group, overall)
-        long_df$Item <- factor(long_df$Item, levels = names(df))
-
-        # 7. Aggregate to chosen level
-        if (level == "item") {
-          agg <- stats::aggregate(
-            cbind(Location = long_df$Location, SE = long_df$SE),
-            by  = list(Item = long_df$Item, DIFgroup = long_df$DIFgroup),
-            FUN = function(x) mean(x, na.rm = TRUE)
-          )
-          agg$Item <- factor(agg$Item, levels = names(df))
-          table_df <- private$.buildWideTable(agg, groups, level = "item")
-          plot_df  <- agg
-          plot_df$Threshold <- NA_character_
-        } else {
-          table_df <- private$.buildWideTable(long_df, groups, level = "threshold")
-          plot_df  <- long_df
-        }
-
-        # 8. Flagged column
-        if (cutoff_val > 0) {
-          table_df$Flagged <- !is.na(table_df$MaxDiff) &
-                              table_df$MaxDiff > cutoff_val
-        } else {
-          table_df$Flagged <- FALSE
-        }
-
-        # 9. Sort if requested
+        # 6. Sort if requested
         if (sort_by_max) {
           table_df <- table_df[order(-table_df$MaxDiff), , drop = FALSE]
           rownames(table_df) <- NULL
         }
 
-        # 10. Set up table columns now that the group structure is known.
+        # 7. Set up table columns now that the group structure is known.
         # NOTE: these group columns depend on the levels of difVar, which
         # cannot be read until the data is loaded -- so they genuinely
         # cannot be moved to .init() (defensible Level 3 case). This causes
         # a one-time UI restructure when the analysis first opens: the table
         # appears blank, then gains its group columns once difVar resolves.
-        # If jamovi ever adds a way to re-init on variable assignment,
-        # revisit and move the static columns to .init().
         # Numeric columns use format = "zto" to match the formatting of
-        # all other tables in the module (and avoids the per-column
-        # sig-figs heuristic expanding decimals for small magnitudes).
+        # all other tables in the module.
         table <- self$results$lrtTable
 
         # When at threshold level, pack repeated Item values into a
@@ -210,13 +187,8 @@ lrdifClass <- R6::R6Class(
                         type = "number", format = "zto",
                         superTitle = "SE")
 
-        # 11. Populate rows. Pass raw numerics so the jamovi frontend
-        # applies the user's "Number format" preferences (pt = decimal
-        # places, sf = significant figures). Note: Location columns
-        # may show one more decimal than SE for small-magnitude values
-        # because jamovi's display heuristic adds digits to preserve
-        # the chosen sig-figs count -- this is jamovi-wide behaviour
-        # and matches every other analysis in the platform.
+        # 8. Populate rows. Raw numerics so the jamovi frontend applies
+        # the user's "Number format" preferences.
         for (i in seq_len(nrow(table_df))) {
           vals <- list(item = as.character(table_df$Item[i]))
           if (level == "threshold") {
@@ -248,9 +220,9 @@ lrdifClass <- R6::R6Class(
           ))
         }
 
-        # 12. LR test note (p-value rounded to 3 digits)
+        # 9. LR test note (p-value rounded to 3 digits)
         model_name <- if (is_polytomous) "Partial Credit Model" else "Rasch Model"
-        p_round <- round(lrt$pvalue, 3)
+        p_round <- round(lr_summary$p_value, 3)
         p_str   <- if (p_round == 0) "&lt; 0.001" else format(p_round, nsmall = 3)
         n_excluded <- n_total - n_complete
         excluded_clause <- if (n_excluded > 0L) {
@@ -260,13 +232,14 @@ lrdifClass <- R6::R6Class(
         } else ""
         lr_html <- paste0(
           "<p><b>Andersen LR test:</b> χ<sup>2</sup> = ",
-          round(lrt$LR, 3),
-          ", <i>df</i> = ", lrt$df,
+          round(lr_summary$LR, 3),
+          ", <i>df</i> = ", lr_summary$df,
           ", <i>p</i> = ", p_str,
           ". ", model_name, " split by `", difVar,
           "` (", length(groups), " groups: ",
           paste(groups, collapse = ", "), "). n = ", n_complete,
-          " complete cases", excluded_clause, "."
+          " complete cases", excluded_clause,
+          ". Results are identical to easyRasch2::RMdifLR()."
         )
         if (cutoff_val > 0) {
           lr_html <- paste0(
@@ -277,24 +250,16 @@ lrdifClass <- R6::R6Class(
         lr_html <- paste0(lr_html, "</p>")
         self$results$lrtNote$setContent(lr_html)
 
-        # 13. Save state for the figure
+        # 10. Save state for the figure (drawn by RMdifLR(output =
+        # "ggplot") in the render function)
         if (show_figure) {
-          self$results$lrtPlot$setState(list(
-            plot_df       = plot_df,
-            groups        = groups,
-            level         = level,
-            conf          = conf_level,
-            n_complete    = n_complete,
-            is_polytomous = is_polytomous
-          ))
+          self$results$lrtPlot$setState(list(df = df, dif = dif_factor))
         }
 
-        # 14. Tileplot: per-item × category × DIF-group response counts
+        # 11. Tileplot: per-item × category × DIF-group response counts,
+        # drawn by easyRasch2::RMplotTile() in the render function.
         if (isTRUE(self$options$showTileplot)) {
-          tile_state <- private$.computeTileCounts(df, dif_factor)
-          tile_state$cutoff  <- self$options$tileCutoff
-          tile_state$percent <- isTRUE(self$options$tilePercent)
-          self$results$tileplot$setState(tile_state)
+          self$results$tileplot$setState(list(df = df, dif = dif_factor))
         }
       }, error = function(e) {
         stop(paste("Error in LR-based DIF analysis:", e$message))
@@ -302,9 +267,9 @@ lrdifClass <- R6::R6Class(
     },
 
     # ---------------------------------------------------------------------
-    # Internal helpers (inlined from easyRasch2::RMdifLR)
+    # jamovi column names must be syntactically safe; group levels may
+    # contain spaces or other characters.
     # ---------------------------------------------------------------------
-
     .locColName = function(g) {
       paste0("loc_", private$.sanitizeName(g))
     },
@@ -317,345 +282,44 @@ lrdifClass <- R6::R6Class(
       out
     },
 
-    # Pull per-fit thresholds + SEs into long-form
-    .oneFitLong = function(fit, dif_group, item_names) {
-      is_rm <- isTRUE(fit$model == "RM")
-      if (is_rm) {
-        # eRm::thresholds() is polytomous-only. For RM the "threshold"
-        # is the item difficulty, available as -betapar with se.beta.
-        beta <- fit$betapar
-        se   <- fit$se.beta
-        raw_names <- sub("^beta\\s+", "", names(beta))
-        if (!all(raw_names %in% item_names)) {
-          stop("Could not match RM item parameter names to data columns: ",
-               paste(utils::head(setdiff(raw_names, item_names), 5L),
-                     collapse = ", "))
-        }
-        return(data.frame(
-          Item      = raw_names,
-          Threshold = "1",
-          DIFgroup  = dif_group,
-          Location  = unname(-as.numeric(beta)),
-          SE        = unname(as.numeric(se)),
-          stringsAsFactors = FALSE
-        ))
-      }
-
-      thr <- eRm::thresholds(fit)
-      loc <- thr$threshpar
-      se  <- thr$se.thresh
-      if (is.list(loc)) loc <- unlist(loc, use.names = TRUE)
-      if (is.list(se))  se  <- unlist(se,  use.names = TRUE)
-
-      parsed <- private$.parseThresholdNames(names(loc), item_names)
-
-      data.frame(
-        Item      = parsed$Item,
-        Threshold = parsed$Threshold,
-        DIFgroup  = dif_group,
-        Location  = unname(as.numeric(loc)),
-        SE        = unname(as.numeric(se)),
-        stringsAsFactors = FALSE
-      )
-    },
-
-    # Parse "thresh beta I1.c1" / "beta I1.c1" / "I1.c1" / "I1" into
-    # Item + Threshold parts.
-    .parseThresholdNames = function(nm, item_names) {
-      bare <- sub("^(thresh\\s+)?beta\\s+", "", nm)
-
-      matched_item <- vapply(bare, function(b) {
-        hits <- item_names[startsWith(b, item_names) |
-                             startsWith(b, paste0(item_names, "."))]
-        if (length(hits) == 0L) NA_character_
-        else hits[which.max(nchar(hits))]
-      }, character(1L))
-
-      thr_part <- mapply(function(b, it) {
-        if (is.na(it)) return(NA_character_)
-        rest <- substr(b, nchar(it) + 1L, nchar(b))
-        rest <- sub("^\\.", "", rest)
-        if (!nzchar(rest)) "1" else rest
-      }, bare, matched_item, USE.NAMES = FALSE)
-
-      if (any(is.na(matched_item))) {
-        bad <- nm[is.na(matched_item)]
-        stop("Could not match threshold parameter name(s) to items: ",
-             paste(utils::head(bad, 5L), collapse = ", "))
-      }
-
-      list(Item = unname(matched_item), Threshold = unname(thr_part))
-    },
-
-    # Walk LRtest's per-group fits
-    .extractLrLocations = function(lrt, groups, item_names) {
-      parts <- lapply(seq_along(groups), function(g) {
-        fit_g <- lrt$fitobj[[g]]
-        private$.oneFitLong(fit_g, dif_group = groups[g],
-                            item_names = item_names)
-      })
-      out <- do.call(rbind, parts)
-      rownames(out) <- NULL
-      out
-    },
-
-    # Reshape long -> wide on DIFgroup; add MaxDiff
-    .buildWideTable = function(long_df, groups, level) {
-      id_cols <- if (level == "item") "Item" else c("Item", "Threshold")
-
-      loc_wide <- stats::reshape(
-        long_df[, c(id_cols, "DIFgroup", "Location"), drop = FALSE],
-        idvar     = id_cols,
-        timevar   = "DIFgroup",
-        direction = "wide"
-      )
-      names(loc_wide) <- sub("^Location\\.", "", names(loc_wide))
-
-      se_wide <- stats::reshape(
-        long_df[, c(id_cols, "DIFgroup", "SE"), drop = FALSE],
-        idvar     = id_cols,
-        timevar   = "DIFgroup",
-        direction = "wide"
-      )
-      names(se_wide) <- sub("^SE\\.", "SE_", names(se_wide))
-
-      out <- merge(loc_wide, se_wide, by = id_cols, sort = FALSE)
-
-      # MaxDiff across the per-group columns (excludes "All")
-      group_mat <- as.matrix(out[, groups, drop = FALSE])
-      out$MaxDiff <- apply(group_mat, 1L, function(x) {
-        x <- x[is.finite(x)]
-        if (length(x) < 2L) NA_real_ else max(x) - min(x)
-      })
-
-      ord <- if (level == "threshold") {
-        order(out$Item, out$Threshold)
-      } else {
-        order(out$Item)
-      }
-      out <- out[ord, , drop = FALSE]
-      rownames(out) <- NULL
-      out
-    },
-
     # ---------------------------------------------------------------------
-    # .lrtPlot -- facet-per-item ggplot
+    # Per-group locations figure — easyRasch2::RMdifLR(output = "ggplot")
     # ---------------------------------------------------------------------
     .lrtPlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
-      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      state    <- image$state
-      plot_df  <- state$plot_df
-      groups   <- state$groups
-      level    <- state$level
-      conf     <- state$conf
-
-      z <- stats::qnorm(1 - (1 - conf) / 2)
-
-      # Show only the per-group locations (no overall/All diamond)
-      plot_df    <- plot_df[plot_df$DIFgroup %in% groups, , drop = FALSE]
-      plot_df$DIFgroup <- factor(plot_df$DIFgroup, levels = groups)
-
-      caption <- er2_caption(paste0(
-        if (level == "item" && state$is_polytomous)
-          "Item locations are means of threshold locations. " else "",
-        "Error bars: ", round(conf * 100), "% CI. ",
-        "n = ", state$n_complete, "."
+      p <- suppressWarnings(suppressMessages(
+        easyRasch2::RMdifLR(
+          image$state$df,
+          dif_var = image$state$dif,
+          level   = self$options$level,
+          cutoff  = if (self$options$cutoff > 0) self$options$cutoff else NULL,
+          conf    = self$options$confLevel / 100,
+          output  = "ggplot"
+        )
       ))
-
-      base_theme <- ggplot2::theme_bw(base_size = 15) +
-        ggplot2::theme(
-          legend.position = "none"
-        ) +
-        er2_axis_margins() +
-        er2_plot_caption()
-
-      if (level == "item") {
-        p <- ggplot2::ggplot(
-          plot_df,
-          ggplot2::aes(x = .data$DIFgroup,
-                       y = .data$Location,
-                       group  = .data$Item,
-                       colour = .data$Item)
-        ) +
-          ggplot2::geom_line() +
-          ggplot2::geom_point() +
-          ggplot2::geom_errorbar(
-            ggplot2::aes(ymin = .data$Location - z * .data$SE,
-                         ymax = .data$Location + z * .data$SE),
-            width = 0.1
-          ) +
-          ggplot2::scale_x_discrete(labels = er2_wrap_labels) +
-          ggplot2::facet_wrap(~ Item) +
-          ggplot2::labs(
-            x       = "DIF group",
-            y       = "Item location (logits)",
-            caption = caption
-          ) +
-          base_theme
-      } else {
-        p <- ggplot2::ggplot(
-          plot_df,
-          ggplot2::aes(x = .data$DIFgroup,
-                       y = .data$Location,
-                       group  = .data$Threshold,
-                       colour = .data$Threshold)
-        ) +
-          ggplot2::geom_line() +
-          ggplot2::geom_point(alpha = 0.9) +
-          ggplot2::geom_errorbar(
-            ggplot2::aes(ymin = .data$Location - z * .data$SE,
-                         ymax = .data$Location + z * .data$SE),
-            width = 0.1
-          ) +
-          ggplot2::scale_x_discrete(labels = er2_wrap_labels) +
-          ggplot2::facet_wrap(~ Item) +
-          ggplot2::labs(
-            x       = "DIF group",
-            y       = "Threshold location (logits)",
-            caption = caption
-          ) +
-          base_theme
-      }
+      p <- er2_bump_text(p)
 
       print(p)
       TRUE
     },
 
-    # ------------------------------------------------------------------
-    # Build per-(item x category x group) counts for the tileplot.
-    # `df` is numeric, complete-cases item data; `dif_vec` is the
-    # corresponding DIF variable values (length = nrow(df)).
-    # Mirrors easyRasch2::RMplotTile logic.
-    # ------------------------------------------------------------------
-    .computeTileCounts = function(df, dif_vec) {
-      item_names <- names(df)
-
-      all_vals       <- unlist(df, use.names = FALSE)
-      all_vals       <- all_vals[!is.na(all_vals)]
-      min_val        <- min(all_vals)
-      max_val        <- max(all_vals)
-      all_categories <- seq(min_val, max_val)
-
-      dif_factor <- if (is.factor(dif_vec)) {
-        droplevels(dif_vec)
-      } else {
-        as.factor(dif_vec)
-      }
-
-      parts <- lapply(levels(dif_factor), function(g) {
-        mask <- !is.na(dif_factor) & dif_factor == g
-        sub  <- df[mask, , drop = FALSE]
-        rows <- lapply(item_names, function(it) {
-          vals <- sub[[it]]
-          vals <- vals[!is.na(vals)]
-          tab  <- table(factor(vals, levels = all_categories))
-          data.frame(
-            item     = it,
-            category = as.integer(names(tab)),
-            n        = as.integer(tab),
-            group    = g,
-            stringsAsFactors = FALSE
-          )
-        })
-        do.call(rbind, rows)
-      })
-      count_df <- do.call(rbind, parts)
-      rownames(count_df) <- NULL
-      count_df$group <- factor(count_df$group, levels = levels(dif_factor))
-
-      totals <- stats::aggregate(
-        count_df$n,
-        by  = count_df[, c("item", "group"), drop = FALSE],
-        FUN = sum
-      )
-      colnames(totals)[ncol(totals)] <- "total"
-      count_df <- merge(count_df, totals, by = c("item", "group"),
-                       sort = FALSE)
-      count_df$percentage <- round(count_df$n / count_df$total * 100, 1)
-
-      # Item ordering: top of y-axis = first column of df
-      count_df$item_label <- factor(count_df$item, levels = rev(item_names))
-
-      group_sizes <- table(dif_factor)
-
-      list(
-        count_df       = count_df,
-        all_categories = all_categories,
-        item_names     = item_names,
-        group_sizes    = group_sizes
-      )
-    },
-
-    # ------------------------------------------------------------------
-    # .tileplot -- faceted tile of item x category response counts,
-    # faceted by the DIF grouping variable. Mirrors RMplotTile.
-    # ------------------------------------------------------------------
+    # ---------------------------------------------------------------------
+    # Faceted tileplot of item × category response counts by DIF group,
+    # drawn by easyRasch2::RMplotTile().
+    # ---------------------------------------------------------------------
     .tileplot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
-      if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      state          <- image$state
-      count_df       <- state$count_df
-      all_categories <- state$all_categories
-      cutoff         <- state$cutoff
-      use_pct        <- isTRUE(state$percent)
-
-      p <- ggplot2::ggplot(
-        count_df,
-        ggplot2::aes(x = .data$category,
-                     y = .data$item_label,
-                     fill = .data$n)
-      ) +
-        ggplot2::geom_tile() +
-        ggplot2::scale_fill_viridis_c(
-          expression(italic(n)),
-          limits = c(0, NA)
-        ) +
-        ggplot2::scale_x_continuous(
-          "Response category",
-          expand = c(0, 0),
-          breaks = all_categories
+      p <- suppressWarnings(suppressMessages(
+        easyRasch2::RMplotTile(
+          image$state$df,
+          group   = image$state$dif,
+          cutoff  = self$options$tileCutoff,
+          percent = isTRUE(self$options$tilePercent)
         )
-
-      # Cell labels (counts or percentages) with low-count highlighting
-      label_aes <- if (use_pct) {
-        ggplot2::aes(label = paste0(.data$percentage, "%"),
-                     color = ifelse(.data$n < cutoff, "red", "orange"))
-      } else {
-        ggplot2::aes(label = .data$n,
-                     color = ifelse(.data$n < cutoff, "red", "orange"))
-      }
-      p <- p +
-        ggplot2::geom_text(label_aes) +
-        ggplot2::guides(color = "none") +
-        ggplot2::scale_color_identity()
-
-      caption_text <- if (!is.null(state$group_sizes)) {
-        gs <- state$group_sizes
-        er2_caption(paste0(
-          "Response category counts by DIF group (",
-          paste0(names(gs), ": n = ", as.integer(gs), collapse = "; "),
-          "). Counts below ", cutoff, " are highlighted in red."
-        ))
-      } else NULL
-
-      # Wrap long DIF-group facet labels
-      p <- p +
-        ggplot2::facet_wrap(~ group,
-                            labeller = ggplot2::labeller(
-                              group = er2_wrap_labels
-                            )) +
-        ggplot2::labs(y = "Items", caption = caption_text) +
-        ggplot2::theme_minimal(base_size = 15) +
-        ggplot2::theme(
-          axis.text.x   = ggplot2::element_text(size = 10),
-          panel.grid    = ggplot2::element_blank(),
-          panel.spacing = ggplot2::unit(0.7, "cm")
-        ) +
-        er2_axis_margins() +
-        er2_plot_caption()
+      ))
+      p <- er2_bump_text(p)
 
       print(p)
       TRUE

@@ -125,3 +125,35 @@ test_that("CFA cutoff runs (>= 4 items)", {
     r <- er2$cfacutoff(data = d, vars = names(d), iterations = 60)))
   expect_equal(r$cfaTable$rowCount, 3)
 })
+
+test_that("CICC runs on polytomous and dichotomous data, with and without DIF", {
+  d <- poly_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$cicc(data = d, vars = names(d))))
+  expect_true(!is.null(r$ciccPlot$state))
+  expect_match(r$ciccNote$content, "total-score group")
+  # all three grouping methods run
+  expect_no_error(suppressWarnings(
+    er2$cicc(data = d, vars = names(d), method = "width")))
+  r_sc <- suppressWarnings(er2$cicc(data = d, vars = names(d),
+                                    method = "score"))
+  expect_match(r_sc$ciccNote$content, "does not apply")
+  expect_no_error(suppressWarnings(
+    er2$cicc(data = dich_data(), vars = names(dich_data()))))
+  dd <- dif_data()
+  expect_no_error(suppressWarnings(
+    r2 <- er2$cicc(data = dd, vars = setdiff(names(dd), "dif"),
+                   difVar = "dif")))
+  expect_match(r2$ciccNote$content, "partial-gamma")
+})
+
+test_that("partial gamma LD expected ranges + plot state (new in 2.1.0)", {
+  d <- poly_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$locdepgamma(data = d, vars = names(d),
+                         computeCutoff = TRUE, iterations = 60)))
+  t1 <- r$dir1Table$asDF
+  expect_true(all(c("gammaLow", "gammaHigh") %in% names(t1)))
+  expect_false(anyNA(t1$gammaLow))
+  expect_true(!is.null(r$ldPlot$state))
+})

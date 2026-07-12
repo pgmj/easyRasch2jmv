@@ -138,6 +138,7 @@ lrdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 rows=0,
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "mair2007"),
                 clearWith=list(
                     "vars",
@@ -208,12 +209,15 @@ lrdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Andersen LR-test DIF
 #'
-#' Splits a Rasch model by an external categorical grouping variable
-#' using \code{eRm::LRtest()} (Andersen's likelihood-ratio test) and reports
-#' per-group item locations (or per-group threshold locations) together
-#' with their standard errors. The dichotomous Rasch Model (RM) is
-#' fitted when the data are 0/1; the Partial Credit Model (PCM)
-#' otherwise -- chosen automatically.
+#' Splits a Rasch / Partial Credit model by an external categorical
+#' grouping variable using Andersen's likelihood-ratio test
+#' (eRm::LRtest(), via the easyRasch2 R package) and reports per-group
+#' item locations (or per-group threshold locations) together with
+#' their standard errors, a MaxDiff column (largest between-group
+#' location difference), and an optional per-group locations figure.
+#' Results are identical to easyRasch2::RMdifLR(). A
+#' response-distribution tileplot (easyRasch2::RMplotTile()) is
+#' available for inspecting per-group category counts.
 #' 
 #' Items whose largest group difference (MaxDiff) exceeds the chosen
 #' cutoff (in logits) are flagged. The Andersen LR test statistic is

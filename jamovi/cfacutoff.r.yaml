@@ -8,7 +8,7 @@ items:
       title: Observed CFA Fit vs Simulated Cutoff
       type: Table
       rows: 3
-      refs: [easyRasch2jmv]
+      refs: [easyRasch2jmv, easyRasch2, zeileis2026, warm1989]
       clearWith:
           - vars
           - estimator
@@ -31,6 +31,38 @@ items:
             title: Flagged
             type: text
 
+    - name: loadingsTable
+      title: Standardized Loadings vs Simulated Expected Range
+      type: Table
+      rows: 0
+      clearWith:
+          - vars
+          - estimator
+          - percentile
+          - iterations
+          - seed
+      columns:
+          - name: item
+            title: Item
+            type: text
+          - name: observed
+            title: Observed loading
+            type: number
+            format: zto
+          - name: low
+            title: Lower
+            type: number
+            format: zto
+            superTitle: Expected range
+          - name: high
+            title: Upper
+            type: number
+            format: zto
+            superTitle: Expected range
+          - name: flagged
+            title: Flagged
+            type: text
+
     - name: cfaNote
       title: ''
       type: Html
@@ -47,6 +79,20 @@ items:
       width: 700
       height: 350
       renderFun: .cfaPlot
+      requiresData: true
+      clearWith:
+          - vars
+          - estimator
+          - percentile
+          - iterations
+          - seed
+
+    - name: cfaLoadingsPlot
+      title: Standardized Loadings vs Simulated Expected Range
+      type: Image
+      width: 600
+      height: 500
+      renderFun: .cfaLoadingsPlot
       requiresData: true
       clearWith:
           - vars

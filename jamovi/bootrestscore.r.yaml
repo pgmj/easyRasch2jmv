@@ -8,7 +8,7 @@ items:
       title: Bootstrap Item-Restscore Misfit
       type: Table
       rows: (vars)
-      refs: [easyRasch2jmv, kreiner2011, mueller2022, mair2007, zeileis2026, johansson2025_detecting]
+      refs: [easyRasch2jmv, easyRasch2, kreiner2011, mueller2022, zeileis2026, warm1989, johansson2025_detecting]
       clearWith:
           - vars
           - iterations

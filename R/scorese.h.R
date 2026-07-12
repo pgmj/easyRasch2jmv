@@ -102,10 +102,10 @@ scoreseResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 rows=0,
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "warm1989",
-                    "mair2007",
-                    "chalmers2012",
-                    "mueller2022"),
+                    "zeileis2026",
+                    "chalmers2012"),
                 clearWith=list(
                     "vars",
                     "method",
@@ -179,14 +179,17 @@ scoreseBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' measurement properties or converting raw totals to interval-scaled
 #' scores.
 #' 
-#' Two estimation methods are available. WLE (default) fits the model
-#' with eRm (CML) and applies Warm's Weighted Likelihood correction for
-#' boundary-score bias; its standard error is the information-based
-#' 1 / sqrt(I(theta)) (as in catR / TAM), and Warm's correction keeps
-#' the lowest and highest scores finite (with the largest SEs). EAP
-#' fits the model with mirt (MML) and uses sum-score-based Expected A
-#' Posteriori estimates with their posterior SDs as standard errors;
-#' EAP estimates are shrunk inward by the normal prior.
+#' Two estimation methods are available, both computed by the
+#' easyRasch2 R package (results are identical to
+#' easyRasch2::RMscoreSE()). WLE (default) fits the model by
+#' conditional maximum likelihood (psychotools) and applies Warm's
+#' Weighted Likelihood correction for boundary-score bias; its
+#' standard error is the information-based 1 / sqrt(I(theta)) (as in
+#' catR / TAM), and Warm's correction keeps the lowest and highest
+#' scores finite (with the largest SEs). EAP fits the model with mirt
+#' (MML) and uses sum-score-based Expected A Posteriori estimates
+#' with their posterior SDs as standard errors; EAP estimates are
+#' shrunk inward by the normal prior.
 #' 
 #' @param data .
 #' @param vars .

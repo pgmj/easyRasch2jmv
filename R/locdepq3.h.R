@@ -8,7 +8,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            iterations = 100,
+            iterations = 250,
             hdciWidth = 99,
             seed = 42,
             nPairs = 10, ...) {
@@ -35,7 +35,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=100,
+                default=250,
                 min=50,
                 max=5000)
             private$..hdciWidth <- jmvcore::OptionNumber$new(
@@ -43,7 +43,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 hdciWidth,
                 default=99,
                 min=50,
-                max=100)
+                max=99.9)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,
@@ -84,6 +84,7 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     inherit = jmvcore::Group,
     active = list(
         q3Table = function() private$.items[["q3Table"]],
+        matrixPlot = function() private$.items[["matrixPlot"]],
         cutoffTable = function() private$.items[["cutoffTable"]],
         q3Plot = function() private$.items[["q3Plot"]],
         pairTable = function() private$.items[["pairTable"]],
@@ -101,16 +102,31 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 title="Q3 Residual Correlation Matrix",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "yen1984",
                     "christensen2017",
-                    "chalmers2012",
-                    "zeileis2026"),
+                    "zeileis2026",
+                    "warm1989"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",
                     "iterations",
                     "seed"),
                 columns=list()))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="matrixPlot",
+                title="Q3 Heatmap",
+                width=550,
+                height=500,
+                renderFun=".matrixPlot",
+                visible="(computeCutoff)",
+                requiresData=TRUE,
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "seed")))
             self$add(jmvcore::Table$new(
                 options=options,
                 name="cutoffTable",
@@ -223,9 +239,15 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Q3 Residual Correlation Matrix
 #'
 #' Computes Yen's Q3 residual correlations between item pairs for local
-#' dependence assessment in Rasch models (fitted via mirt). Optionally
-#' runs a parametric bootstrap simulation to determine a simulation-based
-#' cutoff value. Single-core sequential processing is used by default.
+#' dependence assessment in Rasch models, using the easyRasch2 R package:
+#' item parameters are estimated by conditional maximum likelihood (CML,
+#' via psychotools) and person locations by Warm's weighted likelihood
+#' (WLE). Optionally runs a parametric bootstrap simulation to determine
+#' simulation-based cutoff values -- a global cutoff applied to the Q3
+#' matrix and per-pair expected ranges -- along with a Q3 heatmap and a
+#' per-pair distribution plot. Results match easyRasch2::RMlocdepQ3(),
+#' RMlocdepQ3Cutoff(), and RMlocdepQ3Plot() with the same seed and
+#' iterations. Single-core sequential processing is used.
 #' 
 #' @param data .
 #' @param vars .
@@ -237,6 +259,7 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$q3Table} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$matrixPlot} \tab \tab \tab \tab \tab an image \cr
 #'   \code{results$cutoffTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$q3Plot} \tab \tab \tab \tab \tab an image \cr
 #'   \code{results$pairTable} \tab \tab \tab \tab \tab a table \cr
@@ -254,7 +277,7 @@ locdepq3 <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    iterations = 100,
+    iterations = 250,
     hdciWidth = 99,
     seed = 42,
     nPairs = 10) {

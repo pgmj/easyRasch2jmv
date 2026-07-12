@@ -8,10 +8,12 @@ jas: '1.2'
 description:
     main: |
         Computes pooled conditional infit MSQ statistics for items with missing
-        responses. Internally runs mice::mice() to generate `m` imputed datasets,
-        fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
-        each, computes conditional infit MSQ via iarm::out_infit(), and pools
-        per-item estimates and standard errors using Rubin's rules.
+        responses. Internally runs mice::mice() to generate `m` imputed
+        datasets, then delegates the per-imputation model fitting (conditional
+        maximum likelihood via psychotools, with WLE person estimates),
+        conditional infit computation (iarm::out_infit()), and Rubin's-rules
+        pooling to easyRasch2::RMitemInfitMI(). Results match RMitemInfitMI()
+        and RMitemInfitCutoffMI() run on the same imputed datasets and seed.
 
         Imputation method defaults to 'polr' (proportional-odds logistic
         regression — appropriate for ordinal Likert data). 'pmm' (predictive
@@ -97,7 +99,7 @@ options:
       type: Number
       default: 99
       min: 50
-      max: 100
+      max: 99.9
 
     - name: iterations
       title: Total simulation iterations

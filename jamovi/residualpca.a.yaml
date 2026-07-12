@@ -7,12 +7,16 @@ jas: '1.2'
 
 description:
     main: |
-        Fits a Rasch model (RM for dichotomous data, PCM for polytomous --
-        chosen automatically) and runs an unrotated principal-component
-        analysis on the standardized residuals via `eRm::itemfit()` and
-        `stats::prcomp()`. Reports the largest eigenvalues, the proportion of
-        unexplained variance, and a loadings-vs-location plot for inspecting
-        the first residual contrast.
+        Fits a Rasch / partial credit model and runs an unrotated
+        principal-component analysis on the standardized residuals, computed
+        by the easyRasch2 R package (CML item parameters via psychotools,
+        WLE person estimates; results are identical to
+        easyRasch2::RMdimResidualPCA()). Reports the largest eigenvalues,
+        the variance partition (explained by measures vs unexplained), and a
+        PC1-loadings-vs-location plot for inspecting the first residual
+        contrast. Optionally determines a simulation-based cutoff for the
+        first eigenvalue via parametric bootstrap
+        (easyRasch2::RMdimResidualPCACutoff(); Chou & Wang, 2010).
 
         The "first contrast eigenvalue > 2" rule of thumb is unreliable: the
         expected eigenvalue under a unidimensional model varies with sample

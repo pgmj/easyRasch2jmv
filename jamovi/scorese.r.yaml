@@ -8,7 +8,7 @@ items:
       title: Score-to-Theta Lookup
       type: Table
       rows: 0
-      refs: [easyRasch2jmv, warm1989, mair2007, chalmers2012, mueller2022]
+      refs: [easyRasch2jmv, easyRasch2, warm1989, zeileis2026, chalmers2012]
       clearWith:
           - vars
           - method

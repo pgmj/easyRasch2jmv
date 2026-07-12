@@ -1,0 +1,37 @@
+---
+name: cicc
+title: Item Characteristic Curves (CICC)
+jrs: '1.1'
+
+items:
+    - name: ciccPlot
+      title: Conditional Item Characteristic Curves
+      type: Image
+      refs: [easyRasch2jmv, easyRasch2, buchardt2023, kreiner2011, christensen2013, zeileis2026, warm1989]
+      width: 700
+      height: 700
+      renderFun: .ciccPlot
+      requiresData: true
+      clearWith:
+        - vars
+        - difVar
+        - method
+        - classIntervals
+        - ci
+        - errorBand
+        - confLevel
+        - minN
+
+    - name: ciccNote
+      title: ''
+      type: Html
+      clearWith:
+        - vars
+        - difVar
+        - method
+        - classIntervals
+        - ci
+        - errorBand
+        - confLevel
+        - minN
+...

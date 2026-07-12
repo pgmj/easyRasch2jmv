@@ -7,7 +7,7 @@ items:
     - name: iccPlot
       title: Item Probability Curves
       type: Image
-      refs: [easyRasch2jmv, mair2007]
+      refs: [easyRasch2jmv, easyRasch2, zeileis2026, warm1989]
       width: 700
       height: 600
       renderFun: .iccPlot

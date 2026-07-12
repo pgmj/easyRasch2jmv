@@ -118,8 +118,10 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 title="Person-Item Targeting Plot",
                 refs=list(
                     "easyRasch2jmv",
+                    "easyRasch2",
                     "wright1979",
-                    "mair2007"),
+                    "zeileis2026",
+                    "warm1989"),
                 width=700,
                 height=700,
                 renderFun=".targetingPlot",
@@ -139,7 +141,8 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 title="Item Threshold Locations",
                 rows=0,
                 clearWith=list(
-                    "vars"),
+                    "vars",
+                    "ciLevel"),
                 columns=list(
                     list(
                         `name`="item", 
@@ -158,7 +161,21 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `name`="se", 
                         `title`="SE", 
                         `type`="number", 
-                        `format`="zto"))))
+                        `format`="zto"),
+                    list(
+                        `name`="ciLow", 
+                        `title`="Lower", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(showCi)", 
+                        `superTitle`="CI"),
+                    list(
+                        `name`="ciHigh", 
+                        `title`="Upper", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(showCi)", 
+                        `superTitle`="CI"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="targetingNote",
@@ -191,12 +208,14 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #'
 #' Person-item targeting plot (Wright map): back-to-back histograms
 #' of person locations and item threshold locations, plus a dot plot
-#' of individual item thresholds with optional confidence intervals.
-#' Item thresholds are estimated with CML (eRm); when any response
-#' category has fewer than 3 observations the analysis falls back to
-#' MML (mirt), which is more numerically stable under sparse
-#' categories. Person locations always come from the eRm model.
-#' Mirrors easyRasch2::RMtargeting().
+#' of individual item thresholds with optional confidence intervals,
+#' drawn by the easyRasch2 R package. Item thresholds are estimated
+#' with CML (psychotools); when any response category has fewer than
+#' 3 observations the analysis falls back to MML (mirt), which is
+#' more numerically stable under sparse categories. Person locations
+#' are weighted likelihood estimates (WLE), finite at extreme scores.
+#' Results are identical to easyRasch2::RMtargeting() and the
+#' threshold table to easyRasch2::RMitemParameters().
 #' 
 #' @param data .
 #' @param vars .

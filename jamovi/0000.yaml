@@ -1,19 +1,20 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 2.0.1
+version: 3.0.0
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-06-11'
+date: '2026-07-06'
 type: R
 description: >
-  Provides Rasch analysis functions for Jamovi, wrapping analysis logic from the
-  easyRasch2 R package. Includes conditional item infit, item-restscore, and
-  partial gamma DIF from the iarm package, Yen's Q3 residuals from package mirt,
-  and item probability curves (PCM) from eRm. Uses CML estimation from eRm,
-  except for the analysis of Q3 residuals, which use MML estimation.
+  Provides Rasch analysis functions for jamovi. All analyses delegate their
+  computations to the easyRasch2 R package (conditional maximum likelihood
+  estimation via psychotools with Warm's weighted likelihood person estimates;
+  iarm for the conditional item-fit and partial-gamma statistics; eRm for
+  Andersen's LR test; lavaan for the CFA checks), so results are numerically
+  identical to easyRasch2 with the same seeds and iterations.
 analyses:
   - title: Conditional Item Infit
     name: iteminfit
@@ -22,15 +23,18 @@ analyses:
     menuTitle: Conditional Item Infit
     category: analyses
     description: |-
-      Computes conditional infit MSQ statistics for each item using
-      iarm::out_infit() (CML item parameters from eRm; RM for dichotomous
-      data, PCM for polytomous -- chosen automatically). Optionally
-      determines simulation-based per-item cutoff intervals via parametric
-      bootstrap: datasets are simulated under the fitted model (no misfit
-      by construction) and the HDCI of each item's simulated infit forms
-      the expected range. Items are labelled overfit (infit below the
-      range; more predictable than the model expects) or underfit (above;
-      noisier than expected).
+      Computes conditional infit MSQ statistics for each item using the
+      easyRasch2 R package (iarm::out_infit() on a conditional maximum
+      likelihood fit via psychotools, with WLE person estimates for the
+      relative item locations). Optionally determines simulation-based
+      per-item cutoff intervals via parametric bootstrap: datasets are
+      simulated under the fitted model (no misfit by construction) and
+      the HDCI of each item's simulated infit forms the expected range.
+      Items are labelled overfit (infit below the range; more predictable
+      than the model expects) or underfit (above; noisier than expected).
+      Results match easyRasch2::RMitemInfit(), RMitemInfitCutoff(), and
+      RMitemInfitPlot() with the same seed and iterations. Single-core
+      sequential processing is used.
   - title: Item-Restscore Correlations
     name: itemrestscore
     ns: easyRasch2jmv
@@ -39,35 +43,32 @@ analyses:
     category: analyses
     description: |
       Computes observed and model-expected item-restscore correlations using
-      Goodman-Kruskal's gamma (via the iarm package). Fits a Rasch model
-      (dichotomous data) or Partial Credit Model (polytomous data) using eRm,
-      then reports observed vs. expected restscore correlations, the signed
-      difference (observed minus expected; positive = over-discrimination /
-      often LD, negative = under-discrimination / often noise),
-      adjusted p-values, and item locations.
+      Goodman-Kruskal's gamma, via the easyRasch2 R package
+      (iarm::item_restscore() on a conditional maximum likelihood fit from
+      psychotools, with WLE person estimates for the relative item
+      locations). Reports observed vs. expected restscore correlations, the
+      signed difference (observed minus expected; positive =
+      over-discrimination / often LD, negative = under-discrimination /
+      often noise), BH-adjusted p-values, and item locations. Results match
+      easyRasch2::RMitemRestscore().
   - title: Bootstrap Item-Restscore
     name: bootrestscore
     ns: easyRasch2jmv
     menuGroup: easyRasch2jmv
     menuTitle: Bootstrap Item-Restscore
     category: analyses
-    description: >
-      Non-parametric bootstrap of item-restscore fit using
-      iarm::item_restscore().
-
-      For each iteration a sample of size `samplesize` is drawn from the data
-
-      with replacement, the appropriate Rasch model (eRm::RM for dichotomous,
-
-      psychotools::pcmodel for polytomous) is refitted, and items are classified
-
-      as overfit, underfit, or no misfit based on the BH-adjusted p-value
-
-      (< .05) and the sign of (expected - observed). Useful with large samples
-
-      where the asymptotic test can flag items that are not practically
-
-      misfitting.
+    description: |
+      Non-parametric bootstrap of item-restscore fit via the easyRasch2 R
+      package (RMitemRestscoreBoot). For each iteration a sample of size
+      `samplesize` is drawn from the data with replacement, the Rasch /
+      Partial Credit model is refitted by conditional maximum likelihood
+      (psychotools::pcmodel), and items are classified as overfit,
+      underfit, or no misfit based on the BH-adjusted p-value (< .05) from
+      iarm::item_restscore() and the sign of (observed - expected). Useful
+      with large samples where the asymptotic test can flag items that are
+      not practically misfitting. The bootstrap is numerically identical
+      to easyRasch2::RMitemRestscoreBoot() with the same seed and
+      iterations. Single-core sequential processing is used.
   - title: Conditional Item Infit (Multiple Imputation)
     name: iteminfitmi
     ns: easyRasch2jmv
@@ -76,10 +77,12 @@ analyses:
     menuTitle: Conditional Item Infit (Multiple Imputation)
     description: |-
       Computes pooled conditional infit MSQ statistics for items with missing
-      responses. Internally runs mice::mice() to generate `m` imputed datasets,
-      fits a Rasch model (eRm::RM for dichotomous, eRm::PCM for polytomous) on
-      each, computes conditional infit MSQ via iarm::out_infit(), and pools
-      per-item estimates and standard errors using Rubin's rules.
+      responses. Internally runs mice::mice() to generate `m` imputed
+      datasets, then delegates the per-imputation model fitting (conditional
+      maximum likelihood via psychotools, with WLE person estimates),
+      conditional infit computation (iarm::out_infit()), and Rubin's-rules
+      pooling to easyRasch2::RMitemInfitMI(). Results match RMitemInfitMI()
+      and RMitemInfitCutoffMI() run on the same imputed datasets and seed.
   - title: Dynamic CFA Fit-Index Cutoffs
     name: cfacutoff
     ns: easyRasch2jmv
@@ -87,9 +90,16 @@ analyses:
     menuTitle: Dynamic CFA Fit-Index Cutoffs
     category: analyses
     description: |-
-      Tests whether the observed one-factor categorical-CFA fit
-      indices (CFI, RMSEA, SRMR) are consistent with the data being
-      generated by a unidimensional Rasch / Partial Credit Model.
+      Tests whether the observed one-factor categorical-CFA fit indices
+      (CFI, RMSEA, SRMR) are consistent with the data being generated by a
+      unidimensional Rasch / Partial Credit Model, via the easyRasch2 R
+      package (results are identical to easyRasch2::RMdimCFACutoff() and
+      RMdimCFA() with the same seed). Datasets are simulated under the
+      fitted model (psychotools CML with WLE person estimates), refitted
+      with lavaan (ordered = TRUE), and the observed indices are compared
+      to percentile cutoffs from the simulated null distribution. Also
+      reports each item's observed standardized loading against its
+      simulated expected range, with figures for both views.
   - title: PCA of Standardized Rasch Residuals
     name: residualpca
     ns: easyRasch2jmv
@@ -97,12 +107,16 @@ analyses:
     menuGroup: easyRasch2jmv
     menuTitle: PCA of Standardized Rasch Residuals
     description: |-
-      Fits a Rasch model (RM for dichotomous data, PCM for polytomous --
-      chosen automatically) and runs an unrotated principal-component
-      analysis on the standardized residuals via `eRm::itemfit()` and
-      `stats::prcomp()`. Reports the largest eigenvalues, the proportion of
-      unexplained variance, and a loadings-vs-location plot for inspecting
-      the first residual contrast.
+      Fits a Rasch / partial credit model and runs an unrotated
+      principal-component analysis on the standardized residuals, computed
+      by the easyRasch2 R package (CML item parameters via psychotools,
+      WLE person estimates; results are identical to
+      easyRasch2::RMdimResidualPCA()). Reports the largest eigenvalues,
+      the variance partition (explained by measures vs unexplained), and a
+      PC1-loadings-vs-location plot for inspecting the first residual
+      contrast. Optionally determines a simulation-based cutoff for the
+      first eigenvalue via parametric bootstrap
+      (easyRasch2::RMdimResidualPCACutoff(); Chou & Wang, 2010).
   - title: Partial Gamma Local Dependence
     name: locdepgamma
     ns: easyRasch2jmv
@@ -111,12 +125,18 @@ analyses:
     category: analyses
     description: |
       Computes partial gamma coefficients for Local Dependence (LD)
-      assessment using iarm::partgam_LD(). Each pair of items is tested
-      for residual association, controlling for the rest score (total
-      score minus one of the items in the pair). Because it matters
-      which item of a pair is subtracted from the total score, each pair
-      is tested in both rest-score directions (two tables). Based on
-      easyRasch2::RMlocdepGamma().
+      assessment via the easyRasch2 R package (iarm::partgam_LD()). Each
+      pair of items is tested for residual association, controlling for
+      the rest score (total score minus one of the items in the pair).
+      Because it matters which item of a pair is subtracted from the
+      total score, each pair is tested in both rest-score directions
+      (two tables). Optionally determines simulation-based per-pair
+      expected ranges via parametric bootstrap (data simulated from the
+      fitted model contain no true LD), with a plot of the simulated
+      distributions and observed values. Results are identical to
+      easyRasch2::RMlocdepGamma(), RMlocdepGammaCutoff(), and
+      RMlocdepGammaPlot() with the same seed and iterations. Single-core
+      sequential processing is used.
   - title: Q3 Residual Correlation Matrix
     name: locdepq3
     ns: easyRasch2jmv
@@ -125,9 +145,15 @@ analyses:
     category: analyses
     description: |
       Computes Yen's Q3 residual correlations between item pairs for local
-      dependence assessment in Rasch models (fitted via mirt). Optionally
-      runs a parametric bootstrap simulation to determine a simulation-based
-      cutoff value. Single-core sequential processing is used by default.
+      dependence assessment in Rasch models, using the easyRasch2 R package:
+      item parameters are estimated by conditional maximum likelihood (CML,
+      via psychotools) and person locations by Warm's weighted likelihood
+      (WLE). Optionally runs a parametric bootstrap simulation to determine
+      simulation-based cutoff values -- a global cutoff applied to the Q3
+      matrix and per-pair expected ranges -- along with a Q3 heatmap and a
+      per-pair distribution plot. Results match easyRasch2::RMlocdepQ3(),
+      RMlocdepQ3Cutoff(), and RMlocdepQ3Plot() with the same seed and
+      iterations. Single-core sequential processing is used.
   - title: Andersen LR-test DIF
     name: lrdif
     ns: easyRasch2jmv
@@ -135,12 +161,15 @@ analyses:
     menuTitle: Andersen LR-test DIF
     category: analyses
     description: |-
-      Splits a Rasch model by an external categorical grouping variable
-      using `eRm::LRtest()` (Andersen's likelihood-ratio test) and reports
-      per-group item locations (or per-group threshold locations) together
-      with their standard errors. The dichotomous Rasch Model (RM) is
-      fitted when the data are 0/1; the Partial Credit Model (PCM)
-      otherwise -- chosen automatically.
+      Splits a Rasch / Partial Credit model by an external categorical
+      grouping variable using Andersen's likelihood-ratio test
+      (eRm::LRtest(), via the easyRasch2 R package) and reports per-group
+      item locations (or per-group threshold locations) together with
+      their standard errors, a MaxDiff column (largest between-group
+      location difference), and an optional per-group locations figure.
+      Results are identical to easyRasch2::RMdifLR(). A
+      response-distribution tileplot (easyRasch2::RMplotTile()) is
+      available for inspecting per-group category counts.
   - title: Partial Gamma DIF
     name: partgamdif
     ns: easyRasch2jmv
@@ -149,13 +178,33 @@ analyses:
     category: analyses
     description: |-
       Computes partial gamma coefficients for Differential Item
-      Functioning (DIF) using iarm::partgam_DIF(): the association
-      between each item and the DIF variable, controlling for the rest
-      score. Optionally determines simulation-based expected ranges via
-      parametric bootstrap (the DIF variable is randomly reassigned with
-      preserved group proportions, so the simulated data contain no true
-      DIF). A response-distribution tileplot is available for inspecting
-      per-group category counts.
+      Functioning (DIF) via the easyRasch2 R package
+      (iarm::partgam_DIF()): the association between each item and the
+      DIF variable, controlling for the rest score. Optionally
+      determines simulation-based expected ranges via parametric
+      bootstrap (data are simulated from the fitted model and the DIF
+      variable is randomly reassigned with preserved group proportions,
+      so the simulated data contain no true DIF). Results are identical
+      to easyRasch2::RMdifGamma() and RMdifGammaCutoff() with the same
+      seed and iterations. A response-distribution tileplot
+      (easyRasch2::RMplotTile()) is available for inspecting per-group
+      category counts. Single-core sequential processing is used.
+  - title: Item Characteristic Curves (CICC)
+    name: cicc
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Item Characteristic Curves (CICC)
+    description: |-
+      Conditional item characteristic curves (Buchardt, Christensen &
+      Jensen, 2023): the model-expected item score as a function of the
+      total score (the exact conditional expectation), with observed mean
+      item scores overlaid per total-score group. Groups are formed on
+      the total-score scale -- quantile-based (approximately equal
+      numbers of respondents), equal-width score intervals, or one group
+      per total score -- and observed means that deviate from the
+      expected curve indicate localized item misfit. Drawn by
+      easyRasch2::RMitemICCPlot() (CML item estimation via psychotools).
   - title: Item Probability Curves
     name: iccplot
     ns: easyRasch2jmv
@@ -164,12 +213,13 @@ analyses:
     category: analyses
     description: |
       Plots model-implied response probabilities as a function of the
-      latent trait, using CML estimation via eRm (RM for dichotomous
-      data, PCM for polytomous -- chosen automatically). Dichotomous
-      data are shown as joint item characteristic curves (all items in
-      one panel, one curve per item, cf. eRm::plotjointICC); polytomous
-      data as category probability curves with one facet per item.
-      Mirrors easyRasch2::RMitemCatProb().
+      latent trait, computed by the easyRasch2 R package (CML estimation
+      via psychotools; a dichotomous item is a 2-category partial credit
+      model). Dichotomous data are shown as joint item characteristic
+      curves (all items in one panel, one curve per item, cf.
+      eRm::plotjointICC); polytomous data as category probability curves
+      with one facet per item, drawn by easyRasch2::RMitemCatProb().
+      Probabilities are identical to RMitemCatProb().
   - title: Targeting Plot
     name: targeting
     ns: easyRasch2jmv
@@ -179,12 +229,14 @@ analyses:
     description: |
       Person-item targeting plot (Wright map): back-to-back histograms
       of person locations and item threshold locations, plus a dot plot
-      of individual item thresholds with optional confidence intervals.
-      Item thresholds are estimated with CML (eRm); when any response
-      category has fewer than 3 observations the analysis falls back to
-      MML (mirt), which is more numerically stable under sparse
-      categories. Person locations always come from the eRm model.
-      Mirrors easyRasch2::RMtargeting().
+      of individual item thresholds with optional confidence intervals,
+      drawn by the easyRasch2 R package. Item thresholds are estimated
+      with CML (psychotools); when any response category has fewer than
+      3 observations the analysis falls back to MML (mirt), which is
+      more numerically stable under sparse categories. Person locations
+      are weighted likelihood estimates (WLE), finite at extreme scores.
+      Results are identical to easyRasch2::RMtargeting() and the
+      threshold table to easyRasch2::RMitemParameters().
   - title: Reliability
     name: reliability
     ns: easyRasch2jmv
@@ -192,12 +244,17 @@ analyses:
     menuTitle: Reliability
     category: analyses
     description: |-
-      Reports four reliability indices for a Rasch / partial credit model:
-      Cronbach's alpha (closed-form), the Person Separation Index (PSI) via
-      eRm::SepRel(), empirical reliability via mirt::empirical_rxx(), and
-      Relative Measurement Uncertainty (RMU) computed from mirt plausible
-      values using the Bignardi, Kievit & Bürkner (2025) split-half
-      correlation method.
+      Reports four reliability indices for a Rasch / partial credit model,
+      computed by the easyRasch2 R package (results are identical to
+      easyRasch2::RMreliability()): Cronbach's alpha (closed-form), the
+      WLE-based Person Separation Index (PSI; CML item parameters via
+      psychotools, min/max scorers excluded), the marginal reliability
+      (Green, 1984; CML test information integrated over the estimated
+      latent distribution), and Relative Measurement Uncertainty (RMU)
+      computed from mirt plausible values using the Bignardi, Kievit &
+      Bürkner (2025) split-half correlation method. A large gap between
+      PSI and Marginal suggests the sample is off-target relative to the
+      scale.
   - title: Sum Score to Logit Transformation
     name: scorese
     ns: easyRasch2jmv

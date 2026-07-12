@@ -138,7 +138,10 @@ reliabilityResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 rows=0,
                 refs=list(
                     "easyRasch2jmv",
-                    "mair2007",
+                    "easyRasch2",
+                    "zeileis2026",
+                    "warm1989",
+                    "green1984",
                     "chalmers2012",
                     "bignardi2025",
                     "mislevy1991",
@@ -216,18 +219,23 @@ reliabilityBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 
 #' Reliability
 #'
-#' Reports four reliability indices for a Rasch / partial credit model:
-#' Cronbach's alpha (closed-form), the Person Separation Index (PSI) via
-#' eRm::SepRel(), empirical reliability via mirt::empirical_rxx(), and
-#' Relative Measurement Uncertainty (RMU) computed from mirt plausible
-#' values using the Bignardi, Kievit & Bürkner (2025) split-half
-#' correlation method.
+#' Reports four reliability indices for a Rasch / partial credit model,
+#' computed by the easyRasch2 R package (results are identical to
+#' easyRasch2::RMreliability()): Cronbach's alpha (closed-form), the
+#' WLE-based Person Separation Index (PSI; CML item parameters via
+#' psychotools, min/max scorers excluded), the marginal reliability
+#' (Green, 1984; CML test information integrated over the estimated
+#' latent distribution), and Relative Measurement Uncertainty (RMU)
+#' computed from mirt plausible values using the Bignardi, Kievit &
+#' Bürkner (2025) split-half correlation method. A large gap between
+#' PSI and Marginal suggests the sample is off-target relative to the
+#' scale.
 #' 
-#' A non-parametric bootstrap CI can optionally be added for Cronbach's
-#' alpha; bootstrapping is intentionally not offered for PSI / Empirical
-#' in this Jamovi version because each iteration would require refitting
-#' eRm and mirt and the cost makes it impractical inside the Jamovi UI
-#' thread. Use the CLI function easyRasch2::RMreliability() for that.
+#' A non-parametric bootstrap can optionally be enabled: respondents
+#' are resampled and Cronbach's alpha, PSI, and Marginal reliability
+#' are recomputed natively per resample to yield HDCIs (no model
+#' refitting via mirt is involved, so it is fast enough for the jamovi
+#' UI). The RMU interval is always reported.
 #' 
 #' @param data .
 #' @param vars .

@@ -38,80 +38,33 @@ itemrestscoreClass <- R6::R6Class(
       if (!is.null(dup_msg))
         self$results$restscoreTable$setNote("duplicate", dup_msg)
 
+      # Respondents with no responses on any selected item are dropped up
+      # front: the bundled easyRasch2 release cannot fit all-NA rows
+      # (psychotools errors on polytomous and crashes on dichotomous data).
+      n_total <- nrow(df)
+      df <- df[rowSums(!is.na(df)) > 0, , drop = FALSE]
+
       # Sufficient complete cases?
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0) {
-        stop("No complete cases found in the data. Each row must have responses for all selected items.")
+        stop("No complete cases found in the data. The item-restscore statistics require at least one row with responses to all selected items.")
       }
 
-      # Run analysis (logic inlined from easyRasch2::RMitemRestscore)
       tryCatch(
         {
-          data_mat <- as.matrix(df)
           n_items <- ncol(df)
 
-          # Fit Rasch model and compute item/person locations
-          if (max(data_mat, na.rm = TRUE) == 1L) {
-            # Dichotomous: Rasch model
-            erm_out <- eRm::RM(df)
-            item_avg_locations <- stats::coef(erm_out, "beta") * -1
-            pp <- eRm::person.parameter(erm_out)
-            person_avg_location <- mean(pp$theta.table[["Person Parameter"]], na.rm = TRUE)
-          } else {
-            # Polytomous: Partial Credit Model
-            erm_out <- eRm::PCM(df)
-            thresh_obj <- eRm::thresholds(erm_out)
-            thresh_table <- thresh_obj$threshtable[[1]]
-            item_avg_locations <- rowMeans(thresh_table, na.rm = TRUE)
-            pp <- eRm::person.parameter(erm_out)
-            person_avg_location <- mean(pp$theta.table[["Person Parameter"]], na.rm = TRUE)
-          }
-
-          relative_item_avg_locations <- item_avg_locations - person_avg_location
-
-          # Temporarily set rgl.useNULL to avoid rgl device issues during iarm fitting
-          old_rgl <- getOption("rgl.useNULL")
-          options(rgl.useNULL = TRUE)
-          on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
-
-          # iarm refits the model on complete cases (na.omit) when any
-          # responses are missing -- suppress its console message; the
-          # behaviour is documented in the HTML note below the table.
-          # BH adjustment is hardcoded module-wide.
-          i1 <- suppressMessages(iarm::item_restscore(erm_out, p.adj = "BH"))
-          i1 <- as.data.frame(i1)
-
-          # Pass raw numerics (no pre-rounding) so the jamovi frontend
-          # applies the user's "Number format" preferences -- matches the
-          # convention used by the newer analyses in this module.
-          res_mat <- i1[[1]]
-          observed <- as.numeric(res_mat[seq_len(n_items), 1L])
-          expected <- as.numeric(res_mat[seq_len(n_items), 2L])
-          p_adjusted <- as.numeric(res_mat[seq_len(n_items), 5L])
-
-          # Assemble result data.frame. `Difference` is signed (observed -
-          # expected): positive = item over-discriminates (often LD),
-          # negative = item under-discriminates (often noise / multi-dim).
-          # `Fit` classifies items as overfit (observed > expected) or
-          # underfit (observed < expected) when adj. p < .05 -- the same
-          # rule and labels as the bootstrap item-restscore analysis.
-          difference <- observed - expected
-          fit_class <- ifelse(
-            !is.na(p_adjusted) & p_adjusted < 0.05 & difference > 0, "overfit",
-            ifelse(!is.na(p_adjusted) & p_adjusted < 0.05 & difference < 0,
-                   "underfit", "")
-          )
-          results <- data.frame(
-            Item              = names(df),
-            Observed          = observed,
-            Expected          = expected,
-            Difference        = difference,
-            p_adjusted        = p_adjusted,
-            Fit               = fit_class,
-            Relative_location = relative_item_avg_locations,
-            stringsAsFactors  = FALSE,
-            row.names         = NULL
-          )
+          # All computation is delegated to the easyRasch2 package: CML item
+          # estimation via psychotools with WLE person estimates for the
+          # relative locations, and iarm::item_restscore() with hardcoded BH
+          # adjustment (module-wide convention, also the package default).
+          # Results are numerically identical to RMitemRestscore(). Values
+          # are as reported by the package's dataframe output. Package
+          # warnings (e.g. sparse categories) are suppressed -- the module
+          # surfaces its own sparse-category footnote above.
+          results <- suppressWarnings(suppressMessages(
+            easyRasch2::RMitemRestscore(df, output = "dataframe")
+          ))
 
           # Sort by absolute magnitude when requested, so both over- and
           # underfit items rise to the top while the signed value remains
@@ -130,7 +83,7 @@ itemrestscoreClass <- R6::R6Class(
               expected    = results$Expected[i],
               difference  = results$Difference[i],
               pAdjusted   = results$p_adjusted[i],
-              fit         = results$Fit[i],
+              fit         = results$Flagged[i],
               relLocation = results$Relative_location[i]
             ))
           }
@@ -149,32 +102,37 @@ itemrestscoreClass <- R6::R6Class(
           ))
           table$setNote("loc", paste0(
             "Rel. location = mean item (threshold) location relative to ",
-            "the mean person location, in logits."
+            "the mean person location (weighted likelihood estimates, ",
+            "WLE), in logits."
           ))
 
           # Sample-size / missing-data note. The two parts of the table
           # use different samples when responses are missing: iarm refits
           # the model on complete cases for the restscore statistics,
-          # while the Location columns come from the eRm fit on all
-          # available responses (CML accommodates partial missingness).
-          # This mirrors easyRasch2::RMitemRestscore(). Rows with no valid
-          # responses at all contribute nothing and are not counted in N.
-          n_total <- sum(rowSums(!is.na(df)) > 0)
-          missing_clause <- if (n_total > n_complete) {
+          # while the Location columns come from the CML fit on all
+          # available responses (partial rows retained). This mirrors
+          # easyRasch2::RMitemRestscore(). Rows with no valid responses at
+          # all were dropped above and are reported separately.
+          n_used <- nrow(df)
+          drop_clause <- if (n_used < n_total) {
+            paste0(" (", n_total - n_used, " row(s) without any responses ",
+                   "on the selected items excluded)")
+          } else ""
+          missing_clause <- if (n_used > n_complete) {
             paste0(", of whom ", n_complete, " had complete responses on ",
                    "all ", n_items, " items. Restscore correlations and ",
                    "p-values are computed from the ", n_complete,
                    " complete cases (the model is refitted on complete ",
                    "cases for this purpose); item locations use all ",
-                   "available responses via eRm's conditional maximum ",
+                   "available responses via conditional maximum ",
                    "likelihood estimation.")
           } else {
             paste0(", all with complete responses on all ", n_items,
                    " items.")
           }
           self$results$restscoreNote$setContent(paste0(
-            "<p>Analysis based on N = ", n_total, " respondents",
-            missing_clause, "</p>"
+            "<p>Analysis based on N = ", n_used, " respondents",
+            drop_clause, missing_clause, "</p>"
           ))
         },
         error = function(e) {

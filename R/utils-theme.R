@@ -50,6 +50,30 @@ er2_caption <- function(text, width = 90L) {
   paste(strwrap(prefixed, width = width), collapse = "\n")
 }
 
+#' Enlarge text on a package-drawn plot to the module's base size
+#'
+#' Plots returned by easyRasch2 use the package's default text sizes
+#' (ggplot2 base size 11-13), which are too small on jamovi's fixed-size
+#' canvases; module-drawn plots use base size 15. This bumps the theme's
+#' root `text` element additively, so every rel()-sized element (axis
+#' text, titles, strips, legends) scales along while each plot's own
+#' specific theme settings -- rotated axis labels, blanked grids, the
+#' 10 pt caption from `er2_plot_caption()` -- survive untouched.
+#' patchwork objects get the theme applied to every panel via `&`.
+#'
+#' @param p A `ggplot` or `patchwork` object.
+#' @param size Base text size in points. Default 15 (13 suits dense
+#'   multi-facet grids, matching the module's previous faceted plots).
+#' @return The re-themed plot object.
+#' @noRd
+er2_bump_text <- function(p, size = 15) {
+  th <- ggplot2::theme(text = ggplot2::element_text(size = size))
+  if (inherits(p, "patchwork")) {
+    return(p & th)
+  }
+  p + th
+}
+
 #' Wrap long axis / facet labels onto multiple lines
 #'
 #' Base R only -- no stringr dependency. Width chosen so labels like

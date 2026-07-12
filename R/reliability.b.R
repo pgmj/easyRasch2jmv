@@ -21,7 +21,7 @@ reliabilityClass <- R6::R6Class(
       labels <- c(
         "Cronbach's alpha",
         "PSI",
-        paste0("Empirical (", estim, ")"),
+        "Marginal",
         paste0("RMU (", estim, ")")
       )
       for (i in seq_along(labels)) {
@@ -41,18 +41,19 @@ reliabilityClass <- R6::R6Class(
     .run = function() {
 
       # 1. Return early / explain if requirements not met. With 2
-      # dichotomous items the MML model (mirt) is not estimable (too few
-      # degrees of freedom), and reliability estimates from 2-item
-      # scales are generally not informative, so require 3 items.
+      # dichotomous items the MML model (mirt) behind the RMU estimate is
+      # not estimable (too few degrees of freedom), and reliability
+      # estimates from 2-item scales are generally not informative, so
+      # require 3 items.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
       if (length(self$options$vars) < 3) {
         self$results$relNote$setContent(paste0(
           "<p>This analysis requires at least <b>3 items</b>. With 2 ",
-          "dichotomous items the latent model used for the Empirical and ",
-          "RMU estimates cannot be estimated (too few degrees of ",
-          "freedom), and reliability estimates from 2-item scales are ",
-          "generally not informative. Select at least 3 items.</p>"
+          "dichotomous items the latent model used for the RMU estimate ",
+          "cannot be estimated (too few degrees of freedom), and ",
+          "reliability estimates from 2-item scales are generally not ",
+          "informative. Select at least 3 items.</p>"
         ))
         return()
       }
@@ -76,8 +77,13 @@ reliabilityClass <- R6::R6Class(
       if (!is.null(dup_msg))
         self$results$relTable$setNote("duplicate", dup_msg)
 
+      # Respondents with no responses on any selected item are dropped up
+      # front: the bundled easyRasch2 release cannot fit all-NA rows
+      # (psychotools errors on polytomous and crashes on dichotomous data).
+      n_total <- nrow(df)
+      df <- df[rowSums(!is.na(df)) > 0, , drop = FALSE]
+
       n_complete <- sum(complete.cases(df))
-      n_total    <- nrow(df)
       if (n_complete == 0)
         stop("No complete cases found in the data.")
 
@@ -87,7 +93,7 @@ reliabilityClass <- R6::R6Class(
       rmu_iter    <- self$options$rmuIter
       conf_int    <- self$options$confInt / 100
       theta_range <- c(self$options$thetaMin, self$options$thetaMax)
-      boot_alpha  <- isTRUE(self$options$bootAlpha)
+      boot_cis    <- isTRUE(self$options$bootAlpha)
       boot_iter   <- self$options$bootIter
       seed        <- self$options$seed
 
@@ -100,133 +106,56 @@ reliabilityClass <- R6::R6Class(
         options(rgl.useNULL = TRUE)
         on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
-        data_mat      <- as.matrix(df)
-        is_polytomous <- max(data_mat, na.rm = TRUE) > 1L
-
-        # 5. Full-sample fits
-        mirt_fit <- suppressMessages(
-          mirt::mirt(
-            data       = df,
-            model      = 1,
-            itemtype   = "Rasch",
-            verbose    = FALSE,
-            accelerate = "squarem"
+        # 5. All computation is delegated to the easyRasch2 package:
+        # Cronbach's alpha (closed-form, complete cases), the WLE-based
+        # PSI (native CML/WLE engine, min/max scorers excluded), the
+        # native marginal reliability (Green, 1984; CML test information
+        # integrated over the estimated normal latent density), and RMU
+        # from mirt plausible values. When the bootstrap is enabled,
+        # respondents are resampled and alpha / PSI / Marginal are
+        # recomputed natively per resample for HDCIs. Results are
+        # numerically identical to RMreliability() with the same seed.
+        # Package warnings are suppressed -- the module surfaces its own
+        # footnotes.
+        results <- suppressWarnings(suppressMessages(
+          easyRasch2::RMreliability(
+            df,
+            conf_int    = conf_int,
+            draws       = draws,
+            rmu_iter    = rmu_iter,
+            estim       = estim,
+            boot        = boot_cis,
+            boot_iter   = boot_iter,
+            parallel    = FALSE,
+            seed        = as.integer(seed),
+            theta_range = theta_range,
+            output      = "dataframe"
           )
-        )
-        erm_fit <- if (is_polytomous) eRm::PCM(df) else eRm::RM(df)
+        ))
 
-        # 6. Cronbach's alpha
-        alpha <- .reliab_cronbach_alpha(df)
-
-        # 7. PSI from eRm::SepRel (canonical)
-        psi <- as.numeric(eRm::SepRel(eRm::person.parameter(erm_fit))$sep.rel)
-
-        # 8. Empirical reliability (mirt)
-        emp_rel <- as.numeric(
-          mirt::empirical_rxx(
-            mirt::fscores(mirt_fit,
-                          method         = estim,
-                          theta_lim      = theta_range,
-                          full.scores.SE = TRUE,
-                          verbose        = FALSE)
-          )
-        )
-
-        # 9. RMU (mirt PVs + iterated split-half correlations)
-        if (!is.null(seed)) set.seed(seed)
-        pvs <- mirt::fscores(
-          mirt_fit,
-          method          = estim,
-          theta_lim       = theta_range,
-          plausible.draws = draws,
-          plausible.type  = "MH",
-          verbose         = FALSE
-        )
-        rmu_input <- do.call(cbind, lapply(pvs, as.numeric))
-
-        rmu_iter_results <- do.call(
-          rbind,
-          lapply(seq_len(rmu_iter), function(i) {
-            .reliab_rmu(rmu_input, level = conf_int)
-          })
-        )
-        rmu_estimate <- mean(rmu_iter_results$rmu_estimate)
-        rmu_lower    <- mean(rmu_iter_results$hdci_lowerbound)
-        rmu_upper    <- mean(rmu_iter_results$hdci_upperbound)
-
-        # 10. Bootstrap CI for Cronbach's alpha (sequential, closed-form)
-        alpha_lower <- NA_real_
-        alpha_upper <- NA_real_
-        actual_boot <- NA_integer_
-        if (isTRUE(boot_alpha)) {
-          set.seed(seed + 1L)
-          boot_seeds <- sample.int(.Machine$integer.max, boot_iter)
-          alpha_vec <- vapply(seq_len(boot_iter), function(i) {
-            set.seed(boot_seeds[i])
-            idx <- sample.int(nrow(df), nrow(df), replace = TRUE)
-            .reliab_cronbach_alpha(df[idx, , drop = FALSE])
-          }, numeric(1L))
-          alpha_vec <- alpha_vec[is.finite(alpha_vec)]
-          actual_boot <- length(alpha_vec)
-          # Same robustness thresholds as the simulation analyses: a
-          # CI from a handful of usable resamples would be misleading.
-          if (actual_boot >= 20L) {
-            alpha_int   <- ggdist::hdci(alpha_vec, .width = conf_int)
-            alpha_lower <- alpha_int[1L, 1L]
-            alpha_upper <- alpha_int[1L, 2L]
-          }
-        }
-
-        # 11. Build result rows
-        boot_note <- if (isTRUE(boot_alpha)) {
-          if (!is.na(actual_boot) &&
-              actual_boot >= 20L) {
-            paste0(actual_boot, " bootstrap resamples")
-          } else {
-            paste0("bootstrap failed (only ", actual_boot, " of ",
-                   boot_iter, " resamples usable)")
-          }
-        } else {
-          "no bootstrap"
-        }
-        rmu_note <- paste0(draws, " PVs, ", rmu_iter, " RMU iterations")
-
-        # Raw values (no pre-rounding) so the jamovi frontend applies
-        # the user's "Number format" preferences.
-        rows <- list(
-          list(metric   = "Cronbach's alpha",
-               estimate = alpha,
-               lower    = alpha_lower,
-               upper    = alpha_upper,
-               notes    = boot_note),
-          list(metric   = "PSI",
-               estimate = psi,
-               lower    = NA_real_,
-               upper    = NA_real_,
-               notes    = "eRm::SepRel"),
-          list(metric   = paste0("Empirical (", estim, ")"),
-               estimate = emp_rel,
-               lower    = NA_real_,
-               upper    = NA_real_,
-               notes    = "mirt::empirical_rxx"),
-          list(metric   = paste0("RMU (", estim, ")"),
-               estimate = rmu_estimate,
-               lower    = rmu_lower,
-               upper    = rmu_upper,
-               notes    = rmu_note)
-        )
-
-        # 12. Populate table (rows created in .init(); fill values here)
+        # 6. Populate table (rows created in .init(); fill values here).
+        # Row order from the package is fixed: alpha, PSI, Marginal, RMU.
         table <- self$results$relTable
-        for (i in seq_along(rows)) {
-          table$setRow(rowKey = i, values = rows[[i]])
+        for (i in seq_len(nrow(results))) {
+          table$setRow(rowKey = i, values = list(
+            metric   = results$metric[i],
+            estimate = results$estimate[i],
+            lower    = results$lower[i],
+            upper    = results$upper[i],
+            notes    = results$notes[i]
+          ))
         }
         table$setNote(
           "context",
           paste0(
-            "PSI uses eRm CML item parameters and excludes respondents with ",
-            "min/max raw scores. Empirical reliability and RMU use MML item ",
-            "parameters from mirt; theta estimator: ", estim, "."
+            "PSI is the WLE-based person-separation reliability (CML item ",
+            "parameters via psychotools) and excludes respondents with ",
+            "min/max raw scores. Marginal is the model-based marginal ",
+            "reliability (Green, 1984): CML test information integrated ",
+            "over the estimated latent distribution -- a large gap between ",
+            "PSI and Marginal suggests the sample is off-target relative ",
+            "to the scale. RMU uses plausible values from an MML model ",
+            "(mirt); theta estimator for the RMU draws: ", estim, "."
           )
         )
         table$setNote(
@@ -234,24 +163,28 @@ reliabilityClass <- R6::R6Class(
           paste0(
             "HDCI = highest-density continuous interval (width set by the ",
             "HDCI width option; here ", round(conf_int * 100, 1),
-            "%). Available for Cronbach's alpha (when bootstrapped) and ",
-            "RMU; PSI and Empirical reliability are reported as point ",
-            "estimates only. RMU = Relative Measurement Uncertainty."
+            "%). Available for Cronbach's alpha, PSI, and Marginal when ",
+            "the bootstrap is enabled, and always for RMU. RMU = Relative ",
+            "Measurement Uncertainty."
           )
         )
 
-        # 13. Caption. The estimates use different samples when data are
+        # 7. Caption. The estimates use different samples when data are
         # missing: Cronbach's alpha is closed-form on complete cases,
         # while the model-based estimates retain partially missing rows
-        # (eRm CML / mirt MML).
-        n_used <- sum(rowSums(!is.na(df)) > 0)
+        # (CML / MML estimation).
+        n_used <- nrow(df)
+        drop_clause <- if (n_used < n_total) {
+          paste0(" (", n_total - n_used, " row(s) without any responses ",
+                 "on the selected items excluded)")
+        } else ""
         missing_msg <- if (n_used > n_complete) {
           paste0(
             " Cronbach's alpha is computed from the ", n_complete,
-            " complete cases; the model-based estimates (PSI, Empirical, ",
+            " complete cases; the model-based estimates (PSI, Marginal, ",
             "RMU) use all ", n_used, " rows with at least one response ",
-            "(eRm's CML and mirt's MML estimation accommodate partially ",
-            "missing responses)."
+            "(CML and MML estimation accommodate partially missing ",
+            "responses)."
           )
         } else {
           ""
@@ -260,6 +193,7 @@ reliabilityClass <- R6::R6Class(
           paste0(
             "<p>Reliability based on N = ", n_used,
             " respondents across ", ncol(df), " items",
+            drop_clause,
             if (n_used > n_complete)
               paste0(" (", n_complete, " with complete responses)")
             else "",
@@ -273,58 +207,3 @@ reliabilityClass <- R6::R6Class(
     }
   )
 )
-
-# ---------------------------------------------------------------------------
-# Internal helpers (free functions, not on the R6 class)
-# ---------------------------------------------------------------------------
-
-#' Cronbach's alpha (closed-form, complete cases)
-#'
-#' @keywords internal
-#' @noRd
-.reliab_cronbach_alpha <- function(data) {
-  d <- stats::na.omit(as.data.frame(data))
-  k <- ncol(d)
-  if (k < 2L || nrow(d) < 2L) return(NA_real_)
-  total_var <- stats::var(rowSums(d))
-  if (!is.finite(total_var) || total_var == 0) return(NA_real_)
-  item_vars <- vapply(d, stats::var, numeric(1L))
-  (k / (k - 1L)) * (1 - sum(item_vars) / total_var)
-}
-
-#' Relative Measurement Uncertainty from posterior / plausible-value draws
-#'
-#' Adapted from gbtoolbox::reliability() (GPL-2/3) and the easyRaschBayes
-#' implementation. Random column split, paired Pearson correlations, summary
-#' via ggdist::mean_hdci.
-#'
-#' @keywords internal
-#' @noRd
-.reliab_rmu <- function(input_draws, level = 0.95) {
-  input_draws <- as.matrix(input_draws)
-  if (ncol(input_draws) < 2L) {
-    stop("`input_draws` must have at least 2 columns.", call. = FALSE)
-  }
-
-  col_select <- sample.int(ncol(input_draws), replace = FALSE)
-  half       <- floor(length(col_select) / 2)
-  cols_a     <- col_select[seq_len(half)]
-  cols_b     <- col_select[(half + 1L):(2L * half)]
-
-  draws_a <- input_draws[, cols_a, drop = FALSE]
-  draws_b <- input_draws[, cols_b, drop = FALSE]
-
-  rel_post <- vapply(seq_len(ncol(draws_a)), function(i) {
-    x <- draws_a[, i]
-    y <- draws_b[, i]
-    if (stats::var(x, na.rm = TRUE) == 0 ||
-        stats::var(y, na.rm = TRUE) == 0) {
-      return(0)
-    }
-    stats::cor(x, y, method = "pearson", use = "complete.obs")
-  }, numeric(1L))
-
-  hdci <- ggdist::mean_hdci(rel_post, .width = level)
-  colnames(hdci)[1:3] <- c("rmu_estimate", "hdci_lowerbound", "hdci_upperbound")
-  hdci
-}

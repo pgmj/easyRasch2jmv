@@ -8,7 +8,7 @@ items:
       title: Item-Restscore Correlations
       type: Table
       rows: (vars)
-      refs: [easyRasch2jmv, kreiner2011, mueller2022, mair2007]
+      refs: [easyRasch2jmv, easyRasch2, kreiner2011, mueller2022, zeileis2026, warm1989]
       clearWith:
           - vars
           - sortByDiff
