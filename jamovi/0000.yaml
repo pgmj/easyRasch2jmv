@@ -117,6 +117,22 @@ analyses:
       contrast. Optionally determines a simulation-based cutoff for the
       first eigenvalue via parametric bootstrap
       (easyRasch2::RMdimResidualPCACutoff(); Chou & Wang, 2010).
+  - title: Martin-Löf Test
+    name: martinlof
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Martin-Löf Test
+    description: |-
+      Martin-Löf likelihood-ratio test of unidimensionality against an
+      a priori partition of the items into two subscales, generalised
+      to polytomous Rasch / partial credit models (Christensen,
+      Bjorner, Kreiner & Petersen, 2002), computed by the easyRasch2 R
+      package (RMdimMartinLof()). The p-value is obtained by Monte
+      Carlo simulation under the unidimensional null model (Christensen
+      & Kreiner, 2007), because the asymptotic chi-square approximation
+      is biased toward conservatism at realistic sample sizes,
+      especially with polytomous items.
   - title: Partial Gamma Local Dependence
     name: locdepgamma
     ns: easyRasch2jmv
@@ -143,7 +159,7 @@ analyses:
     menuGroup: easyRasch2jmv
     menuTitle: Q3 Residual Correlation Matrix
     category: analyses
-    description: |
+    description: |-
       Computes Yen's Q3 residual correlations between item pairs for local
       dependence assessment in Rasch models, using the easyRasch2 R package:
       item parameters are estimated by conditional maximum likelihood (CML,
@@ -170,6 +186,22 @@ analyses:
       Results are identical to easyRasch2::RMdifLR(). A
       response-distribution tileplot (easyRasch2::RMplotTile()) is
       available for inspecting per-group category counts.
+  - title: Tree-Based DIF
+    name: diftree
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Tree-Based DIF
+    description: |-
+      Tree-based Differential Item Functioning (DIF) analysis via the
+      easyRasch2 R package (RMdifTree(), building on
+      psychotree::raschtree() / pctree()): the sample is recursively
+      split on one or more covariates wherever the item parameters are
+      unstable, so DIF is detected without pre-specifying groups.
+      Unlike the other DIF analyses in this module, several covariates
+      can be examined at once, continuous covariates (e.g. age) are
+      handled natively (the algorithm finds the optimal cutpoint), and
+      interactions emerge as nested splits.
   - title: Partial Gamma DIF
     name: partgamdif
     ns: easyRasch2jmv
@@ -255,17 +287,41 @@ analyses:
       Bürkner (2025) split-half correlation method. A large gap between
       PSI and Marginal suggests the sample is off-target relative to the
       scale.
-  - title: Sum Score to Logit Transformation
-    name: scorese
+  - title: Person Parameters
+    name: personparams
     ns: easyRasch2jmv
-    menuGroup: easyRasch2jmv
-    menuTitle: Sum Score to Logit Transformation
     category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Person Parameters
     description: |-
-      Maps each possible raw sum score to a person-location estimate (in
-      logits) and its standard error. Useful when reporting a scale's
-      measurement properties or converting raw totals to interval-scaled
-      scores.
+      Estimates a location on the latent variable (theta, in logits) for
+      each respondent, with its standard error of measurement (SEM),
+      using the easyRasch2 R package (RMpersonParameters()): item
+      parameters are estimated once by conditional maximum likelihood
+      (CML, via psychotools) and treated as fixed; each person's theta
+      is then estimated from the items they answered, so respondents
+      with partially missing responses are retained. Results are
+      identical to easyRasch2::RMpersonParameters().
+  - title: Person Fit
+    name: personfit
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Person Fit
+    description: |-
+      Computes per-respondent person-fit statistics with Monte-Carlo
+      resampled p-values, using the easyRasch2 R package
+      (RMpersonFit()): conditional infit and outfit mean-squares (MSQ;
+      computed conditional on the total score, so no biased person
+      estimate enters, and partial missingness is handled directly) and
+      the standardized log-likelihood statistic lz. Significance is
+      assessed by resampling under the fitted model rather than by the
+      unreliable asymptotic null distributions: the MSQ statistics are
+      referenced against patterns sampled conditional on the person's
+      total score, and lz against patterns simulated at the estimated
+      location with the location re-estimated per pattern. Results are
+      identical to easyRasch2::RMpersonFit() with the same seed and
+      iterations. Single-core sequential processing is used.
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

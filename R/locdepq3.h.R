@@ -11,6 +11,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             iterations = 250,
             hdciWidth = 99,
             seed = 42,
+            pValues = FALSE,
+            correction = "fwer",
             nPairs = 10, ...) {
 
             super$initialize(
@@ -49,6 +51,18 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 seed,
                 default=42,
                 min=0)
+            private$..pValues <- jmvcore::OptionBool$new(
+                "pValues",
+                pValues,
+                default=FALSE)
+            private$..correction <- jmvcore::OptionList$new(
+                "correction",
+                correction,
+                options=list(
+                    "fwer",
+                    "fdr_bh",
+                    "fdr_by"),
+                default="fwer")
             private$..nPairs <- jmvcore::OptionInteger$new(
                 "nPairs",
                 nPairs,
@@ -61,6 +75,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..iterations)
             self$.addOption(private$..hdciWidth)
             self$.addOption(private$..seed)
+            self$.addOption(private$..pValues)
+            self$.addOption(private$..correction)
             self$.addOption(private$..nPairs)
         }),
     active = list(
@@ -69,6 +85,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         iterations = function() private$..iterations$value,
         hdciWidth = function() private$..hdciWidth$value,
         seed = function() private$..seed$value,
+        pValues = function() private$..pValues$value,
+        correction = function() private$..correction$value,
         nPairs = function() private$..nPairs$value),
     private = list(
         ..vars = NA,
@@ -76,6 +94,8 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..iterations = NA,
         ..hdciWidth = NA,
         ..seed = NA,
+        ..pValues = NA,
+        ..correction = NA,
         ..nPairs = NA)
 )
 
@@ -106,7 +126,9 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "yen1984",
                     "christensen2017",
                     "zeileis2026",
-                    "warm1989"),
+                    "warm1989",
+                    "ferreira2024",
+                    "westfallyoung1993"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",
@@ -173,7 +195,9 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "iterations",
                     "hdciWidth",
-                    "seed"),
+                    "seed",
+                    "pValues",
+                    "correction"),
                 columns=list(
                     list(
                         `name`="item1", 
@@ -201,6 +225,18 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `format`="zto", 
                         `superTitle`="Expected range"),
                     list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjusted", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
                         `name`="flagged", 
                         `title`="Flagged", 
                         `type`="text"))))
@@ -213,7 +249,9 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "iterations",
                     "hdciWidth",
-                    "seed")))}))
+                    "seed",
+                    "pValues",
+                    "correction")))}))
 
 locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "locdepq3Base",
@@ -249,12 +287,26 @@ locdepq3Base <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' RMlocdepQ3Cutoff(), and RMlocdepQ3Plot() with the same seed and
 #' iterations. Single-core sequential processing is used.
 #' 
+#' Optionally, bootstrap p-values can be added to the item-pair
+#' table: each pair's observed Q3 is compared against its simulated
+#' distribution (one-sided Monte-Carlo p-value for excess positive
+#' local dependence), with correction for multiple comparisons
+#' across all pairs -- Westfall-Young step-down (familywise error
+#' rate, the default; Ferreira, 2024), Benjamini-Hochberg, or
+#' Benjamini-Yekutieli (false discovery rate). Flagging is then
+#' based on the adjusted p-value (< 0.05) instead of the expected
+#' range. At least 1000 iterations are recommended when reporting
+#' p-values. Results match easyRasch2::RMlocdepQ3() with
+#' p_value = TRUE.
+#' 
 #' @param data .
 #' @param vars .
 #' @param computeCutoff .
 #' @param iterations .
 #' @param hdciWidth .
 #' @param seed .
+#' @param pValues .
+#' @param correction .
 #' @param nPairs .
 #' @return A results object containing:
 #' \tabular{llllll}{
@@ -280,6 +332,8 @@ locdepq3 <- function(
     iterations = 250,
     hdciWidth = 99,
     seed = 42,
+    pValues = FALSE,
+    correction = "fwer",
     nPairs = 10) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
@@ -298,6 +352,8 @@ locdepq3 <- function(
         iterations = iterations,
         hdciWidth = hdciWidth,
         seed = seed,
+        pValues = pValues,
+        correction = correction,
         nPairs = nPairs)
 
     analysis <- locdepq3Class$new(

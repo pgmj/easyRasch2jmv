@@ -12,6 +12,7 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             bins = 15,
             xlimLow = -4,
             xlimHigh = 4,
+            longFormat = FALSE,
             showCi = TRUE,
             ciLevel = 95, ...) {
 
@@ -58,6 +59,10 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 default=4,
                 min=0,
                 max=10)
+            private$..longFormat <- jmvcore::OptionBool$new(
+                "longFormat",
+                longFormat,
+                default=FALSE)
             private$..showCi <- jmvcore::OptionBool$new(
                 "showCi",
                 showCi,
@@ -75,6 +80,7 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..bins)
             self$.addOption(private$..xlimLow)
             self$.addOption(private$..xlimHigh)
+            self$.addOption(private$..longFormat)
             self$.addOption(private$..showCi)
             self$.addOption(private$..ciLevel)
         }),
@@ -85,6 +91,7 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         bins = function() private$..bins$value,
         xlimLow = function() private$..xlimLow$value,
         xlimHigh = function() private$..xlimHigh$value,
+        longFormat = function() private$..longFormat$value,
         showCi = function() private$..showCi$value,
         ciLevel = function() private$..ciLevel$value),
     private = list(
@@ -94,6 +101,7 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..bins = NA,
         ..xlimLow = NA,
         ..xlimHigh = NA,
+        ..longFormat = NA,
         ..showCi = NA,
         ..ciLevel = NA)
 )
@@ -142,40 +150,9 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 rows=0,
                 clearWith=list(
                     "vars",
-                    "ciLevel"),
-                columns=list(
-                    list(
-                        `name`="item", 
-                        `title`="Item", 
-                        `type`="text"),
-                    list(
-                        `name`="threshold", 
-                        `title`="Threshold", 
-                        `type`="text"),
-                    list(
-                        `name`="location", 
-                        `title`="Location", 
-                        `type`="number", 
-                        `format`="zto"),
-                    list(
-                        `name`="se", 
-                        `title`="SE", 
-                        `type`="number", 
-                        `format`="zto"),
-                    list(
-                        `name`="ciLow", 
-                        `title`="Lower", 
-                        `type`="number", 
-                        `format`="zto", 
-                        `visible`="(showCi)", 
-                        `superTitle`="CI"),
-                    list(
-                        `name`="ciHigh", 
-                        `title`="Upper", 
-                        `type`="number", 
-                        `format`="zto", 
-                        `visible`="(showCi)", 
-                        `superTitle`="CI"))))
+                    "ciLevel",
+                    "longFormat"),
+                columns=list()))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="targetingNote",
@@ -224,6 +201,7 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param bins .
 #' @param xlimLow .
 #' @param xlimHigh .
+#' @param longFormat .
 #' @param showCi .
 #' @param ciLevel .
 #' @return A results object containing:
@@ -248,6 +226,7 @@ targeting <- function(
     bins = 15,
     xlimLow = -4,
     xlimHigh = 4,
+    longFormat = FALSE,
     showCi = TRUE,
     ciLevel = 95) {
 
@@ -268,6 +247,7 @@ targeting <- function(
         bins = bins,
         xlimLow = xlimLow,
         xlimHigh = xlimHigh,
+        longFormat = longFormat,
         showCi = showCi,
         ciLevel = ciLevel)
 

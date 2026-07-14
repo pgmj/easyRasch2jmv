@@ -1,6 +1,5 @@
----
-title: Targeting Plot
-name: targeting
+title: Martin-Löf Test
+name: martinlof
 jus: '3.0'
 stage: 0
 compilerMode: tame
@@ -10,41 +9,33 @@ children:
     stretchFactor: 1
     children:
       - type: TargetLayoutBox
-        label: Items
+        label: Subscale 1 items
         children:
           - type: VariablesListBox
-            name: vars
+            name: subscale1
+            isTarget: true
+      - type: TargetLayoutBox
+        label: Subscale 2 items
+        children:
+          - type: VariablesListBox
+            name: subscale2
             isTarget: true
 
   - type: LayoutBox
     margin: large
     children:
-      - type: CheckBox
-        name: robust
-      - type: ComboBox
-        name: sortItems
       - type: TextBox
-        name: bins
+        name: iterations
         format: number
+      - type: TextBox
+        name: seed
+        format: number
+      - type: CheckBox
+        name: sequential
 
   - type: LayoutBox
     margin: large
     children:
       - type: TextBox
-        name: xlimLow
+        name: minExpected
         format: number
-      - type: TextBox
-        name: xlimHigh
-        format: number
-
-  - type: LayoutBox
-    margin: large
-    children:
-      - type: CheckBox
-        name: longFormat
-      - type: CheckBox
-        name: showCi
-      - type: TextBox
-        name: ciLevel
-        format: number
-...

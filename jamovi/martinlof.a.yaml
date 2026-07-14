@@ -1,0 +1,88 @@
+---
+name: martinlof
+title: Martin-Löf Test
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Martin-Löf likelihood-ratio test of unidimensionality against an
+        a priori partition of the items into two subscales, generalised
+        to polytomous Rasch / partial credit models (Christensen,
+        Bjorner, Kreiner & Petersen, 2002), computed by the easyRasch2 R
+        package (RMdimMartinLof()). The p-value is obtained by Monte
+        Carlo simulation under the unidimensional null model (Christensen
+        & Kreiner, 2007), because the asymptotic chi-square approximation
+        is biased toward conservatism at realistic sample sizes,
+        especially with polytomous items.
+
+        Interpreting the p-value: a small p-value means the observed
+        joint distribution of the two subscale scores departs from what a
+        single underlying dimension predicts -- evidence against
+        unidimensionality for this partition. Read it together with the
+        correlation between the subscale person estimates (WLE), which
+        serves as the effect size: a rejected test with a correlation
+        near 1 indicates a statistically detectable but trivial
+        departure, while a correlation clearly below 1 indicates
+        substantive multidimensionality.
+
+        Important: this is not a routine screening tool. The partition
+        must be specified a priori (e.g. from theory or instrument
+        design). Testing a partition suggested by the same data -- for
+        example the split indicated by the first residual PCA contrast --
+        inflates the Type-I error rate and invalidates the p-value.
+
+        The analysis uses complete cases only (rows with any missing
+        response are excluded; at least 30 complete cases are required).
+        Results are identical to easyRasch2::RMdimMartinLof() with the
+        same seed and iterations. Single-core sequential processing is
+        used.
+
+options:
+    - name: data
+      type: Data
+
+    - name: subscale1
+      title: Subscale 1 items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: subscale2
+      title: Subscale 2 items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: iterations
+      title: Number of Monte Carlo iterations
+      type: Integer
+      default: 250
+      min: 100
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+    - name: sequential
+      title: Sequential stopping (Besag-Clifford)
+      type: Bool
+      default: false
+
+    - name: minExpected
+      title: Grey out heatmap cells with expected count below (0 = off)
+      type: Number
+      default: 0
+      min: 0
+      max: 100
+...

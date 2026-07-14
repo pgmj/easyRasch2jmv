@@ -1,0 +1,97 @@
+---
+name: diftree
+title: Tree-Based DIF
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Tree-based Differential Item Functioning (DIF) analysis via the
+        easyRasch2 R package (RMdifTree(), building on
+        psychotree::raschtree() / pctree()): the sample is recursively
+        split on one or more covariates wherever the item parameters are
+        unstable, so DIF is detected without pre-specifying groups.
+        Unlike the other DIF analyses in this module, several covariates
+        can be examined at once, continuous covariates (e.g. age) are
+        handled natively (the algorithm finds the optimal cutpoint), and
+        interactions emerge as nested splits.
+
+        For every split, each item receives an effect-size measure --
+        the Mantel-Haenszel odds ratio on the ETS Delta scale for
+        dichotomous data, or the partial gamma coefficient for
+        polytomous data -- classified into the ETS categories A
+        (negligible), B (moderate), and C (large). Optional iterative
+        purification recomputes the effect sizes while excluding
+        already-flagged items from the matching score.
+
+        Note that the A/B/C boundaries are conventions from large-scale
+        educational testing, not values calibrated to the sample and
+        items at hand (in contrast to the simulation-based cutoffs used
+        elsewhere in this module), so the classification is best read as
+        a rough magnitude guide. For a sample-calibrated partial-gamma
+        DIF test with a pre-specified grouping, use the Partial Gamma
+        DIF analysis with simulation-based cutoffs.
+
+        The analysis is deterministic (no simulation). Results are
+        identical to easyRasch2::RMdifTree().
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: covariates
+      title: Covariates
+      type: Variables
+      suggested:
+        - nominal
+        - ordinal
+        - continuous
+      permitted:
+        - numeric
+        - factor
+
+    - name: purification
+      title: Iterative purification
+      type: Bool
+      default: false
+
+    - name: pruneNegligible
+      title: Prune splits with only negligible (A) DIF
+      type: Bool
+      default: false
+
+    - name: alpha
+      title: Classification alpha
+      type: Number
+      default: 0.05
+      min: 0.001
+      max: 0.5
+
+    - name: pAdj
+      title: p-value adjustment (partial gamma)
+      type: List
+      options:
+        - name: none
+          title: None
+        - name: fdr
+          title: FDR (Benjamini-Hochberg)
+        - name: bonferroni
+          title: Bonferroni
+      default: none
+
+    - name: showSE
+      title: Standard errors
+      type: Bool
+      default: false
+...

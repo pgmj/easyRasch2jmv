@@ -1,0 +1,161 @@
+---
+name: personparams
+title: Person Parameters
+jrs: '1.1'
+
+items:
+    - name: summaryTable
+      title: Person Location Summary
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, easyRasch2, warm1989, bock1982, zeileis2026]
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+      columns:
+          - name: statistic
+            title: Statistic
+            type: text
+          - name: value
+            title: Value
+            type: number
+            format: zto
+
+    - name: personNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: thetaPlot
+      title: Person Location Distribution
+      type: Image
+      width: 550
+      height: 450
+      renderFun: .thetaPlot
+      requiresData: true
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    # Output variables written into the dataset (paired with the a.yaml
+    # Output options of the same names).
+    - name: outputTheta
+      title: Person location (theta)
+      type: Output
+      varTitle: theta
+      varDescription: >
+        Person location on the latent variable (logits), estimated with
+        easyRasch2 (jamovi module easyRasch2jmv, Person Parameters
+        analysis).
+      measureType: continuous
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputSem
+      title: SE of measurement (SEM)
+      type: Output
+      varTitle: SEM
+      varDescription: >
+        Standard error of measurement of the estimated person location
+        (logits), from the easyRasch2jmv Person Parameters analysis.
+      measureType: continuous
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputSumScore
+      title: Sum score
+      type: Output
+      varTitle: sum_score
+      varDescription: >
+        Sum score over the selected items (answered items only), from the
+        easyRasch2jmv Person Parameters analysis.
+      measureType: continuous
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputNAnswered
+      title: Items answered
+      type: Output
+      varTitle: n_answered
+      varDescription: >
+        Number of selected items with a non-missing response, from the
+        easyRasch2jmv Person Parameters analysis.
+      measureType: continuous
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputExtreme
+      title: Extreme score (min or max)
+      type: Output
+      varTitle: extreme
+      varDescription: >
+        1 when the respondent scored the minimum or maximum possible on
+        the items they answered (person location extrapolated, large
+        SEM), 0 otherwise. From the easyRasch2jmv Person Parameters
+        analysis.
+      measureType: nominal
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: scoreTable
+      title: Score-to-Theta Lookup
+      type: Table
+      rows: 0
+      visible: (showScoreTable)
+      refs: [chalmers2012]
+      clearWith:
+          - vars
+          - method
+          - thetaMin
+          - thetaMax
+      columns:
+          - name: rawScore
+            title: Ordinal sum score
+            type: integer
+          - name: logitScore
+            title: Logit score
+            type: number
+            format: zto
+          - name: logitSE
+            title: Logit std.error
+            type: number
+            format: zto
+
+    - name: scorePlot
+      title: Sum Score to Logit Conversion
+      type: Image
+      width: 450
+      height: 600
+      renderFun: .scorePlot
+      visible: (showScoreTable && showFigure)
+      requiresData: true
+      clearWith:
+          - vars
+          - method
+          - ciMultiplier
+          - thetaMin
+          - thetaMax
+...

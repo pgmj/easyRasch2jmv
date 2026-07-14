@@ -1,0 +1,110 @@
+---
+name: personparams
+title: Person Parameters
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Estimates a location on the latent variable (theta, in logits) for
+        each respondent, with its standard error of measurement (SEM),
+        using the easyRasch2 R package (RMpersonParameters()): item
+        parameters are estimated once by conditional maximum likelihood
+        (CML, via psychotools) and treated as fixed; each person's theta
+        is then estimated from the items they answered, so respondents
+        with partially missing responses are retained. Results are
+        identical to easyRasch2::RMpersonParameters().
+
+        The estimates can be saved as new variables in the dataset (theta,
+        SEM, sum score, number of items answered, extreme-score flag) for
+        use in other jamovi analyses or for export.
+
+        A sum-score-to-logit lookup table (easyRasch2::RMscoreSE()) can
+        also be shown, mapping each possible raw sum score to a person
+        location and its standard error -- useful when reporting a
+        scale's measurement properties or converting raw totals to
+        interval-scaled scores -- with an optional figure.
+
+        WLE (Warm's weighted likelihood, the default) is bias-corrected
+        and yields finite locations for minimum and maximum scores, though
+        such extreme scores are extrapolated and carry large standard
+        errors. EAP (expected a posteriori) uses a normal prior estimated
+        from the data (marginal maximum likelihood, item parameters held
+        fixed) and shrinks extreme scores toward the prior mean.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: method
+      title: Estimation method
+      type: List
+      options:
+        - name: WLE
+          title: WLE (Warm's weighted likelihood)
+        - name: EAP
+          title: EAP (expected a posteriori)
+      default: WLE
+
+    - name: thetaMin
+      title: Theta range (lower)
+      type: Number
+      default: -10
+      min: -20
+      max: 0
+
+    - name: thetaMax
+      title: Theta range (upper)
+      type: Number
+      default: 10
+      min: 0
+      max: 20
+
+    - name: showScoreTable
+      title: Sum score to logit table
+      type: Bool
+      default: false
+
+    - name: showFigure
+      title: Sum score to logit figure
+      type: Bool
+      default: false
+
+    - name: ciMultiplier
+      title: CI multiplier (figure)
+      type: Number
+      default: 1.96
+      min: 0.1
+      max: 5
+
+    - name: outputTheta
+      title: Person location (theta)
+      type: Output
+
+    - name: outputSem
+      title: SE of measurement (SEM)
+      type: Output
+
+    - name: outputSumScore
+      title: Sum score
+      type: Output
+
+    - name: outputNAnswered
+      title: Items answered
+      type: Output
+
+    - name: outputExtreme
+      title: Extreme score (min or max)
+      type: Output
+...

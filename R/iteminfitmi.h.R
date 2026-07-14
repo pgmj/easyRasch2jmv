@@ -127,6 +127,7 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
     inherit = jmvcore::Group,
     active = list(
         infitTable = function() private$.items[["infitTable"]],
+        simCache = function() private$.items[["simCache"]],
         imputationNote = function() private$.items[["imputationNote"]],
         infitPlot = function() private$.items[["infitPlot"]]),
     private = list(),
@@ -201,6 +202,21 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `title`="Rel. location", 
                         `type`="number", 
                         `format`="zto"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="simCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "auxVars",
+                    "method",
+                    "m",
+                    "maxit",
+                    "seed",
+                    "computeCutoff",
+                    "hdciWidth",
+                    "iterations")))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="imputationNote",
@@ -292,6 +308,7 @@ iteminfitmiBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$infitTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$simCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$imputationNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$infitPlot} \tab \tab \tab \tab \tab an image \cr
 #' }

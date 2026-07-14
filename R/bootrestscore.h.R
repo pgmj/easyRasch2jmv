@@ -93,6 +93,7 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
     inherit = jmvcore::Group,
     active = list(
         bootstrapTable = function() private$.items[["bootstrapTable"]],
+        simCache = function() private$.items[["simCache"]],
         bootstrapNote = function() private$.items[["bootstrapNote"]],
         bootstrapPlot = function() private$.items[["bootstrapPlot"]]),
     private = list(),
@@ -146,6 +147,16 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `name`="misfit", 
                         `title`="Flagged", 
                         `type`="text"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="simCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "iterations",
+                    "samplesize",
+                    "seed")))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="bootstrapNote",
@@ -217,6 +228,7 @@ bootrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$bootstrapTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$simCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$bootstrapNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$bootstrapPlot} \tab \tab \tab \tab \tab an image \cr
 #' }

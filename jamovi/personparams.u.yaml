@@ -1,5 +1,5 @@
-title: Sum Score to Logit Transformation
-name: scorese
+title: Person Parameters
+name: personparams
 jus: '3.0'
 stage: 0
 compilerMode: tame
@@ -31,11 +31,26 @@ children:
     margin: large
     children:
       - type: CheckBox
-        name: showFigure
+        name: showScoreTable
         children:
-          - type: LayoutBox
-            margin: large
+          - type: CheckBox
+            name: showFigure
             children:
               - type: TextBox
                 name: ciMultiplier
                 format: number
+
+  - type: CollapseBox
+    label: Save to dataset
+    collapsed: false
+    children:
+      - type: Output
+        name: outputTheta
+      - type: Output
+        name: outputSem
+      - type: Output
+        name: outputSumScore
+      - type: Output
+        name: outputNAnswered
+      - type: Output
+        name: outputExtreme

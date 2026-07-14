@@ -1,0 +1,120 @@
+---
+name: personfit
+title: Person Fit
+menuGroup: easyRasch2jmv
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Computes per-respondent person-fit statistics with Monte-Carlo
+        resampled p-values, using the easyRasch2 R package
+        (RMpersonFit()): conditional infit and outfit mean-squares (MSQ;
+        computed conditional on the total score, so no biased person
+        estimate enters, and partial missingness is handled directly) and
+        the standardized log-likelihood statistic lz. Significance is
+        assessed by resampling under the fitted model rather than by the
+        unreliable asymptotic null distributions: the MSQ statistics are
+        referenced against patterns sampled conditional on the person's
+        total score, and lz against patterns simulated at the estimated
+        location with the location re-estimated per pattern. Results are
+        identical to easyRasch2::RMpersonFit() with the same seed and
+        iterations. Single-core sequential processing is used.
+
+        Each requested statistic is shown as a person-fit map (statistic
+        against person location, flagged respondents highlighted). A
+        respondent is flagged when the uncorrected p-value of any
+        requested statistic falls below the flagging alpha -- a
+        per-person screening flag, so under model fit about alpha of the
+        respondents are flagged by chance. Extreme scorers (minimum or
+        maximum possible score) cannot be assessed and receive no values.
+
+        The flag and the underlying statistics and p-values can be saved
+        as new variables in the dataset -- for example to filter out
+        aberrant respondents before rerunning other analyses.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars
+      title: Items
+      type: Variables
+      suggested:
+        - continuous
+        - ordinal
+      permitted:
+        - numeric
+      rejectInf: true
+
+    - name: statInfit
+      title: Infit MSQ
+      type: Bool
+      default: true
+
+    - name: statOutfit
+      title: Outfit MSQ
+      type: Bool
+      default: true
+
+    - name: statLz
+      title: lz (standardized log-likelihood)
+      type: Bool
+      default: true
+
+    - name: flagDirection
+      title: Flagged misfit direction (MSQ)
+      type: List
+      options:
+        - name: both
+          title: Underfit and overfit (two-sided)
+        - name: underfit
+          title: Underfit only (one-sided)
+      default: both
+
+    - name: flagAlpha
+      title: Flagging alpha
+      type: Number
+      default: 0.05
+      min: 0.001
+      max: 0.5
+
+    - name: iterations
+      title: Number of resampling iterations
+      type: Integer
+      default: 500
+      min: 100
+
+    - name: seed
+      title: Random seed
+      type: Integer
+      default: 42
+
+    - name: outputFlagged
+      title: Flagged (any statistic)
+      type: Output
+
+    - name: outputInfit
+      title: Infit MSQ
+      type: Output
+
+    - name: outputOutfit
+      title: Outfit MSQ
+      type: Output
+
+    - name: outputLz
+      title: lz
+      type: Output
+
+    - name: outputPInfit
+      title: p-value (infit)
+      type: Output
+
+    - name: outputPOutfit
+      title: p-value (outfit)
+      type: Output
+
+    - name: outputPLz
+      title: p-value (lz)
+      type: Output
+...

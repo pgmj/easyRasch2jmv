@@ -1,0 +1,93 @@
+---
+name: martinlof
+title: Martin-Löf Test
+jrs: '1.1'
+
+items:
+    - name: summaryTable
+      title: Martin-Löf Test of Unidimensionality
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, easyRasch2, christensen2002, christensen2007, besag1991, zeileis2026, warm1989]
+      clearWith: &mcOpts
+          - subscale1
+          - subscale2
+          - iterations
+          - sequential
+          - seed
+      columns:
+          - name: statistic
+            title: Statistic
+            type: text
+          - name: value
+            title: Value
+            type: number
+            format: zto
+
+    - name: corrTable
+      title: Subscale Correlation (WLE person estimates)
+      type: Table
+      rows: 1
+      clearWith: *mcOpts
+      columns:
+          - name: r
+            title: Correlation
+            type: number
+            format: zto
+          - name: ciLow
+            title: Lower
+            type: number
+            format: zto
+            superTitle: 95% CI
+          - name: ciHigh
+            title: Upper
+            type: number
+            format: zto
+            superTitle: 95% CI
+          - name: n
+            title: N
+            type: integer
+
+    - name: mlNote
+      title: ''
+      type: Html
+      clearWith: *mcOpts
+
+    - name: nullPlot
+      title: Monte Carlo Null Distribution
+      type: Image
+      width: 550
+      height: 450
+      renderFun: .nullPlot
+      requiresData: true
+      clearWith: *mcOpts
+
+    # The heatmap re-renders together with the other results (its content
+    # does not depend on the Monte Carlo options, but clearing it keeps
+    # the display in sync when a new analysis runs); the re-render is
+    # cheap and reads the cached data, so minExpected and the MC options
+    # never rerun the simulation itself.
+    - name: residualPlot
+      title: Observed vs Expected Score Cross-Table Residuals
+      type: Image
+      width: 600
+      height: 550
+      renderFun: .residualPlot
+      requiresData: true
+      clearWith:
+          - subscale1
+          - subscale2
+          - iterations
+          - sequential
+          - seed
+          - minExpected
+
+    # Hidden state carrier: caches the Monte Carlo result so option
+    # changes that do not affect it (minExpected) reuse the simulation.
+    # The figures read their inputs from here. Never displayed.
+    - name: simCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith: *mcOpts
+...

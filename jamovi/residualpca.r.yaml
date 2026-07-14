@@ -37,6 +37,19 @@ items:
             type: text
             visible: (computeCutoff)
 
+    # Hidden state carrier: caches the cutoff simulation so option changes
+    # that do not affect it (nComponents, coordFlip) reuse the simulated
+    # distribution instead of rerunning it. Never displayed.
+    - name: simCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - seed
+
     - name: pcaNote
       title: ''
       type: Html

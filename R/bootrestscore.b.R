@@ -75,45 +75,74 @@ bootrestscoreClass <- R6::R6Class(
         # counts-to-percentages aggregation stays module-side; percentages
         # are computed unrounded from the raw counts.) Package warnings are
         # suppressed -- the module surfaces its own footnotes.
-        fit_all <- suppressWarnings(suppressMessages(
-          easyRasch2::RMitemRestscoreBoot(
-            df,
-            iterations = iterations,
-            samplesize = samplesize_used,
-            parallel   = FALSE,
-            seed       = as.integer(seed),
-            output     = "raw"
-          )
-        ))
-        # Upstream signs diff as (expected - observed); the module's
-        # Difference convention (matching the asymptotic item-restscore
-        # analysis) is (observed - expected), so flip the sign here.
-        fit_all$diff <- -fit_all$diff
+        # The bootstrap is the expensive part, and jamovi reruns .run on
+        # every option change -- including changes (cutoff, sortBy,
+        # showPlot) that do not affect the resampling. The hidden simCache
+        # element carries the raw per-iteration data and the full-sample
+        # restscore fit; jamovi clears its state exactly when a
+        # bootstrap-relevant option changes (its clearWith list), and the
+        # signature check makes reuse self-validating rather than relying
+        # on clearWith alone. samplesize enters via its clamped value.
+        sim_sig <- list(
+          iterations = iterations,
+          samplesize = samplesize_used,
+          seed       = as.integer(seed)
+        )
+        cached <- self$results$simCache$state
+        if (!is.null(cached) && !is.null(cached$fit_all) &&
+            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
+          fit_all           <- cached$fit_all
+          obs_df            <- cached$obs_df
+          actual_iterations <- cached$actual_iterations
+        } else {
+          fit_all <- suppressWarnings(suppressMessages(
+            easyRasch2::RMitemRestscoreBoot(
+              df,
+              iterations = iterations,
+              samplesize = samplesize_used,
+              parallel   = FALSE,
+              seed       = as.integer(seed),
+              output     = "raw"
+            )
+          ))
+          # Upstream signs diff as (expected - observed); the module's
+          # Difference convention (matching the asymptotic item-restscore
+          # analysis) is (observed - expected), so flip the sign here.
+          fit_all$diff <- -fit_all$diff
 
-        # Guard against misleading percentages: with few successful
-        # iterations the classification shares are based on tiny
-        # denominators (there is no observed-only fallback -- the
-        # bootstrap is the analysis). Failed iterations are discarded
-        # inside the package, so count what came back.
-        actual_iterations <- length(unique(fit_all$iteration))
-        if (actual_iterations < 20L) {
-          stop(paste0(
-            "Only ", actual_iterations, " of ", iterations, " bootstrap ",
-            "iterations succeeded -- too few for trustworthy ",
-            "classification percentages. This typically happens when ",
-            "items have very low or very high endorsement rates, so that ",
-            "resampled datasets often contain items without response ",
-            "variation. Consider a larger bootstrap sample size."
-          ), call. = FALSE)
+          # Guard against misleading percentages: with few successful
+          # iterations the classification shares are based on tiny
+          # denominators (there is no observed-only fallback -- the
+          # bootstrap is the analysis). Failed iterations are discarded
+          # inside the package, so count what came back.
+          actual_iterations <- length(unique(fit_all$iteration))
+          if (actual_iterations < 20L) {
+            stop(paste0(
+              "Only ", actual_iterations, " of ", iterations, " bootstrap ",
+              "iterations succeeded -- too few for trustworthy ",
+              "classification percentages. This typically happens when ",
+              "items have very low or very high endorsement rates, so that ",
+              "resampled datasets often contain items without response ",
+              "variation. Consider a larger bootstrap sample size."
+            ), call. = FALSE)
+          }
+
+          # --- Full-sample relative locations --------------------------------
+          # Same full-sample CML/WLE fit the package's own summary output
+          # reports (numerically identical to RMitemRestscoreBoot()'s
+          # Relative_location column).
+          obs_df <- suppressWarnings(suppressMessages(
+            easyRasch2::RMitemRestscore(df, output = "dataframe")
+          ))
+
+          self$results$simCache$setState(list(
+            fit_all           = fit_all,
+            obs_df            = obs_df,
+            actual_iterations = actual_iterations,
+            sig               = sim_sig,
+            df                = df
+          ))
         }
-
-        # --- Full-sample relative locations ----------------------------------
-        # Same full-sample CML/WLE fit the package's own summary output
-        # reports (numerically identical to RMitemRestscoreBoot()'s
-        # Relative_location column).
-        obs_df <- suppressWarnings(suppressMessages(
-          easyRasch2::RMitemRestscore(df, output = "dataframe")
-        ))
         relative_item_avg_locations <-
           obs_df$Relative_location[match(item_names, obs_df$Item)]
 
@@ -221,11 +250,11 @@ bootrestscoreClass <- R6::R6Class(
         )
         self$results$bootstrapNote$setContent(note_html)
 
-        # 7. Save state for plot (raw per-iteration data; item order
-        # follows the table sort)
+        # 7. Save state for plot (item order follows the table sort; the
+        # raw per-iteration data is read from the simCache element inside
+        # the render function -- single storage)
         if (isTRUE(self$options$showPlot)) {
           self$results$bootstrapPlot$setState(list(
-            fit_all           = fit_all,
             item_names        = wide$Item,
             actual_iterations = actual_iterations,
             samplesize_used   = samplesize_used
@@ -246,7 +275,10 @@ bootrestscoreClass <- R6::R6Class(
       if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
       state <- image$state
-      d <- state$fit_all
+      # Raw per-iteration data lives in the hidden simCache element
+      # (single storage; also serves as the bootstrap cache for .run).
+      d <- self$results$simCache$state$fit_all
+      if (is.null(d)) return(FALSE)
       # coord_flip() below puts items on the y-axis like the conditional
       # infit plot; reversed levels place the first item at the top.
       d$Item <- factor(d$Item, levels = rev(state$item_names))

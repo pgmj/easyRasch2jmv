@@ -67,6 +67,11 @@ options:
       min: 0
       max: 10
 
+    - name: longFormat
+      title: Long format threshold table (with SE and CI)
+      type: Bool
+      default: false
+
     - name: showCi
       title: CIs around item threshold locations
       type: Bool

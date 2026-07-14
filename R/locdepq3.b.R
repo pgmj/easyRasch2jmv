@@ -7,6 +7,12 @@ locdepq3Class <- R6::R6Class(
     # .init() runs immediately when options change — sets up table structure
     # so column headers appear instantly and don't flicker on re-run.
     .init = function() {
+      # The adjusted-p column names its correction method, extending the
+      # "Adj. p-value (BH)" title convention of the asymptotic p columns.
+      self$results$pairTable$getColumn("pAdjusted")$setTitle(
+        padjusted_title(self$options$correction)
+      )
+
       vars <- self$options$vars
       if (is.null(vars) || length(vars) < 3)
         return()
@@ -124,7 +130,27 @@ locdepq3Class <- R6::R6Class(
           cutoff_res   <- NULL
           sim_fail_msg <- NULL
 
-          if (compute_cutoff) {
+          # The simulation is the expensive part, and jamovi reruns .run on
+          # every option change -- including changes (pValues, correction,
+          # nPairs) that do not affect the simulation. The heatmap state
+          # carries the cutoff object and jamovi clears it exactly when a
+          # simulation-relevant option changes (its clearWith list; the
+          # per-pair plot is unsuitable as the cache because its state is
+          # also cleared by nPairs). The signature check makes reuse
+          # self-validating rather than relying on clearWith alone -- in
+          # particular, hdciWidth changes the cutoff object but is not in
+          # the heatmap's clearWith, and the signature catches it.
+          sim_sig <- list(
+            iterations = iterations,
+            seed       = as.integer(seed_val),
+            hdci_width = self$options$hdciWidth / 100
+          )
+          cached <- self$results$matrixPlot$state
+          if (compute_cutoff &&
+              !is.null(cached) && !is.null(cached$cutoff_res) &&
+              identical(cached$sig, sim_sig) && identical(cached$df, df)) {
+            cutoff_res <- cached$cutoff_res
+          } else if (compute_cutoff) {
             cutoff_res <- tryCatch(
               suppressWarnings(suppressMessages(
                 easyRasch2::RMlocdepQ3Cutoff(
@@ -159,9 +185,21 @@ locdepq3Class <- R6::R6Class(
           }
 
           # --- Step 2: Observed Q3 matrix (and pair table with cutoff) -----
+          # Bootstrap p-values need the full cutoff object (it carries the
+          # simulated per-pair distributions), so they are only computed
+          # when the simulation succeeded. The pValues option can hold a
+          # stale TRUE while greyed out (jamovi disables but does not reset
+          # nested options), hence the explicit computeCutoff gate. The
+          # package's below-1000-iterations warning is suppressed with the
+          # rest; the module states the same caveat in the note below.
+          use_pvalues <- compute_cutoff &&
+            isTRUE(self$options$pValues) &&
+            !is.null(cutoff_res)
+
           if (!is.null(cutoff_res)) {
             res <- suppressWarnings(suppressMessages(easyRasch2::RMlocdepQ3(
-              df, cutoff = cutoff_res, output = "dataframe"
+              df, cutoff = cutoff_res, output = "dataframe",
+              p_value = use_pvalues, correction = self$options$correction
             )))
             matrix_df <- res$matrix
             pairs_df  <- res$pairs
@@ -215,7 +253,10 @@ locdepq3Class <- R6::R6Class(
           # cheap. Storing the data + cutoff object (rather than ggplot
           # objects) keeps the saved analysis small.
           if (!is.null(cutoff_res)) {
-            plot_state <- list(df = df, cutoff_res = cutoff_res)
+            # sig makes the heatmap state double as the simulation cache
+            # consulted at the top of this function.
+            plot_state <- list(df = df, cutoff_res = cutoff_res,
+                               sig = sim_sig)
             self$results$q3Plot$setState(plot_state)
             self$results$matrixPlot$setState(plot_state)
           }
@@ -234,26 +275,57 @@ locdepq3Class <- R6::R6Class(
 
             pt <- self$results$pairTable
             for (i in seq_len(nrow(pairs_df))) {
-              pt$setRow(rowNo = i, values = list(
+              vals <- list(
                 item1   = pairs_df$Item1[i],
                 item2   = pairs_df$Item2[i],
                 q3      = full_mat[pairs_df$Item1[i], pairs_df$Item2[i]],
                 q3Low   = pc$Q3_low[idx[i]],
                 q3High  = pc$Q3_high[idx[i]],
                 flagged = pairs_df$Flagged[i]
+              )
+              if (use_pvalues) {
+                vals$pValue    <- pairs_df$p_q3[i]
+                vals$pAdjusted <- pairs_df$padj_q3[i]
+              }
+              pt$setRow(rowNo = i, values = vals)
+            }
+            if (use_pvalues) {
+              # With bootstrap p-values, flagging follows the adjusted
+              # p-value (upstream behavior; one-sided test for excess
+              # positive local dependence, so only 'above' pairs are
+              # flagged); the expected-range columns stay as the
+              # effect-size reference.
+              pt$setNote("flag", paste0(
+                "Flagged: adjusted p-value < 0.05, indicating stronger ",
+                "residual association than the model predicts (positive ",
+                "local dependence; the test is one-sided, so only 'above' ",
+                "pairs are flagged). The expected-range columns remain as ",
+                "the effect-size reference. Pairs are sorted by deviation ",
+                "from the simulated per-pair median (the black dots in ",
+                "the figure), descending."
+              ))
+              pt$setNote("pvalues", paste0(
+                "p-value: probability of a Q3 at least as large as ",
+                "observed under local independence, computed from the ",
+                cutoff_res$actual_iterations, " simulated datasets ",
+                "(Monte-Carlo, one-sided). Adj. p-value: corrected for ",
+                "multiple comparisons across the ", nrow(pairs_df),
+                " item pairs using ",
+                correction_label(self$options$correction), "."
+              ))
+            } else {
+              pt$setNote("flag", paste0(
+                "Expected range = ", self$options$hdciWidth, "% HDCI of the ",
+                "per-pair Q3 values simulated under local independence. ",
+                "Flagged: 'above' = stronger residual association than the ",
+                "model predicts (positive local dependence); 'below' = ",
+                "weaker than predicted (can indicate multidimensionality). ",
+                "These per-pair intervals complement the global cutoff used ",
+                "by the tables above. Pairs are sorted by deviation from ",
+                "the simulated per-pair median (the black dots in the ",
+                "figure), descending."
               ))
             }
-            pt$setNote("flag", paste0(
-              "Expected range = ", self$options$hdciWidth, "% HDCI of the ",
-              "per-pair Q3 values simulated under local independence. ",
-              "Flagged: 'above' = stronger residual association than the ",
-              "model predicts (positive local dependence); 'below' = ",
-              "weaker than predicted (can indicate multidimensionality). ",
-              "These per-pair intervals complement the global cutoff used ",
-              "by the tables above. Pairs are sorted by deviation from ",
-              "the simulated per-pair median (the black dots in the ",
-              "figure), descending."
-            ))
           }
 
           # --- Step 3d: Sample-size note ------------------------------------
@@ -274,6 +346,9 @@ locdepq3Class <- R6::R6Class(
             paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
                    sim_fail_msg)
           } else ""
+          pvalue_clause <- if (use_pvalues) {
+            pvalue_iteration_caveat(cutoff_res$actual_iterations)
+          } else ""
           self$results$q3Note$setContent(paste0(
             "<p>Q3 residual correlations from a unidimensional ",
             if (max(as.matrix(df), na.rm = TRUE) > 1L) "partial credit"
@@ -282,7 +357,7 @@ locdepq3Class <- R6::R6Class(
             "maximum likelihood (CML) item estimation with weighted ",
             "likelihood (WLE) person estimates, on n = ", n_used,
             " respondents", drop_clause, missing_clause, ". Mean Q3 = ",
-            round(mean_resid, 3), ".", fail_clause, "</p>"
+            round(mean_resid, 3), ".", pvalue_clause, fail_clause, "</p>"
           ))
 
           # --- Step 4: Populate the Q3 table (structure set up in .init()) --

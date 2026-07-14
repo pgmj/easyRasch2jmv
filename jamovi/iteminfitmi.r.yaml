@@ -53,6 +53,24 @@ items:
             type: number
             format: zto
 
+    # Hidden state carrier: caches the whole imputation + pooling +
+    # cutoff-simulation pipeline so a sort-order change reuses the results
+    # instead of rerunning mice and the simulations. Never displayed.
+    - name: simCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - auxVars
+          - method
+          - m
+          - maxit
+          - seed
+          - computeCutoff
+          - hdciWidth
+          - iterations
+
     - name: imputationNote
       title: ''
       type: Html

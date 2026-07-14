@@ -39,7 +39,6 @@ targetingClass <- R6::R6Class(
       tryCatch({
         item_names <- names(df)
         ci_level   <- self$options$ciLevel / 100
-        show_ci    <- isTRUE(self$options$showCi)
 
         # Estimation-method selection mirrors easyRasch2::RMtargeting():
         # CML (psychotools) when all response categories have at least 3
@@ -52,42 +51,99 @@ targetingClass <- R6::R6Class(
         estimator    <- if (use_mml) "MML" else "CML"
 
         # Threshold table via easyRasch2: grand-mean-centred threshold
-        # locations with delta-method SEs and Wald CIs, numerically
-        # identical to RMitemParameters() with the same estimator.
+        # locations, numerically identical to RMitemParameters() with the
+        # same estimator. The default is the wide layout (one row per
+        # item, one column per threshold, no SE/CI); the long layout (one
+        # row per threshold) adds the delta-method SE and Wald CI.
         # Package messages (e.g. the empty-respondent drop) are
         # suppressed; the module note reports the sample.
-        thr <- suppressWarnings(suppressMessages(
-          easyRasch2::RMitemParameters(
-            df,
-            estimator = estimator,
-            format    = "long",
-            se        = TRUE,
-            ci_level  = ci_level,
-            output    = "dataframe"
-          )
-        ))
-
-        # Populate threshold table.
-        # NOTE: rows are added here rather than in .init() because the
-        # number of rows equals the number of estimated thresholds, which
-        # depends on the observed response categories per item -- it
-        # cannot be derived from the options alone (defensible Level 3
-        # case).
+        # NOTE: columns and rows are built here rather than in .init()
+        # because the number of thresholds depends on the observed
+        # response categories per item -- it cannot be derived from the
+        # options alone (defensible Level 3 case).
+        long_format <- isTRUE(self$options$longFormat)
         table <- self$results$thresholdTable
-        for (i in seq_len(nrow(thr))) {
-          table$addRow(rowKey = i, values = list(
-            item      = thr$item[i],
-            threshold = paste0("T", thr$threshold[i]),
-            location  = thr$location[i],
-            se        = thr$se[i],
-            ciLow     = thr$ci_lower[i],
-            ciHigh    = thr$ci_upper[i]
+
+        if (long_format) {
+          thr <- suppressWarnings(suppressMessages(
+            easyRasch2::RMitemParameters(
+              df,
+              estimator = estimator,
+              format    = "long",
+              se        = TRUE,
+              ci_level  = ci_level,
+              output    = "dataframe"
+            )
           ))
-        }
-        if (show_ci) {
+
+          table$addColumn(name = "item", title = "Item", type = "text",
+                          combineBelow = TRUE)
+          table$addColumn(name = "threshold", title = "Threshold",
+                          type = "text")
+          table$addColumn(name = "location", title = "Location",
+                          type = "number", format = "zto")
+          table$addColumn(name = "se", title = "SE",
+                          type = "number", format = "zto")
+          table$addColumn(name = "ciLow", title = "Lower",
+                          type = "number", format = "zto",
+                          superTitle = "CI")
+          table$addColumn(name = "ciHigh", title = "Upper",
+                          type = "number", format = "zto",
+                          superTitle = "CI")
+
+          for (i in seq_len(nrow(thr))) {
+            table$addRow(rowKey = i, values = list(
+              item      = thr$item[i],
+              threshold = paste0("T", thr$threshold[i]),
+              location  = thr$location[i],
+              se        = thr$se[i],
+              ciLow     = thr$ci_lower[i],
+              ciHigh    = thr$ci_upper[i]
+            ))
+          }
           table$setNote("ci", paste0(
             "Wald confidence intervals (", self$options$ciLevel,
             "%): location ± z × SE."
+          ))
+        } else {
+          thr_w <- suppressWarnings(suppressMessages(
+            easyRasch2::RMitemParameters(
+              df,
+              estimator = estimator,
+              format    = "wide",
+              se        = FALSE,
+              output    = "dataframe"
+            )
+          ))
+          t_cols <- setdiff(names(thr_w), c("item", "location"))
+
+          table$addColumn(name = "item", title = "Item", type = "text")
+          for (tc in t_cols) {
+            table$addColumn(
+              name       = tc,
+              title      = toupper(tc),
+              type       = "number",
+              format     = "zto",
+              superTitle = "Threshold location"
+            )
+          }
+          table$addColumn(name = "location", title = "Location",
+                          type = "number", format = "zto")
+
+          for (i in seq_len(nrow(thr_w))) {
+            vals <- list(item = thr_w$item[i],
+                         location = thr_w$location[i])
+            for (tc in t_cols) vals[[tc]] <- thr_w[[tc]][i]
+            table$addRow(rowKey = i, values = vals)
+          }
+          table$setNote("wide", paste0(
+            if (length(t_cols) > 0) {
+              "Location = mean of the item's threshold locations. "
+            } else {
+              "Location = item difficulty (dichotomous items have a single threshold). "
+            },
+            "Enable 'Long format threshold table' for one row per ",
+            "threshold with SE and confidence interval."
           ))
         }
 

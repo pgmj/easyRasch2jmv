@@ -18,6 +18,18 @@ description:
         RMlocdepQ3Cutoff(), and RMlocdepQ3Plot() with the same seed and
         iterations. Single-core sequential processing is used.
 
+        Optionally, bootstrap p-values can be added to the item-pair
+        table: each pair's observed Q3 is compared against its simulated
+        distribution (one-sided Monte-Carlo p-value for excess positive
+        local dependence), with correction for multiple comparisons
+        across all pairs -- Westfall-Young step-down (familywise error
+        rate, the default; Ferreira, 2024), Benjamini-Hochberg, or
+        Benjamini-Yekutieli (false discovery rate). Flagging is then
+        based on the adjusted p-value (< 0.05) instead of the expected
+        range. At least 1000 iterations are recommended when reporting
+        p-values. Results match easyRasch2::RMlocdepQ3() with
+        p_value = TRUE.
+
 options:
     - name: data
       type: Data
@@ -56,6 +68,23 @@ options:
       type: Integer
       default: 42
       min: 0
+
+    - name: pValues
+      title: Bootstrap p-values
+      type: Bool
+      default: false
+
+    - name: correction
+      title: Multiple-comparison correction
+      type: List
+      options:
+        - name: fwer
+          title: Familywise (Westfall-Young)
+        - name: fdr_bh
+          title: FDR (Benjamini-Hochberg)
+        - name: fdr_by
+          title: FDR (Benjamini-Yekutieli)
+      default: fwer
 
     - name: nPairs
       title: Max. number of item pairs to plot

@@ -1,0 +1,67 @@
+---
+name: diftree
+title: Tree-Based DIF
+jrs: '1.1'
+
+items:
+    - name: treePlot
+      title: DIF Tree
+      type: Image
+      width: 700
+      height: 500
+      renderFun: .treePlot
+      requiresData: true
+      clearWith: &fitOpts
+          - vars
+          - covariates
+          - purification
+          - pruneNegligible
+          - alpha
+          - pAdj
+
+    - name: difTable
+      title: Effect Sizes per Split
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, easyRasch2, strobl2015, henninger2023, henninger2025, bjorner1998, zeileis2026]
+      clearWith: *fitOpts
+      columns:
+          - name: node
+            title: Node
+            type: integer
+          - name: split
+            title: Split
+            type: text
+            combineBelow: true
+          - name: item
+            title: Item
+            type: text
+          - name: effectSize
+            title: Effect size
+            type: number
+            format: zto
+          - name: se
+            title: SE
+            type: number
+            format: zto
+            visible: (showSE)
+          - name: class
+            title: Class
+            type: text
+          - name: flagged
+            title: Flagged
+            type: text
+          - name: nLeft
+            title: Left
+            type: integer
+            superTitle: n
+          - name: nRight
+            title: Right
+            type: integer
+            superTitle: n
+
+    - name: difNote
+      title: ''
+      type: Html
+      clearWith: *fitOpts
+...

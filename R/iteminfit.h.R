@@ -11,6 +11,8 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             hdciWidth = 99,
             iterations = 250,
             seed = 42,
+            pValues = FALSE,
+            correction = "fwer",
             sortByInfit = FALSE, ...) {
 
             super$initialize(
@@ -47,6 +49,18 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 "seed",
                 seed,
                 default=42)
+            private$..pValues <- jmvcore::OptionBool$new(
+                "pValues",
+                pValues,
+                default=FALSE)
+            private$..correction <- jmvcore::OptionList$new(
+                "correction",
+                correction,
+                options=list(
+                    "fwer",
+                    "fdr_bh",
+                    "fdr_by"),
+                default="fwer")
             private$..sortByInfit <- jmvcore::OptionBool$new(
                 "sortByInfit",
                 sortByInfit,
@@ -57,6 +71,8 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..hdciWidth)
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
+            self$.addOption(private$..pValues)
+            self$.addOption(private$..correction)
             self$.addOption(private$..sortByInfit)
         }),
     active = list(
@@ -65,6 +81,8 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         hdciWidth = function() private$..hdciWidth$value,
         iterations = function() private$..iterations$value,
         seed = function() private$..seed$value,
+        pValues = function() private$..pValues$value,
+        correction = function() private$..correction$value,
         sortByInfit = function() private$..sortByInfit$value),
     private = list(
         ..vars = NA,
@@ -72,6 +90,8 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..hdciWidth = NA,
         ..iterations = NA,
         ..seed = NA,
+        ..pValues = NA,
+        ..correction = NA,
         ..sortByInfit = NA)
 )
 
@@ -102,13 +122,17 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "mueller2022",
                     "zeileis2026",
                     "warm1989",
-                    "kay2025"),
+                    "kay2025",
+                    "ferreira2024",
+                    "westfallyoung1993"),
                 clearWith=list(
                     "vars",
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
                     "seed",
+                    "pValues",
+                    "correction",
                     "sortByInfit"),
                 columns=list(
                     list(
@@ -135,6 +159,18 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
                     list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjusted", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
                         `name`="misfit", 
                         `title`="Flagged", 
                         `type`="text", 
@@ -153,7 +189,9 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "computeCutoff",
                     "hdciWidth",
                     "iterations",
-                    "seed")))
+                    "seed",
+                    "pValues",
+                    "correction")))
             self$add(jmvcore::Image$new(
                 options=options,
                 name="infitPlot",
@@ -211,12 +249,24 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' exception: with small samples, around 100 iterations can yield
 #' better detection power than a larger number (Johansson, 2025).
 #' 
+#' Optionally, bootstrap p-values can be added: each item's observed
+#' infit is compared against its simulated distribution (Monte-Carlo
+#' p-value), with correction for multiple comparisons across items --
+#' Westfall-Young step-down (familywise error rate, the default;
+#' Ferreira, 2024), Benjamini-Hochberg, or Benjamini-Yekutieli (false
+#' discovery rate). Flagging is then based on the adjusted p-value
+#' (< 0.05) instead of the expected range. At least 1000 iterations
+#' are recommended when reporting p-values. Results match
+#' easyRasch2::RMitemInfit() with p_value = TRUE.
+#' 
 #' @param data .
 #' @param vars .
 #' @param computeCutoff .
 #' @param hdciWidth .
 #' @param iterations .
 #' @param seed .
+#' @param pValues .
+#' @param correction .
 #' @param sortByInfit .
 #' @return A results object containing:
 #' \tabular{llllll}{
@@ -239,6 +289,8 @@ iteminfit <- function(
     hdciWidth = 99,
     iterations = 250,
     seed = 42,
+    pValues = FALSE,
+    correction = "fwer",
     sortByInfit = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
@@ -257,6 +309,8 @@ iteminfit <- function(
         hdciWidth = hdciWidth,
         iterations = iterations,
         seed = seed,
+        pValues = pValues,
+        correction = correction,
         sortByInfit = sortByInfit)
 
     analysis <- iteminfitClass$new(

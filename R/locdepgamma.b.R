@@ -95,7 +95,27 @@ locdepgammaClass <- R6::R6Class(
         compute_cutoff <- isTRUE(self$options$computeCutoff)
         cutoff_res   <- NULL
         sim_fail_msg <- NULL
-        if (compute_cutoff) {
+
+        # The simulation is the expensive part, and jamovi reruns .run on
+        # every option change -- including changes (filters, sorting,
+        # plotPairs, showSE) that do not affect the simulation. The hidden
+        # simCache element carries the cutoff object; jamovi clears its
+        # state exactly when a simulation-relevant option changes (its
+        # clearWith list), and the signature check makes reuse
+        # self-validating rather than relying on clearWith alone. (The
+        # plot state cannot serve as the cache here: its clearWith also
+        # includes plotPairs, which must keep forcing a re-render.)
+        sim_sig <- list(
+          iterations = self$options$iterations,
+          seed       = as.integer(self$options$seed),
+          hdci_width = self$options$hdciWidth / 100
+        )
+        cached <- self$results$simCache$state
+        if (compute_cutoff &&
+            !is.null(cached) && !is.null(cached$cutoff_res) &&
+            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
+          cutoff_res <- cached$cutoff_res
+        } else if (compute_cutoff) {
           cutoff_res <- tryCatch(
             suppressWarnings(suppressMessages(
               easyRasch2::RMlocdepGammaCutoff(
@@ -263,9 +283,16 @@ locdepgammaClass <- R6::R6Class(
           }
         }
 
-        # 7. Save state for the plot
+        # 7. Save the simulation cache. The per-pair plot reads the cutoff
+        # object and data from here too (via .ldPlot), so nothing is
+        # stored twice. On simulation failure the cache is cleared so the
+        # plot cannot render from a stale cutoff object.
         if (!is.null(cutoff_res)) {
-          self$results$ldPlot$setState(list(df = df, cutoff_res = cutoff_res))
+          self$results$simCache$setState(list(
+            cutoff_res = cutoff_res, sig = sim_sig, df = df
+          ))
+        } else if (compute_cutoff) {
+          self$results$simCache$setState(NULL)
         }
 
         # 8. Caption note
@@ -331,12 +358,15 @@ locdepgammaClass <- R6::R6Class(
     # (base size 15).
     # ---------------------------------------------------------------------
     .ldPlot = function(image, ggtheme, theme, ...) {
-      if (is.null(image$state)) return(FALSE)
+      # The cutoff object and data live in the hidden simCache element
+      # (single storage; also serves as the simulation cache for .run).
+      state <- self$results$simCache$state
+      if (is.null(state) || is.null(state$cutoff_res)) return(FALSE)
 
       p <- suppressWarnings(suppressMessages(
         easyRasch2::RMlocdepGammaPlot(
-          image$state$cutoff_res,
-          data    = image$state$df,
+          state$cutoff_res,
+          data    = state$df,
           n_pairs = self$options$plotPairs
         )
       ))

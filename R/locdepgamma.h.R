@@ -129,6 +129,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         dir1Table = function() private$.items[["dir1Table"]],
         dir2Table = function() private$.items[["dir2Table"]],
         ldPlot = function() private$.items[["ldPlot"]],
+        simCache = function() private$.items[["simCache"]],
         ldNote = function() private$.items[["ldNote"]]),
     private = list(),
     public=list(
@@ -314,6 +315,17 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "plotPairs")))
             self$add(jmvcore::Html$new(
                 options=options,
+                name="simCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "hdciWidth",
+                    "seed")))
+            self$add(jmvcore::Html$new(
+                options=options,
                 name="ldNote",
                 title="",
                 clearWith=list(
@@ -382,6 +394,7 @@ locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #'   \code{results$dir1Table} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$dir2Table} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$ldPlot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$simCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$ldNote} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'

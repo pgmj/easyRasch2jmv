@@ -89,7 +89,26 @@ partgamdifClass <- R6::R6Class(
         # why in the note below the table.
         cutoff_res <- NULL
         sim_fail_msg <- NULL
-        if (isTRUE(self$options$computeCutoff)) {
+
+        # The simulation is the expensive part, and jamovi reruns .run on
+        # every option change -- including changes (tileplot options,
+        # sortByGamma, showSE) that do not affect the simulation. The plot
+        # state carries the cutoff object and jamovi clears it exactly
+        # when a simulation-relevant option changes (its clearWith list),
+        # so a surviving state is a valid cache. The signature check makes
+        # reuse self-validating rather than relying on clearWith alone.
+        sim_sig <- list(
+          iterations = self$options$iterations,
+          seed       = as.integer(self$options$seed),
+          hdci_width = self$options$hdciWidth / 100
+        )
+        cached <- self$results$pgdifPlot$state
+        if (isTRUE(self$options$computeCutoff) &&
+            !is.null(cached) && !is.null(cached$cutoff_res) &&
+            identical(cached$sig, sim_sig) &&
+            identical(cached$df, df) && identical(cached$dif, dif_vec)) {
+          cutoff_res <- cached$cutoff_res
+        } else if (isTRUE(self$options$computeCutoff)) {
           cutoff_res <- tryCatch(
             suppressWarnings(suppressMessages(
               easyRasch2::RMdifGammaCutoff(
@@ -206,7 +225,9 @@ partgamdifClass <- R6::R6Class(
 
         if (!is.null(cutoff_res)) {
           # Save state for plot (incl. the 95% Wald CI of the observed
-          # gamma, drawn as a segment in the same colour as the diamond)
+          # gamma, drawn as a segment in the same colour as the diamond).
+          # The full cutoff object plus sig/df/dif also serve as the
+          # simulation cache consulted above.
           observed_gamma_vec <- pgam_df$gamma
           observed_lower_vec <- pgam_df$lower
           observed_upper_vec <- pgam_df$upper
@@ -215,10 +236,10 @@ partgamdifClass <- R6::R6Class(
           names(observed_upper_vec) <- pgam_df$Item
 
           self$results$pgdifPlot$setState(list(
-            results_df        = cutoff_res$results,
-            item_names        = cutoff_res$item_names,
-            actual_iterations = cutoff_res$actual_iterations,
-            sample_n          = cutoff_res$sample_n,
+            cutoff_res        = cutoff_res,
+            sig               = sim_sig,
+            df                = df,
+            dif               = dif_vec,
             observed_gamma    = observed_gamma_vec,
             observed_lower    = observed_lower_vec,
             observed_upper    = observed_upper_vec,
@@ -251,10 +272,10 @@ partgamdifClass <- R6::R6Class(
       if (!requireNamespace("ggdist",  quietly = TRUE)) return(FALSE)
 
       state             <- image$state
-      results_df        <- state$results_df
-      item_names        <- state$item_names
-      actual_iterations <- state$actual_iterations
-      sample_n          <- state$sample_n
+      results_df        <- state$cutoff_res$results
+      item_names        <- state$cutoff_res$item_names
+      actual_iterations <- state$cutoff_res$actual_iterations
+      sample_n          <- state$cutoff_res$sample_n
       observed_gamma    <- state$observed_gamma
       item_names_data   <- state$item_names_data
 

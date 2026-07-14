@@ -8,13 +8,15 @@ items:
       title: Conditional Item Infit MSQ
       type: Table
       rows: (vars)
-      refs: [easyRasch2jmv, easyRasch2, mueller2020, johansson2025_detecting, mueller2022, zeileis2026, warm1989, kay2025]
+      refs: [easyRasch2jmv, easyRasch2, mueller2020, johansson2025_detecting, mueller2022, zeileis2026, warm1989, kay2025, ferreira2024, westfallyoung1993]
       clearWith:
         - vars
         - computeCutoff
         - hdciWidth
         - iterations
         - seed
+        - pValues
+        - correction
         - sortByInfit
       columns:
         - name: item
@@ -36,6 +38,16 @@ items:
           format: zto
           visible: (computeCutoff)
           superTitle: Expected range
+        - name: pValue
+          title: p-value
+          type: number
+          format: zto,pvalue
+          visible: (computeCutoff && pValues)
+        - name: pAdjusted
+          title: Adj. p-value
+          type: number
+          format: zto,pvalue
+          visible: (computeCutoff && pValues)
         - name: misfit
           title: Flagged
           type: text
@@ -54,6 +66,8 @@ items:
         - hdciWidth
         - iterations
         - seed
+        - pValues
+        - correction
 
     - name: infitPlot
       title: Simulated Infit MSQ Distribution

@@ -59,13 +59,16 @@ test_that("reliability runs, incl. bootstrap alpha CI", {
   expect_equal(r$relTable$rowCount, 4)
 })
 
-test_that("score-to-logit runs for WLE and EAP", {
+test_that("person parameters runs for WLE and EAP, incl. score-to-logit table", {
   d <- poly_data()
   expect_no_error(suppressWarnings(
-    r <- er2$scorese(data = d, vars = names(d), method = "WLE")))
+    r <- er2$personparams(data = d, vars = names(d), method = "WLE",
+                          showScoreTable = TRUE, showFigure = TRUE)))
   expect_gt(r$scoreTable$rowCount, 0)
+  expect_gt(r$summaryTable$rowCount, 0)
   expect_no_error(suppressWarnings(
-    er2$scorese(data = d, vars = names(d), method = "EAP")))
+    er2$personparams(data = d, vars = names(d), method = "EAP",
+                     showScoreTable = TRUE)))
 })
 
 test_that("residual PCA runs with and without cutoff", {
@@ -155,5 +158,41 @@ test_that("partial gamma LD expected ranges + plot state (new in 2.1.0)", {
   t1 <- r$dir1Table$asDF
   expect_true(all(c("gammaLow", "gammaHigh") %in% names(t1)))
   expect_false(anyNA(t1$gammaLow))
-  expect_true(!is.null(r$ldPlot$state))
+  # the plot reads the cutoff object from the hidden simCache element
+  # (which doubles as the simulation cache)
+  expect_true(!is.null(r$simCache$state$cutoff_res))
+})
+
+test_that("person fit runs on polytomous and dichotomous data", {
+  d <- poly_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$personfit(data = d, vars = names(d), iterations = 100)))
+  expect_gt(r$summaryTable$rowCount, 0)
+  expect_no_error(suppressWarnings(
+    er2$personfit(data = dich_data(), vars = names(dich_data()),
+                  iterations = 100, statLz = FALSE)))
+})
+
+test_that("Martin-Loef test runs, incl. sequential stopping", {
+  d <- poly_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$martinlof(data = d, subscale1 = names(d)[1:3],
+                       subscale2 = names(d)[4:5], iterations = 150)))
+  expect_gt(r$summaryTable$rowCount, 0)
+  expect_no_error(suppressWarnings(
+    er2$martinlof(data = d, subscale1 = names(d)[1:3],
+                  subscale2 = names(d)[4:5], iterations = 150,
+                  sequential = TRUE)))
+})
+
+test_that("tree-based DIF runs on polytomous and dichotomous data", {
+  d <- dif_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$diftree(data = d, vars = dif_items(), covariates = "dif")))
+  expect_true(nzchar(r$difNote$content))
+  dd <- dich_data()
+  dd$grp <- factor(rep(c("x", "y"), length.out = nrow(dd)))
+  expect_no_error(suppressWarnings(
+    er2$diftree(data = dd, vars = setdiff(names(dd), "grp"),
+                covariates = "grp")))
 })

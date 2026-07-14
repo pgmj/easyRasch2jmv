@@ -17,7 +17,7 @@ Encoding: UTF-8
 Imports:
     jmvcore (>= 0.8.5),
     R6,
-    easyRasch2 (>= 1.0.0.9000),
+    easyRasch2 (>= 1.1.0),
     eRm,
     iarm,
     lavaan,
@@ -30,8 +30,11 @@ Imports:
     utils,
     patchwork,
     mice,
-    ggrepel
-Remotes: pgmj/easyRasch2@126b64d
+    ggrepel,
+    psychotree,
+    partykit,
+    difR
+Remotes: pgmj/easyRasch2@e4f65fa
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

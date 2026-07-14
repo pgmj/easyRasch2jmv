@@ -100,43 +100,69 @@ iteminfitmiClass <- R6::R6Class(
         methods_vec[aux_vars] <- ""
       }
 
-      # 8. Run mice with retry-on-failure logic
-      attempt <- private$.runMice(mi_input, methods_vec, m, maxit, seed)
+      # The imputation + pooling + cutoff-simulation pipeline below is the
+      # expensive part, and jamovi reruns .run on every option change --
+      # including the sort toggle, which does not affect any of it. The
+      # hidden simCache element carries the pipeline outputs; jamovi
+      # clears its state exactly when a pipeline-relevant option changes
+      # (its clearWith list), and the signature + input-data check makes
+      # reuse self-validating rather than relying on clearWith alone.
+      sim_sig <- list(
+        method         = method_choice,
+        m              = m,
+        maxit          = maxit,
+        seed           = as.integer(seed),
+        compute_cutoff = compute_cutoff,
+        hdci_width     = hdci_width,
+        sim_iterations = sim_iterations
+      )
+      cached <- self$results$simCache$state
+      use_cache <- !is.null(cached) && !is.null(cached$results) &&
+        identical(cached$sig, sim_sig) &&
+        identical(cached$mi_input, mi_input)
 
       retry_note <- NULL
-      if (!attempt$ok && method_choice == "polr") {
-        retry_maxit <- min(maxit * 2L, 100L)
-        attempt <- private$.runMice(mi_input, methods_vec, m, retry_maxit, seed)
-        if (attempt$ok) {
-          retry_note <- paste0(
-            "Initial imputation with maxit=", maxit, " failed to fully ",
-            "impute the data. Succeeded after retrying with maxit=",
-            retry_maxit, ". Consider increasing the iterations setting."
-          )
-        }
-      }
+      mids_object <- NULL
+      if (use_cache) {
+        retry_note <- cached$retry_note
+      } else {
+        # 8. Run mice with retry-on-failure logic
+        attempt <- private$.runMice(mi_input, methods_vec, m, maxit, seed)
 
-      if (!attempt$ok) {
-        msg <- paste0(
-          "Imputation with method '", method_choice, "' failed",
-          if (method_choice == "polr") " even after doubling maxit" else "",
-          ". ",
-          if (!is.null(attempt$message))
-            paste0("Reason: ", attempt$message, ". ") else "",
-          if (method_choice == "polr") {
-            paste0("Try selecting method 'pmm' (recommended for difficult ",
-                   "data) or 'cart'. Alternatively, check that all items ",
-                   "have responses in all categories.")
-          } else if (method_choice == "cart") {
-            "Try selecting method 'pmm' or 'polr', or increase the iterations."
-          } else {
-            "Try increasing the iterations or selecting a different method."
+        if (!attempt$ok && method_choice == "polr") {
+          retry_maxit <- min(maxit * 2L, 100L)
+          attempt <- private$.runMice(mi_input, methods_vec, m, retry_maxit, seed)
+          if (attempt$ok) {
+            retry_note <- paste0(
+              "Initial imputation with maxit=", maxit, " failed to fully ",
+              "impute the data. Succeeded after retrying with maxit=",
+              retry_maxit, ". Consider increasing the iterations setting."
+            )
           }
-        )
-        stop(msg)
-      }
+        }
 
-      mids_object <- attempt$imp
+        if (!attempt$ok) {
+          msg <- paste0(
+            "Imputation with method '", method_choice, "' failed",
+            if (method_choice == "polr") " even after doubling maxit" else "",
+            ". ",
+            if (!is.null(attempt$message))
+              paste0("Reason: ", attempt$message, ". ") else "",
+            if (method_choice == "polr") {
+              paste0("Try selecting method 'pmm' (recommended for difficult ",
+                     "data) or 'cart'. Alternatively, check that all items ",
+                     "have responses in all categories.")
+            } else if (method_choice == "cart") {
+              "Try selecting method 'pmm' or 'polr', or increase the iterations."
+            } else {
+              "Try increasing the iterations or selecting a different method."
+            }
+          )
+          stop(msg)
+        }
+
+        mids_object <- attempt$imp
+      }
 
       # 9. Pooled infit via easyRasch2. The imputation layer above (mice
       # with optional auxiliary variables) stays in the module -- the R
@@ -151,12 +177,21 @@ iteminfitmiClass <- R6::R6Class(
         options(rgl.useNULL = TRUE)
         on.exit(options(rgl.useNULL = old_rgl), add = TRUE)
 
+        n_complete_first <- nrow(df_items)
+
+        if (use_cache) {
+          results      <- cached$results
+          cutoff_res   <- cached$cutoff_res
+          pooled_msq   <- cached$pooled_msq
+          n_failed     <- cached$n_failed
+          sim_fail_msg <- cached$sim_fail_msg
+        } else {
+
         long_completed <- mice::complete(mids_object, action = "long",
                                          include = TRUE)
         mids_items <- mice::as.mids(
           long_completed[, c(".imp", ".id", item_names), drop = FALSE]
         )
-        n_complete_first <- nrow(df_items)
 
         # 10. Optional: simulation-based cutoffs across imputations.
         # RMitemInfitCutoffMI() distributes the iterations over the imputed
@@ -216,11 +251,28 @@ iteminfitmiClass <- R6::R6Class(
             invokeRestart("muffleWarning")
           }
         )
-        m_ok <- m - n_failed
-
         # Pooled observed infit per item, aligned to the item order, for
         # the plot overlay (extracted before any sorting below).
         pooled_msq <- results$Infit_MSQ[match(item_names, results$Item)]
+
+        # Save the pipeline cache (results are pre-sort; the sort is
+        # re-applied below on every run). sim_fail_msg is cached too so a
+        # cached rerun replays the failure note instead of re-attempting
+        # a simulation that would fail identically.
+        self$results$simCache$setState(list(
+          results      = results,
+          cutoff_res   = cutoff_res,
+          pooled_msq   = pooled_msq,
+          n_failed     = n_failed,
+          retry_note   = retry_note,
+          sim_fail_msg = sim_fail_msg,
+          sig          = sim_sig,
+          mi_input     = mi_input
+        ))
+
+        } # end !use_cache
+
+        m_ok <- m - n_failed
 
         # 11. Sort if requested
         if (isTRUE(sort_by_infit)) {

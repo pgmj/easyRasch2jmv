@@ -25,6 +25,16 @@ description:
         exception: with small samples, around 100 iterations can yield
         better detection power than a larger number (Johansson, 2025).
 
+        Optionally, bootstrap p-values can be added: each item's observed
+        infit is compared against its simulated distribution (Monte-Carlo
+        p-value), with correction for multiple comparisons across items --
+        Westfall-Young step-down (familywise error rate, the default;
+        Ferreira, 2024), Benjamini-Hochberg, or Benjamini-Yekutieli (false
+        discovery rate). Flagging is then based on the adjusted p-value
+        (< 0.05) instead of the expected range. At least 1000 iterations
+        are recommended when reporting p-values. Results match
+        easyRasch2::RMitemInfit() with p_value = TRUE.
+
 options:
     - name: data
       type: Data
@@ -61,6 +71,23 @@ options:
       title: Random seed
       type: Integer
       default: 42
+
+    - name: pValues
+      title: Bootstrap p-values
+      type: Bool
+      default: false
+
+    - name: correction
+      title: Multiple-comparison correction
+      type: List
+      options:
+        - name: fwer
+          title: Familywise (Westfall-Young)
+        - name: fdr_bh
+          title: FDR (Benjamini-Hochberg)
+        - name: fdr_by
+          title: FDR (Benjamini-Yekutieli)
+      default: fwer
 
     - name: sortByInfit
       title: Sorted by Infit MSQ (descending)

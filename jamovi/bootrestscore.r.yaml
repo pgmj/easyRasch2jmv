@@ -36,6 +36,21 @@ items:
             title: Flagged
             type: text
 
+    # Hidden state carrier: caches the bootstrap (raw per-iteration data +
+    # the full-sample restscore fit) so option changes that do not affect
+    # it (cutoff, sortBy, showPlot) reuse the resampling results instead of
+    # rerunning them. The violin plot reads the raw data from here too.
+    # Never displayed.
+    - name: simCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - iterations
+          - samplesize
+          - seed
+
     - name: bootstrapNote
       title: ''
       type: Html

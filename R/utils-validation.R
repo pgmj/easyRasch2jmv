@@ -289,3 +289,57 @@ low_iteration_caveat <- function(actual, recommended = 100L) {
     "consider more iterations or checking for sparse response categories."
   )
 }
+
+#' Prose label for a bootstrap p-value multiplicity correction
+#'
+#' Used in table footnotes wherever bootstrap p-values are shown; mirrors
+#' easyRasch2's internal .correction_label(). `correction` takes the same
+#' values as the module's `correction` option (= the package argument).
+#'
+#' @param correction One of "fwer", "fdr_bh", "fdr_by".
+#' @return Character scalar describing the procedure.
+#' @noRd
+correction_label <- function(correction) {
+  switch(correction,
+    fwer   = paste0("the Westfall-Young step-down procedure, which controls ",
+                    "the familywise error rate"),
+    fdr_bh = paste0("the Benjamini-Hochberg procedure, which controls the ",
+                    "false discovery rate"),
+    fdr_by = paste0("the Benjamini-Yekutieli procedure, which controls the ",
+                    "false discovery rate under arbitrary dependence")
+  )
+}
+
+#' Column title for the adjusted bootstrap p-value
+#'
+#' @param correction One of "fwer", "fdr_bh", "fdr_by".
+#' @return Character scalar, e.g. "Adj. p-value (FWER)".
+#' @noRd
+padjusted_title <- function(correction) {
+  switch(correction,
+    fwer   = "Adj. p-value (FWER)",
+    fdr_bh = "Adj. p-value (BH)",
+    fdr_by = "Adj. p-value (BY)"
+  )
+}
+
+#' Caveat for bootstrap p-values from a small simulation
+#'
+#' Mirrors the warning easyRasch2 issues below 1000 iterations (which the
+#' module suppresses along with all other package warnings): with few
+#' iterations the multiple-comparison correction is liberal and small
+#' p-values are imprecise. Returns "" at or above the threshold. Leading
+#' space so it appends cleanly to an existing note.
+#'
+#' @param actual Number of successful simulation iterations.
+#' @return Character scalar (possibly "") with a leading space.
+#' @noRd
+pvalue_iteration_caveat <- function(actual) {
+  if (actual >= 1000L) return("")
+  paste0(
+    " The bootstrap p-values are based on only ", actual, " simulation ",
+    "iterations; with few iterations the multiple-comparison correction ",
+    "is liberal and small p-values are imprecise. At least 1000 iterations ",
+    "are recommended when reporting p-values."
+  )
+}

@@ -81,6 +81,7 @@ residualpcaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
     inherit = jmvcore::Group,
     active = list(
         pcaTable = function() private$.items[["pcaTable"]],
+        simCache = function() private$.items[["simCache"]],
         pcaNote = function() private$.items[["pcaNote"]],
         pcaPlot = function() private$.items[["pcaPlot"]]),
     private = list(),
@@ -131,6 +132,16 @@ residualpcaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `title`="Flagged", 
                         `type`="text", 
                         `visible`="(computeCutoff)"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="simCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "iterations",
+                    "seed")))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="pcaNote",
@@ -204,6 +215,7 @@ residualpcaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$pcaTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$simCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$pcaNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$pcaPlot} \tab \tab \tab \tab \tab an image \cr
 #' }

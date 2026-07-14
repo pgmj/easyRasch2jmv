@@ -3,6 +3,14 @@ iteminfitClass <- R6::R6Class(
   "iteminfitClass",
   inherit = iteminfitBase,
   private = list(
+    .init = function() {
+      # The adjusted-p column names its correction method, extending the
+      # "Adj. p-value (BH)" title convention of the asymptotic p columns.
+      self$results$infitTable$getColumn("pAdjusted")$setTitle(
+        padjusted_title(self$options$correction)
+      )
+    },
+
     .run = function() {
       # 1. Return early / explain if requirements not met. With 2 items
       # the conditional infit is ~1 for both items by construction (no
@@ -61,7 +69,24 @@ iteminfitClass <- R6::R6Class(
         cutoff_res   <- NULL
         sim_fail_msg <- NULL
 
-        if (isTRUE(self$options$computeCutoff)) {
+        # The simulation is the expensive part, and jamovi reruns .run on
+        # every option change -- including changes (pValues, correction,
+        # sortByInfit) that do not affect the simulation. The plot state
+        # already carries the cutoff object and jamovi clears it exactly
+        # when a simulation-relevant option changes (its clearWith list),
+        # so a surviving state is a valid cache. The signature check makes
+        # reuse self-validating rather than relying on clearWith alone.
+        sim_sig <- list(
+          iterations = self$options$iterations,
+          seed       = as.integer(self$options$seed),
+          hdci_width = self$options$hdciWidth / 100
+        )
+        cached <- self$results$infitPlot$state
+        if (isTRUE(self$options$computeCutoff) &&
+            !is.null(cached) && !is.null(cached$cutoff_res) &&
+            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
+          cutoff_res <- cached$cutoff_res
+        } else if (isTRUE(self$options$computeCutoff)) {
           cutoff_res <- tryCatch(
             suppressWarnings(suppressMessages(
               easyRasch2::RMitemInfitCutoff(
@@ -92,12 +117,24 @@ iteminfitClass <- R6::R6Class(
           }
         }
 
+        # Bootstrap p-values need the full cutoff object (it carries the
+        # simulated distributions), so they are only computed when the
+        # simulation succeeded. The pValues option can hold a stale TRUE
+        # while greyed out (jamovi disables but does not reset nested
+        # options), hence the explicit computeCutoff gate.
+        use_pvalues <- isTRUE(self$options$computeCutoff) &&
+          isTRUE(self$options$pValues) &&
+          !is.null(cutoff_res)
+
         # Observed conditional infit (+ expected range and flags when the
-        # cutoff simulation succeeded). Values are as reported by
-        # easyRasch2::RMitemInfit(): infit to 3 decimals, Rel. location to 2.
+        # cutoff simulation succeeded, + bootstrap p-values when requested).
+        # The package's below-1000-iterations warning is suppressed with the
+        # rest; the module states the same caveat in the note below.
         results <- suppressWarnings(suppressMessages(
           easyRasch2::RMitemInfit(df, cutoff = cutoff_res,
-                                  output = "dataframe")
+                                  p_value    = use_pvalues,
+                                  correction = self$options$correction,
+                                  output     = "dataframe")
         ))
 
         # 4. Sort if requested
@@ -118,6 +155,10 @@ iteminfitClass <- R6::R6Class(
             vals$infitLow <- results$Infit_low[i]
             vals$infitHigh <- results$Infit_high[i]
             vals$misfit <- results$Flagged[i]
+          }
+          if (use_pvalues) {
+            vals$pValue <- results$p_infit[i]
+            vals$pAdjusted <- results$padj_infit[i]
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -153,7 +194,33 @@ iteminfitClass <- R6::R6Class(
             "in logits."
           )
         )
-        if (!is.null(cutoff_res)) {
+        if (use_pvalues) {
+          # With bootstrap p-values, flagging follows the adjusted p-value
+          # (upstream behavior); the expected-range columns stay as the
+          # effect-size reference.
+          table$setNote(
+            "misfit",
+            paste0(
+              "Flagged: adjusted p-value < 0.05; observed infit below 1 = ",
+              "overfit (item is more predictable than the model expects), ",
+              "above 1 = underfit (noisier than expected). Note the ",
+              "direction is inverted relative to the item-restscore ",
+              "analyses. The expected-range columns remain as the ",
+              "effect-size reference."
+            )
+          )
+          table$setNote(
+            "pvalues",
+            paste0(
+              "p-value: probability of an infit at least as extreme as ",
+              "observed if the model fits, computed from the ",
+              cutoff_res$actual_iterations, " simulated datasets ",
+              "(Monte-Carlo). Adj. p-value: corrected for multiple ",
+              "comparisons across the ", nrow(results), " items using ",
+              correction_label(self$options$correction), "."
+            )
+          )
+        } else if (!is.null(cutoff_res)) {
           table$setNote(
             "misfit",
             paste0(
@@ -181,6 +248,9 @@ iteminfitClass <- R6::R6Class(
             " complete cases.",
             iteration_note(self$options$iterations, 250L, infit = TRUE),
             low_iteration_caveat(cutoff_res$actual_iterations),
+            if (use_pvalues)
+              pvalue_iteration_caveat(cutoff_res$actual_iterations)
+            else "",
             "</p>"
           )
           self$results$cutoffNote$setContent(note_html)
@@ -207,7 +277,8 @@ iteminfitClass <- R6::R6Class(
           self$results$infitPlot$setState(list(
             df         = df,
             cutoff_res = cutoff_res,
-            n_complete = n_complete
+            n_complete = n_complete,
+            sig        = sim_sig
           ))
         }
 

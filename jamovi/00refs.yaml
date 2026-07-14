@@ -96,6 +96,85 @@ refs:
         publisher: 'Educational Methods & Psychometrics'
         url: https://doi.org/10.61186/emp.2025.5
 
+    ferreira2024:
+        type: article
+        author: Ferreira, J. A.
+        year: 2024
+        title: "Methods of testing a 'small' or 'moderate' number of hypotheses simultaneously"
+        publisher: 'Journal of Statistical Theory and Practice, 19(6)'
+        url: https://doi.org/10.1007/s42519-024-00412-4
+
+    westfallyoung1993:
+        type: book
+        author: Westfall, P. H., & Young, S. S.
+        year: 1993
+        title: 'Resampling-Based Multiple Testing'
+        publisher: 'Wiley'
+
+    strobl2015:
+        type: article
+        author: Strobl, C., Kopf, J., & Zeileis, A.
+        year: 2015
+        title: 'Rasch trees: A new method for detecting differential item functioning in the Rasch model'
+        publisher: 'Psychometrika, 80(2), 289-316'
+        url: https://doi.org/10.1007/s11336-013-9388-3
+
+    henninger2023:
+        type: article
+        author: Henninger, M., Debelak, R., & Strobl, C.
+        year: 2023
+        title: 'A new stopping criterion for Rasch trees based on the Mantel-Haenszel effect size measure for differential item functioning'
+        publisher: 'Educational and Psychological Measurement, 83(1), 181-212'
+        url: https://doi.org/10.1177/00131644221077135
+
+    henninger2025:
+        type: article
+        author: Henninger, M., Radek, J., Debelak, R., & Strobl, C.
+        year: 2025
+        title: 'Partial credit trees meet the partial gamma coefficient for quantifying DIF and DSF in polytomous items'
+        publisher: 'Behaviormetrika, 52, 221-257'
+        url: https://doi.org/10.1007/s41237-024-00243-4
+
+    christensen2002:
+        type: article
+        author: Christensen, K. B., Bjorner, J. B., Kreiner, S., & Petersen, J. H.
+        year: 2002
+        title: 'Testing unidimensionality in polytomous Rasch models'
+        publisher: 'Psychometrika, 67(4), 563-574'
+        url: https://doi.org/10.1007/BF02295132
+
+    christensen2007:
+        type: article
+        author: Christensen, K. B., & Kreiner, S.
+        year: 2007
+        title: 'A Monte Carlo approach to unidimensionality testing in polytomous Rasch models'
+        publisher: 'Applied Psychological Measurement, 31(1), 20-30'
+        url: https://doi.org/10.1177/0146621605286204
+
+    besag1991:
+        type: article
+        author: Besag, J., & Clifford, P.
+        year: 1991
+        title: 'Sequential Monte Carlo p-values'
+        publisher: 'Biometrika, 78(2), 301-304'
+        url: https://doi.org/10.1093/biomet/78.2.301
+
+    sinharay2016:
+        type: article
+        author: Sinharay, S.
+        year: 2016
+        title: 'Assessment of person fit using resampling-based approaches'
+        publisher: 'Journal of Educational Measurement, 53(1), 63-85'
+        url: https://doi.org/10.1111/jedm.12101
+
+    bock1982:
+        type: article
+        author: Bock, R. D., & Mislevy, R. J.
+        year: 1982
+        title: 'Adaptive EAP estimation of ability in a microcomputer environment'
+        publisher: 'Applied Psychological Measurement, 6(4), 431-444'
+        url: https://doi.org/10.1177/014662168200600405
+
     mair2007:
         type: article
         author: Mair, P., & Hatzinger, R.

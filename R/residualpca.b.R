@@ -94,7 +94,24 @@ residualpcaClass <- R6::R6Class(
         # the note explains why.
         cutoff_res   <- NULL
         sim_fail_msg <- NULL
-        if (compute_cutoff) {
+
+        # The simulation is the expensive part, and jamovi reruns .run on
+        # every option change -- including changes (nComponents, coordFlip)
+        # that do not affect the simulation. The hidden simCache element
+        # carries the cutoff object; jamovi clears its state exactly when
+        # a simulation-relevant option changes (its clearWith list), and
+        # the signature check makes reuse self-validating rather than
+        # relying on clearWith alone.
+        sim_sig <- list(
+          iterations = self$options$iterations,
+          seed       = as.integer(self$options$seed)
+        )
+        cached <- self$results$simCache$state
+        if (compute_cutoff &&
+            !is.null(cached) && !is.null(cached$cutoff_res) &&
+            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
+          cutoff_res <- cached$cutoff_res
+        } else if (compute_cutoff) {
           cutoff_res <- tryCatch(
             suppressWarnings(suppressMessages(
               easyRasch2::RMdimResidualPCACutoff(
@@ -123,6 +140,15 @@ residualpcaClass <- R6::R6Class(
             )
             cutoff_res <- NULL
           }
+        }
+
+        # Save (or clear, on failure) the simulation cache.
+        if (!is.null(cutoff_res)) {
+          self$results$simCache$setState(list(
+            cutoff_res = cutoff_res, sig = sim_sig, df = df
+          ))
+        } else if (compute_cutoff) {
+          self$results$simCache$setState(NULL)
         }
 
         result_df <- suppressWarnings(suppressMessages(

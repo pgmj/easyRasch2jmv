@@ -1,213 +1,182 @@
 # easyRasch2jmv 3.0.0
 
-- **CICC: corrected and extended total-score grouping.** The grouping
-  option previously mislabelled as "equal-width theta intervals" is in
-  fact quantile-based grouping of the **total score** (approximately
-  equal numbers of respondents per group; all CICC grouping happens on
-  the total-score scale, following Buchardt, Christensen & Jensen,
-  2023). The option is now labelled accordingly, a new **equal-width
-  total-score intervals** method was added (via the easyRasch2
-  development version), and the number-of-intervals setting is greyed
-  out when "each total score separately" is selected (it never applied
-  there). The error-band option is now described as what it is — a
-  model-based band around the expected curve, complementary to the
-  error bars on observed means, not a replacement — and the note
-  explains how to read it. Buchardt et al. (2023) added to the
-  references. (Manual score cutpoints are available in
-  easyRasch2::RMitemICCPlot() via `score_breaks`; deliberately not
-  exposed in the GUI.)
-- **Larger plot text for package-drawn figures**: every figure rendered
-  directly by easyRasch2 (CICC, item probability curves, targeting,
-  both CFA figures, the Q3 heatmap, the LR-DIF locations figure, and
-  the response-distribution tileplots) now has its text enlarged to the
-  module's base size 15, matching the module's own plots, while each
-  figure's specific theming is preserved.
-- **The module now installs easyRasch2 from GitHub** (development
-  version, `Remotes: pgmj/easyRasch2`) rather than CRAN, picking up
-  unrounded data-frame output, the all-NA-respondent crash fixes,
-  seed-reproducible RMU, and the LD gamma SE/CI columns without
-  waiting for the next CRAN release.
-- **Andersen LR-test DIF now uses the easyRasch2 R package directly**
-  (`easyRasch2::RMdifLR()`, which deliberately remains based on
-  `eRm::LRtest()`): per-group location/threshold tables, the MaxDiff
-  flagging, and the per-group locations figure are all identical to the
-  R package. The response-distribution tileplot is drawn by
-  `easyRasch2::RMplotTile()`. This completes the migration: **all 15
-  analyses now delegate their computations to easyRasch2**, and the
-  module's vendored simulation and estimation code is fully retired.
-- **Partial gamma DIF now uses the easyRasch2 R package directly**
-  (`easyRasch2::RMdifGamma()` / `RMdifGammaCutoff()`). The simulated
-  expected ranges' generating model moves from eRm-MLE person parameters
-  to the WLE theta pool, shifting the ranges slightly; observed gammas,
-  SEs, and p-values are unchanged (same `iarm` statistic). The
-  response-distribution tileplot is now drawn by
-  `easyRasch2::RMplotTile()` (the function the module's version was
-  ported from). The simulated-gamma figure keeps the module's rendering,
-  including the observed gamma's 95% Wald CI segment.
-- **Partial gamma local dependence now uses the easyRasch2 R package
-  directly** (`easyRasch2::RMlocdepGamma()`), and gains the
-  simulation-based machinery its DIF sibling already had:
-  - **New: simulation-based per-pair expected ranges** (parametric
-    bootstrap under the fitted model, no true LD by construction), with
-    Lower/Upper columns and above-range flags on both direction tables.
-  - **New: a per-pair figure** (`easyRasch2::RMlocdepGammaPlot()`):
-    simulated partial-gamma distributions as dot clouds with observed
-    values as orange diamonds, ranked by deviation from the simulated
-    null.
-  - The SE and 95% CI columns come from the easyRasch2 development
-    version's data output (with an older easyRasch2 they are sourced
-    from the same underlying `iarm::partgam_LD()` call, identical by
-    construction).
-- The module's vendored simulation code is now fully retired: with all
-  simulation-based analyses delegated to easyRasch2, the only retained
-  helper is the observed-CFA fallback used when the CFA cutoff
-  simulation fails.
-- **Residual PCA now uses the easyRasch2 R package directly**
-  (`easyRasch2::RMdimResidualPCA()` / `RMdimResidualPCACutoff()`).
-  Standardized residuals move from eRm's `itemfit()` to the native
-  CML/WLE residuals, and the variance partition now **retains extreme
-  scorers** (WLE person estimates are finite there; previously only
-  non-extreme cases entered the partition). Eigenvalues, loadings, the
-  partition percentages, and the simulated cutoff all shift accordingly.
-- **Dynamic CFA fit-index cutoffs now use the easyRasch2 R package
-  directly** (`easyRasch2::RMdimCFACutoff()` / `RMdimCFA()` /
-  `RMdimCFAPlot()`); the simulated datasets are now generated from
-  psychotools CML + WLE (was eRm), shifting the cutoffs slightly. Two
-  additions:
-  - **New: standardized-loadings table and figure** — each item's
-    observed one-factor loading against its simulated expected range,
-    flagged above/below, pointing to the items driving
-    multidimensionality.
-  - The fit-index figure is now drawn by `RMdimCFAPlot()`.
-- **New analysis: Item Characteristic Curves (CICC)** — conditional item
-  characteristic curves via `easyRasch2::RMitemICCPlot()`: model-expected
-  item score curves with observed class-interval averages overlaid
-  (Kreiner-style graphical item fit), with options for interval
-  construction (equal-width theta intervals or per raw score), number of
-  intervals, confidence intervals or error bands, and a minimum
-  observations-per-interval filter. An optional DIF variable draws the
-  observed averages separately per group, with partial-gamma DIF
-  annotations per item.
-- **Item probability curves now use the easyRasch2 R package directly**:
-  probabilities come from `easyRasch2::RMitemCatProb()` (CML via
-  psychotools instead of eRm; curve positions shift very slightly for
-  polytomous data). The polytomous faceted plot is drawn by the package;
-  the dichotomous joint-ICC view (all items in one panel) remains a
-  module-specific presentation of the package-computed curves.
-- **Targeting plot now uses the easyRasch2 R package directly**: the
-  Wright map is drawn by `easyRasch2::RMtargeting()` and the threshold
-  table comes from `easyRasch2::RMitemParameters()` (both using the same
-  CML-with-MML-sparse-fallback estimator selection as before).
-  Consequences:
-  - The **person histogram now uses WLE person locations including
-    respondents with extreme (minimum/maximum) scores**, which the
-    previous eRm-MLE estimates extrapolated; the person distribution
-    shifts accordingly. Threshold standard errors shift by a few percent
-    (psychotools vs eRm covariance).
-  - **New: the threshold table gains Lower/Upper Wald CI columns**
-    (shown when CIs are enabled), matching the intervals drawn in the
-    figure.
-- **Reliability now uses the easyRasch2 R package directly**
-  (`easyRasch2::RMreliability()`), replacing the module's adapted
-  implementation. Three substantive changes:
-  - The **"Empirical" row is replaced by "Marginal"** — the model-based
-    marginal reliability (Green, 1984; CML test information integrated
-    over the estimated latent distribution). The previous
-    `mirt::empirical_rxx()` estimate was the EAP-twin of the PSI and
-    therefore largely redundant; the marginal coefficient is the
-    complementary model-based view, and a large PSI-vs-Marginal gap now
-    serves as an off-target diagnostic. The theta-estimator option now
-    affects only the RMU plausible values.
-  - **PSI moves from `eRm::SepRel()` to the native WLE-based person
-    separation index** (CML item parameters via psychotools; min/max
-    scorers excluded). Values shift, noticeably for samples with many
-    extreme scores.
-  - **The bootstrap option now yields HDCIs for Cronbach's alpha, PSI,
-    and Marginal reliability** (respondents resampled, all three
-    recomputed natively per resample), not just alpha. The option kept
-    its internal name (saved analyses continue to work) but was retitled
-    accordingly.
-- **Sum score to logit transformation now uses the easyRasch2 R package
-  directly** (`easyRasch2::RMscoreSE()`), replacing the module's verbatim
-  port of the same WLE solver. Point estimates and standard errors are
-  unchanged (the 2.0.1 release had already aligned the module's WLE SEM
-  with `RMscoreSE()`); the internal CML fit moves from eRm to
-  psychotools, and the module's now-unused ported WLE helpers
-  (`utils-theta.R`) were removed.
-- **Item-restscore and bootstrap item-restscore now use the easyRasch2
-  R package directly**, replacing the module's adapted implementations.
-  - Item-restscore delegates to `easyRasch2::RMitemRestscore()`: same
-    gamma statistics and BH-adjusted p-values (conditional, hence
-    engine-invariant), but the **Rel. location column shifts slightly**
-    (CML thresholds via psychotools with a WLE person-mean reference,
-    replacing eRm-MLE). Values pass through the R package's data-frame
-    output (unrounded with the easyRasch2 development version).
-  - Bootstrap item-restscore runs the bootstrap via
-    `easyRasch2::RMitemRestscoreBoot(output = "raw")` — numerically
-    identical draws and classifications with the same seed — with the
-    percentage table and violin plot built from the raw per-iteration
-    data (percentages remain unrounded). The dichotomous per-iteration
-    refit moves from `eRm::RM` to `psychotools::pcmodel`, which is
-    substantially faster; the default number of iterations was raised
-    from 200 to 250, matching the other simulation-based analyses.
-  - Both analyses drop respondents with no responses at all up front
-    (reported in the note), as the Q3 and infit analyses do.
-- **Conditional item infit (standard and multiple-imputation) now uses
-  the easyRasch2 R package directly**, replacing the module's adapted
-  implementation. The per-analysis model fitting moves from eRm (MLE
-  person parameters) to conditional maximum likelihood via psychotools
-  with Warm's weighted likelihood (WLE) person estimates. Consequences:
-  - Observed infit MSQ values are engine-invariant (they match the
-    previous eRm route to ~1e-6), but the **Rel. location column shifts
-    slightly** (the person-mean reference is now WLE instead of eRm-MLE)
-    and the simulation-based cutoffs shift slightly (the generating theta
-    pool is now WLE). Results are numerically identical to
-    `easyRasch2::RMitemInfit()` / `RMitemInfitCutoff()` /
-    `RMitemInfitMI()` / `RMitemInfitCutoffMI()` with the same seed and
-    iterations.
-  - The bootstrap is substantially faster per iteration, so the standard
-    analysis' default iterations were raised from 200 to 250, matching
-    the other simulation-based analyses (the small-sample exception —
-    around 100 iterations can outperform more; Johansson, 2025 — still
-    applies and remains documented in the notes). The MI analysis'
-    default of 500 total iterations is unchanged.
-  - The MI analysis keeps its jamovi-specific imputation layer — the
-    imputation-method choice, retry logic, and **auxiliary variables**
-    (not available in the R package, which takes a ready-made mids
-    object) — and passes an items-only mids object to easyRasch2.
-  - Table values pass through the R package's data-frame output. The
-    module installs the easyRasch2 development version (GitHub), which
-    returns unrounded values; with easyRasch2 1.0.0 they arrive rounded
-    (infit and pooled SE to 3 decimals, Rel. location to 2).
-  - The HDCI width option's maximum changed from 100 to 99.9 in both
-    analyses (consistent with the Q3 analysis).
-- **Q3 residual analysis now uses the easyRasch2 R package directly**
-  (easyRasch2 1.0.0 is on CRAN), replacing the module's adapted
-  implementation. Estimation moves from MML (mirt) to conditional maximum
-  likelihood item parameters (psychotools) with Warm's weighted likelihood
-  (WLE) person estimates — true to the Rasch tradition and finite at
-  extreme scores. Results are numerically identical to
-  `easyRasch2::RMlocdepQ3()` / `RMlocdepQ3Cutoff()` / `RMlocdepQ3Plot()`
-  run with the same seed and iterations. Consequences:
-  - Q3 values shift slightly relative to earlier module versions
-    (CML/WLE vs MML Q3 typically correlate > 0.99); simulation-based
-    cutoffs shift accordingly. Saved analyses will show updated numbers
-    when re-run.
-  - The parametric bootstrap is substantially faster per iteration
-    (roughly 3x for polytomous, 14x for dichotomous data), so the
-    default number of iterations was raised from 100 to 250, matching
-    the other simulation-based analyses.
-  - **New output: Q3 heatmap** — a lower-triangle tile plot of the
-    observed Q3 matrix with a diverging fill centred on the mean
-    off-diagonal Q3, and pairs above the global dynamic cut-off outlined
-    in black. Shown when the cutoff simulation is enabled.
-  - The HDCI width option's maximum changed from 100 to 99.9 (the
-    package requires a width strictly below 100%).
-  - Data with no complete response rows are no longer rejected:
-    CML/WLE estimation handles incomplete response patterns directly,
-    so the previous "no complete cases" stop was removed. Respondents
-    with no responses at all on the selected items are excluded and
-    reported in the note.
+The migration release: **all analyses now delegate their
+computations to the `easyRasch2` R package**, and the module's vendored
+estimation and simulation code is retired. Estimation moves to conditional
+maximum likelihood (CML) via psychotools, with Warm's weighted likelihood (WLE)
+person estimates throughout, replacing the earlier eRm and mirt
+engines. Overall consequences:
+
+- Every analysis is numerically identical to its easyRasch2
+  counterpart run with the same seed and iterations.
+- Observed conditional statistics are essentially unchanged (infit
+  matches the previous engine to ~1e-6; gamma statistics and their
+  p-values are identical; CML/WLE Q3 typically correlates > 0.99 with
+  the previous MML Q3), but **relative item locations, person
+  distributions, and simulation-based expected ranges shift slightly**
+  — the person reference and the generating theta pool are now WLE
+  instead of eRm-MLE. Saved analyses show updated numbers when re-run.
+- WLE estimates are finite at extreme scores, so extreme scorers are
+  now retained where they previously were extrapolated or excluded
+  (the targeting person histogram and the residual-PCA variance
+  partition).
+- The parametric bootstraps are substantially faster per iteration,
+  and **default iterations are unified at 250** across the
+  simulation-based analyses. The HDCI width maximum is 99.9%
+  throughout. Option changes that do not affect a simulation or
+  bootstrap (sorting, filters, p-value settings, plot options, the DIF
+  tileplot) no longer rerun it, in every simulation-based analysis —
+  including the MI conditional infit analysis, where a sort-order
+  change previously reran the imputation and simulation pipeline.
+- Table values pass through the package's unrounded data-frame output
+  (jamovi's number formatting applies).
+- Respondents with no responses on any selected item are excluded up
+  front and reported in the note; the Q3 analysis no longer requires
+  complete response rows (CML handles incomplete patterns directly).
+
+New functionality:
+
+- **New analysis: Tree-Based DIF** — model-based recursive partitioning
+  for DIF via `easyRasch2::RMdifTree()` (psychotree Rasch/PCM trees;
+  Strobl et al., 2015): the sample is split wherever item parameters
+  are unstable along one or more covariates, so groups need not be
+  pre-specified — several covariates at once, continuous covariates
+  with data-driven cutpoints, and interactions as nested splits. Each
+  split's items get an effect size (Mantel-Haenszel on the ETS Delta
+  scale for dichotomous data, partial gamma for polytomous; Henninger
+  et al., 2023, 2025) classified A/B/C, with optional iterative
+  purification, optional pruning of all-negligible splits, an
+  adjustable classification alpha, and an optional p-value adjustment
+  for the partial-gamma classification. Output: the tree figure with
+  per-node item profiles, and the per-split effect-size table. The
+  output notes that the A/B/C boundaries are conventions rather than
+  sample-calibrated values, pointing to the Partial Gamma DIF analysis
+  with simulation-based cutoffs for a calibrated test.
+- **New analysis: Martin-Löf Test** — likelihood-ratio test of
+  unidimensionality against an a priori two-subscale partition of the
+  items, generalised to polytomous models (Christensen, Bjorner,
+  Kreiner & Petersen, 2002), via `easyRasch2::RMdimMartinLof()`. The
+  p-value comes from Monte Carlo simulation under the unidimensional
+  null (Christensen & Kreiner, 2007; the asymptotic chi-square is
+  biased toward conservatism), with optional Besag-Clifford sequential
+  stopping for faster runs when the null is compatible with the data.
+  Alongside the test, the correlation between the two subscales' WLE
+  person estimates is reported with a 95% CI. Two default figures: the Monte
+  Carlo null distribution with the observed statistic marked, and the
+  observed-vs-expected subscore cross-table residual heatmap
+  (`RMdimMartinLofResiduals()`, with an optional minimum-expected-count
+  filter for sparse cells). The output states prominently that the
+  partition must be a priori: testing a split suggested by the same
+  data (e.g. the first residual-PCA contrast) invalidates the p-value.
+  Complete cases only (at least 30 required).
+- **New analysis: Person Fit** — per-respondent person-fit statistics
+  with Monte-Carlo resampled p-values, via `easyRasch2::RMpersonFit()`:
+  conditional infit and outfit MSQ (conditional on the total score, so
+  no biased person estimate enters and partial missingness is handled
+  directly) and the standardized log-likelihood lz, each shown as a
+  person-fit map (statistic vs person location, flagged respondents
+  highlighted) — all three by default, individually selectable.
+  Significance comes from resampling under the fitted model (the
+  asymptotic nulls are unreliable; Müller, 2020; Sinharay, 2016), with
+  a choice of flagging direction for the MSQ statistics (two-sided, or
+  underfit-only for more power against careless responding) and an
+  adjustable flagging alpha (default 0.05; a per-person screening flag,
+  so about alpha of respondents are flagged by chance under fit). The
+  flag, the statistics, and their p-values can be **saved as variables
+  in the dataset** — e.g. to filter out aberrant respondents before
+  rerunning other analyses. Extreme scorers cannot be assessed and get
+  empty cells. A summary table reports assessed/extreme counts and
+  flagged counts overall and per statistic. The default of 500
+  resampling iterations (rather than the module-wide 250) reflects that
+  per-person p-values have resolution 1/iterations.
+- **New analysis: Person Parameters** — estimates each respondent's
+  location on the latent variable (theta, in logits) with its standard
+  error of measurement, by WLE (Warm's weighted likelihood, the
+  default; finite at extreme scores) or EAP (normal prior estimated
+  from the data by marginal maximum likelihood), via
+  `easyRasch2::RMpersonParameters()`. The estimates can be **saved as
+  new variables in the dataset** — theta, SEM, sum score, number of
+  items answered, and an extreme-score flag — for use in other jamovi
+  analyses or for export; respondents with partially missing responses
+  are retained (theta estimated from the items they answered), and the
+  saved columns stay row-aligned with the spreadsheet. The displayed
+  output is a compact summary table (mean, SD, median, MAD, IQR, range
+  of theta, mean SEM, extreme-score counts) and a theta histogram whose
+  caption reports the number and share of minimum and maximum scores.
+  Item parameters switch from CML to MML under sparse response
+  categories, with a note, as in the targeting analysis.
+
+  **This analysis replaces the former "Sum Score to Logit
+  Transformation" analysis**, which is removed from the menu: the
+  score-to-theta lookup table and its figure (the option previously
+  titled just "Figure") are now the *Sum score to logit table* and
+  *Sum score to logit figure* options here, sharing the WLE/EAP method
+  choice and theta range with the person estimates, and computed by
+  `easyRasch2::RMscoreSE()` exactly as before. Saved analyses from
+  earlier module versions that used the old analysis need to be
+  re-created. Note that with EAP, the lookup table's sum-score EAP
+  (mirt, standard-normal prior) and the pattern-based EAP person
+  estimates use different engines, so values for the same sum score
+  can differ slightly (a table note explains this).
+- **New analysis: Item Characteristic Curves (CICC)** — model-expected
+  item score curves with observed class-interval means overlaid
+  (Kreiner-style graphical item fit), via
+  `easyRasch2::RMitemICCPlot()`. Grouping happens on the total-score
+  scale (Buchardt, Christensen & Jensen, 2023): quantile groups
+  (default), equal-width score intervals, or each total score
+  separately. Observed means can carry confidence intervals,
+  complemented by a model-based error band around the expected curve
+  showing where the means should fall if the model holds; a minimum
+  observations-per-interval filter is available. An optional DIF
+  variable draws the observed means separately per group, with
+  partial-gamma DIF annotations per item.
+- **Conditional item infit and Q3: optional bootstrap p-values.** With
+  simulation-based cutoffs enabled, a checkbox adds Monte-Carlo
+  p-values comparing each observed statistic against its simulated
+  distribution (two-sided per item for infit; one-sided per item pair
+  for Q3, testing excess positive local dependence) and adjusted
+  p-values, defaulting to the Westfall-Young step-down familywise
+  correction (Ferreira, 2024) with Benjamini-Hochberg and
+  Benjamini-Yekutieli FDR alternatives; the adjusted-p column title
+  names the chosen method. Flagging then follows the adjusted p-value
+  (< 0.05), with the expected range kept as the effect-size reference.
+  Matches `easyRasch2::RMitemInfit()` / `RMlocdepQ3()` with
+  `p_value = TRUE`; at least 1000 iterations are recommended when
+  reporting p-values (noted in the output). The other simulation-based
+  analyses will gain the same option in later releases; the asymptotic
+  p-values in the item-restscore and partial-gamma analyses keep their
+  fixed Benjamini-Hochberg correction (the cheap first screen).
+- **Q3 heatmap** — a lower-triangle tile plot of the observed Q3
+  matrix with a diverging fill centred on the mean off-diagonal Q3 and
+  pairs above the global dynamic cutoff outlined in black (shown when
+  the cutoff simulation is enabled).
+- **Partial gamma local dependence: simulation-based expected ranges
+  and a per-pair figure**, matching the machinery its DIF sibling
+  already had: parametric bootstrap under the fitted model (no true LD
+  by construction), Lower/Upper columns and above-range flags on both
+  direction tables, and simulated per-pair distributions as dot clouds
+  with the observed values overlaid.
+- **CFA: standardized-loadings table and figure** — each item's
+  observed one-factor loading against its simulated expected range,
+  flagged above/below, pointing to the items driving
+  multidimensionality.
+- **Targeting: the threshold table defaults to a wide layout** — one
+  row per item with a column per threshold plus the mean location, and
+  no SE/CI. The optional **long layout** (one row per threshold) adds
+  the SE and Wald CI columns at the chosen confidence level, matching
+  the intervals drawn in the figure.
+
+Other changes:
+
+- **Reliability**: the "Empirical" row is replaced by **"Marginal"**
+  reliability (Green, 1984) — the model-based marginal coefficient is
+  complementary to the PSI (a large gap between them serves as an
+  off-target diagnostic), whereas the previous
+  `mirt::empirical_rxx()` estimate was largely redundant with it. The
+  **PSI is now the native WLE-based person separation index** (values
+  shift, noticeably for samples with many extreme scores), and the
+  **bootstrap yields HDCIs for Cronbach's alpha, PSI, and Marginal
+  reliability**, not just alpha.
 
 # easyRasch2jmv 2.0.1
 

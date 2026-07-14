@@ -7,7 +7,7 @@ items:
     - name: q3Table
       title: Q3 Residual Correlation Matrix
       type: Table
-      refs: [easyRasch2jmv, easyRasch2, yen1984, christensen2017, zeileis2026, warm1989]
+      refs: [easyRasch2jmv, easyRasch2, yen1984, christensen2017, zeileis2026, warm1989, ferreira2024, westfallyoung1993]
       clearWith:
           - vars
           - computeCutoff
@@ -73,6 +73,8 @@ items:
           - iterations
           - hdciWidth
           - seed
+          - pValues
+          - correction
       columns:
           - name: item1
             title: Item 1
@@ -94,6 +96,16 @@ items:
             type: number
             format: zto
             superTitle: Expected range
+          - name: pValue
+            title: p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
+          - name: pAdjusted
+            title: Adj. p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
           - name: flagged
             title: Flagged
             type: text
@@ -107,4 +119,6 @@ items:
           - iterations
           - hdciWidth
           - seed
+          - pValues
+          - correction
 ...

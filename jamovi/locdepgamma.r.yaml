@@ -152,6 +152,20 @@ items:
           - seed
           - plotPairs
 
+    # Hidden state carrier: caches the cutoff simulation so option changes
+    # that do not affect it (filters, sorting, plotPairs, showSE) reuse the
+    # simulated distributions instead of rerunning them. Never displayed.
+    - name: simCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - computeCutoff
+          - iterations
+          - hdciWidth
+          - seed
+
     - name: ldNote
       title: ''
       type: Html
