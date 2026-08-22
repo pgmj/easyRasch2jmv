@@ -66,14 +66,14 @@ options:
     - name: iterations
       title: Number of simulation iterations
       type: Integer
-      default: 250
+      default: 400
       min: 50
       max: 5000
 
     - name: hdciWidth
       title: HDCI width for item-pair intervals
       type: Number
-      default: 99
+      default: 95
       min: 50
       max: 99.9
 
@@ -82,6 +82,23 @@ options:
       type: Integer
       default: 42
       min: 0
+
+    - name: pValues
+      title: Bootstrap p-values
+      type: Bool
+      default: true
+
+    - name: correction
+      title: Multiple-comparison correction
+      type: List
+      options:
+        - name: fwer
+          title: Familywise (Westfall-Young)
+        - name: fdr_bh
+          title: FDR (Benjamini-Hochberg)
+        - name: fdr_by
+          title: FDR (Benjamini-Yekutieli)
+      default: fwer
 
     - name: plotPairs
       title: Max. number of item pairs to plot

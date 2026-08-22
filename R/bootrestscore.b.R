@@ -35,6 +35,9 @@ bootrestscoreClass <- R6::R6Class(
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
         self$results$bootstrapTable$setNote("sparse", sparse_msg)
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$bootstrapTable$setNote("recode", recode_msg)
 
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
@@ -246,7 +249,7 @@ bootrestscoreClass <- R6::R6Class(
           " and ", n_items, " items.",
           clamp_msg, missing_msg,
           iteration_note(iterations, 250L),
-          low_iteration_caveat(actual_iterations), "</p>"
+          iteration_attrition_note(actual_iterations, iterations), "</p>"
         )
         self$results$bootstrapNote$setContent(note_html)
 

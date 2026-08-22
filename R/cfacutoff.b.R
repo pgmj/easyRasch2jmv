@@ -77,6 +77,10 @@ cfacutoffClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$cfaTable$setNote("sparse", sparse_msg)
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$cfaTable$setNote("recode", recode_msg)
+
       dup_msg <- duplicate_items_note(df_complete)
       if (!is.null(dup_msg))
         self$results$cfaTable$setNote("duplicate", dup_msg)
@@ -246,7 +250,7 @@ cfacutoffClass <- R6::R6Class(
           "seed.",
           success_clause,
           iteration_note(iterations, 250L),
-          low_iteration_caveat(actual_iterations), "</p>"
+          iteration_attrition_note(actual_iterations, iterations), "</p>"
         )
         self$results$cfaNote$setContent(note_html)
 

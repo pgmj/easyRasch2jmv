@@ -144,6 +144,33 @@ to_numeric_responses_df <- function(df) {
 #' @param vars Character vector of selected item variable names.
 #' @return The converted numeric data.frame of item responses.
 #' @noRd
+#' Is the data coded with 1, rather than 0, as the lowest category?
+#'
+#' Deliberately restrictive. `TRUE` only when *every* item's lowest observed
+#' response is exactly 1, which is the one arrangement where 1-based coding
+#' is the obvious reading. All items can then be shifted by the same -1, so
+#' the shift cannot itself create an item whose minimum sits above zero.
+#'
+#' Everything else is left alone and behaves as before: ragged minima (some
+#' items starting at 1, others higher), a minimum above 1, and gaps in the
+#' codes all still reach `validate_response_data()` and produce its error,
+#' or reach the model and are handled downstream as they are today.
+#'
+#' A uniform shift is lossless. Verified against the same data coded from 0,
+#' the conditional fit statistics agree exactly.
+#'
+#' @param df data.frame of numeric item responses (already converted).
+#' @return `TRUE` or `FALSE`.
+#' @noRd
+is_one_based <- function(df) {
+  mins <- vapply(
+    df,
+    function(x) suppressWarnings(min(x, na.rm = TRUE)),
+    numeric(1L)
+  )
+  all(is.finite(mins)) && all(mins == 1)
+}
+
 prepare_item_data <- function(data, vars) {
   # Robust conversion: handles factors with text labels (SPSS),
   # haven_labelled vectors, and numerics.
@@ -172,6 +199,12 @@ prepare_item_data <- function(data, vars) {
       "(e.g., 999, 8888) rather than ordinal responses. ",
       "Mark these codes as missing in the data editor, or recode your data."
     ))
+  }
+
+  # 1-based coding: shift every item by -1. See is_one_based() for why the
+  # test is as restrictive as it is.
+  if (is_one_based(df)) {
+    df[] <- lapply(df, function(x) x - 1L)
   }
 
   validate_response_data(df)
@@ -247,47 +280,31 @@ duplicate_items_note <- function(df) {
 #' running at or below the analysis default (someone who lowered the
 #' count needs the advice even more); returns "" when they raised it.
 #' `default_iterations` must be kept in sync with the a.yaml default.
-#' The infit variant adds the small-sample exception (detection power
-#' can be better with ~100 iterations than with more; Johansson, 2025).
+#' The infit variant names the calibrated floor and the range advisable
+#' for a final analysis (Johansson, 2026). It previously carried a
+#' small-sample exception, that around 100 iterations could beat a larger
+#' number on detection (Johansson, 2025). That advantage turned out to be
+#' an artifact of an interval that had not converged, bought with an
+#' inflated familywise error rate, so the exception is withdrawn.
 #'
 #' @param iterations Current option value.
 #' @param default_iterations The a.yaml default for this analysis.
-#' @param infit Logical; use the conditional-infit variant.
+#' @param corrected Logical; use the variant for analyses that flag on the
+#'   Westfall-Young corrected p-value, where 400 is a measured floor rather
+#'   than a round number. True for conditional infit and for both local
+#'   dependence analyses.
 #' @return Character scalar (possibly "") with a leading space.
 #' @noRd
-iteration_note <- function(iterations, default_iterations, infit = FALSE) {
+iteration_note <- function(iterations, default_iterations, corrected = FALSE) {
   if (iterations > default_iterations) return("")
-  if (infit) {
+  if (corrected) {
     paste0(" More iterations are generally recommended for ",
-           "publication-ready results; however, for conditional infit ",
-           "with small samples, around 100 iterations can yield better ",
-           "detection power than a larger number (Johansson, 2025).")
+           "publication-ready results: 400 is a floor and 1000 to 2000 is ",
+           "advisable for a final analysis (Johansson, 2026).")
   } else {
     paste0(" More iterations are generally recommended for ",
            "publication-ready results.")
   }
-}
-
-#' Caveat for a simulation/bootstrap with few *successful* iterations
-#'
-#' Complements iteration_note() (which concerns the requested count): this
-#' fires on the number that actually succeeded, regardless of how many
-#' were requested -- e.g. when most iterations failed on sparse-category
-#' validation at small samples. Below `recommended` (default 100) the
-#' percentile/HDCI cutoffs rest on a thin tail and may be unstable, so a
-#' caveat is shown but the analysis still runs. Returns "" at or above the
-#' threshold. Leading space so it appends cleanly to an existing note.
-#'
-#' @param actual Number of successful iterations.
-#' @param recommended Threshold below which the caveat is shown.
-#' @noRd
-low_iteration_caveat <- function(actual, recommended = 100L) {
-  if (actual >= recommended) return("")
-  paste0(
-    " Note: only ", actual, " iterations succeeded, so the results rest on ",
-    "a small number of simulated/resampled datasets and may be unstable -- ",
-    "consider more iterations or checking for sparse response categories."
-  )
 }
 
 #' Prose label for a bootstrap p-value multiplicity correction
@@ -325,21 +342,155 @@ padjusted_title <- function(correction) {
 
 #' Caveat for bootstrap p-values from a small simulation
 #'
-#' Mirrors the warning easyRasch2 issues below 1000 iterations (which the
-#' module suppresses along with all other package warnings): with few
-#' iterations the multiple-comparison correction is liberal and small
-#' p-values are imprecise. Returns "" at or above the threshold. Leading
-#' space so it appends cleanly to an existing note.
+#' Two forms. With `floor = NULL` (the default) the wording is the generic
+#' one used since 3.0.0: few iterations make the correction liberal and
+#' small p-values imprecise. With a numeric `floor` the wording becomes the
+#' two-tier version calibrated by Johansson (2026), mirroring easyRasch2
+#' (whose console notices the module suppresses along with everything else,
+#' so the caveat has to be restated here). Below the floor the
+#' Westfall-Young correction is mildly liberal under the null, so the error
+#' rate itself is off. Between the floor and 1000 the error rate is
+#' calibrated and only reproducibility keeps improving.
+#'
+#' Only conditional infit passes a floor. The measured value of 400 comes
+#' from a study of item fit statistics, so applying it to \eqn{Q_3} pairs
+#' would extrapolate beyond the evidence. Revisit when the \eqn{Q_3} study
+#' is complete.
+#'
+#' Returns "" at or above 1000. Leading space so it appends cleanly to an
+#' existing note.
 #'
 #' @param actual Number of successful simulation iterations.
+#' @param floor Calibrated iteration floor, or `NULL` for the generic
+#'   wording.
 #' @return Character scalar (possibly "") with a leading space.
 #' @noRd
-pvalue_iteration_caveat <- function(actual) {
+pvalue_iteration_caveat <- function(actual, floor = NULL) {
   if (actual >= 1000L) return("")
+  if (is.null(floor)) {
+    return(paste0(
+      " The bootstrap p-values are based on only ", actual, " simulation ",
+      "iterations; with few iterations the multiple-comparison correction ",
+      "is liberal and small p-values are imprecise. At least 1000 iterations ",
+      "are recommended when reporting p-values."
+    ))
+  }
+  if (actual < floor) {
+    paste0(
+      " The bootstrap p-values are based on only ", actual, " simulation ",
+      "iterations, below the calibrated floor of ", floor, ". Below that the ",
+      "multiple-comparison correction is mildly liberal, so the familywise ",
+      "error rate is above the nominal level (Johansson, 2026)."
+    )
+  } else {
+    paste0(
+      " The bootstrap p-values are based on ", actual, " simulation ",
+      "iterations. Error rates are calibrated at this many, but decisions ",
+      "are still somewhat seed-dependent: two analysts using different ",
+      "seeds disagree about at least one item roughly 10% of the time at ",
+      "400 iterations against 4% at 2000, so 1000 to 2000 is advisable for ",
+      "a final analysis (Johansson, 2026)."
+    )
+  }
+}
+
+#' Note for simulated datasets that had to be discarded
+#'
+#' A parametric-bootstrap iteration is dropped when its simulated dataset
+#' cannot be refitted: an item with an unused response category, an item
+#' with almost no variation, or a refit that fails to converge. All get more
+#' likely with small samples, extreme item locations and rarely used
+#' categories.
+#'
+#' Everything downstream rests on the successful count, so that is what the
+#' notes report. This is the single low-iteration caveat, covering two cases
+#' that used to need two helpers and a branch at every call site.
+#'
+#' \itemize{
+#'   \item Iterations were lost. The note explains the gap and names the
+#'     remedy, which is simply to ask for more.
+#'   \item Nothing was lost but few were asked for. The note says the
+#'     results rest on a thin tail and may be unstable.
+#' }
+#'
+#' Both fire together when a short run also loses iterations. Returns "" when
+#' the run neither lost anything nor ended up thin, and `requested` may be
+#' `NULL` where the caller does not track it. Leading space so it appends
+#' cleanly to an existing note.
+#'
+#' @param actual Number of successful iterations.
+#' @param requested Number of iterations asked for, or `NULL`.
+#' @param recommended Count below which the surviving run counts as thin.
+#' @return Character scalar (possibly "") with a leading space.
+#' @noRd
+iteration_attrition_note <- function(actual, requested = NULL,
+                                     recommended = 100L) {
+  if (is.null(actual) || !is.finite(actual)) return("")
+  lost <- !is.null(requested) && is.finite(requested) && actual < requested
+  thin <- actual < recommended
+  if (!lost && !thin) return("")
+  if (!lost) {
+    return(paste0(
+      " Note: only ", actual, " iterations succeeded, so the results rest on ",
+      "a small number of simulated/resampled datasets and may be unstable -- ",
+      "consider more iterations or checking for sparse response categories."
+    ))
+  }
   paste0(
-    " The bootstrap p-values are based on only ", actual, " simulation ",
-    "iterations; with few iterations the multiple-comparison correction ",
-    "is liberal and small p-values are imprecise. At least 1000 iterations ",
-    "are recommended when reporting p-values."
+    " Note: ", requested - actual, " of the ", requested, " simulated ",
+    "datasets could not be refitted, usually because an item ended up with ",
+    "an unused response category or almost no variation, so the results ",
+    "rest on ", actual, " datasets. Increase the number of simulation ",
+    "iterations to recover the intended number.",
+    if (thin) {
+      paste0(" With this few, the expected ranges rest on a thin tail and ",
+             "may be unstable.")
+    } else {
+      ""
+    }
+  )
+}
+
+#' Caveat for flagging against the interval instead of a corrected p-value
+#'
+#' Flagging every item whose infit falls outside a width-`w` interval tests
+#' all `k` items at once, so the familywise error rate is `1 - w^k` (Sidak).
+#' At the module default of a 95% interval over nine items that is 37%, far
+#' above the 5% most readers assume. The interval is a description of where
+#' a fitting item's statistic is expected to fall; the corrected p-value is
+#' the decision rule (Johansson, 2026).
+#'
+#' Adaptive: the rate is computed from the width and item count actually in
+#' use. Returns "" when p-values are already in use, and when the width or
+#' item count is unusable. Leading space so it appends cleanly to an
+#' existing note.
+#'
+#' The comparisons are items for conditional infit and item pairs for the two
+#' local dependence analyses. Pairs grow quadratically in items, so the same
+#' width buys a far worse rate there: 37% over the nine items of a nine-item
+#' scale, 84% over its 36 pairs.
+#'
+#' @param width Interval width as a proportion (e.g. `0.95`), or `NULL`.
+#' @param n_comparisons Number of items or item pairs flagged.
+#' @param unit Plural noun for what is compared, `"items"` or `"item pairs"`.
+#' @return Character scalar (possibly "") with a leading space.
+#' @noRd
+interval_flagging_note <- function(width, n_comparisons, unit = "items") {
+  if (is.null(width) || length(width) != 1L || is.na(width) ||
+      width <= 0 || width >= 1) {
+    return("")
+  }
+  if (is.null(n_comparisons) || length(n_comparisons) != 1L ||
+      is.na(n_comparisons) || n_comparisons < 1L) {
+    return("")
+  }
+  paste0(
+    " ", sub("^(.)", "\\U\\1", unit, perl = TRUE), " are flagged against ",
+    "the expected range, not against a corrected p-value. Because the range ",
+    "is applied to all ", n_comparisons, " ", unit, " at once, its width ",
+    "implies a familywise error rate of about ",
+    format(round(100 * (1 - width^n_comparisons)), trim = TRUE), "%. Enable ",
+    "<i>Bootstrap p-values</i> to flag on the Westfall-Young corrected ",
+    "p-value, which targets 5% directly (Johansson, 2026)."
   )
 }

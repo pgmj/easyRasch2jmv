@@ -155,8 +155,10 @@ test_that("iteminfit bootstrap p-values match easyRasch2 and flag on adjusted p"
   notes <- vapply(r$infitTable$notes, function(x) x$note, character(1))
   expect_true(any(grepl("adjusted p-value < 0.05", notes)))
   expect_true(any(grepl("Benjamini-Yekutieli", notes)))
-  # < 1000 iterations => p-value caveat in the note below the table
-  expect_match(r$cutoffNote$content, "At least 1000 iterations")
+  # below the calibrated floor => the liberal-correction tier of the caveat
+  expect_match(r$cutoffNote$content, "below the calibrated floor of 400")
+  # and the withdrawn small-sample advice is gone
+  expect_false(grepl("detection power", r$cutoffNote$content))
 
   # dynamic adjusted-p column title names the method
   expect_identical(r$infitTable$getColumn("pAdjusted")$title,
@@ -455,4 +457,102 @@ test_that("tree-based DIF matches easyRasch2 and explains its classification", {
     expect_true(any(grepl("rough magnitude guide", notes)))
   }
   expect_match(r$difNote$content, "identical to easyRasch2::RMdifTree")
+})
+
+test_that("locdepgamma keeps its asymptotic columns on the interval branch", {
+  # Regression, easyRasch2 1.2.0. RMlocdepGamma()'s `p_value` default became
+  # NULL, meaning "corrected bootstrap p-values whenever a full cutoff object
+  # is supplied", and that branch drops `padj_bh` and `Significance`. This
+  # analysis reads both, and has no bootstrap p-value option of its own, so it
+  # asks for the interval branch by name. Left implicit, the adjusted
+  # p-value, significance and flag columns all came back empty as soon as
+  # expected ranges were switched on, and nothing errored.
+  d <- poly_data()
+  r <- suppressWarnings(suppressMessages(
+    er2$locdepgamma(data = d, vars = names(d), computeCutoff = TRUE,
+                    iterations = 60, seed = 42, pValues = FALSE)))
+  t1 <- r$dir1Table$asDF
+
+  expect_false(all(is.na(t1$padjBH)))
+  expect_true(all(c("gammaPair", "gammaLow", "gammaHigh", "flagged") %in%
+                    names(t1)))
+
+  # The flag is taken on the pair statistic, the larger of the pair's two
+  # rest-score directions, not on the coefficient the table displays.
+  cut <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepGammaCutoff(d, iterations = 60, parallel = FALSE,
+                                    seed = 42, hdci_width = 0.99)))
+  pk <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepGamma(d, cutoff = cut, p_value = FALSE,
+                              output = "dataframe")$direction1))
+  expect_equal(t1$padjBH, pk$padj_bh)
+  expect_identical(
+    !is.na(t1$flagged) & t1$flagged == "TRUE",
+    !is.na(pk$gamma_low) &
+      (pk$gamma_pair < pk$gamma_low | pk$gamma_pair > pk$gamma_high)
+  )
+})
+
+test_that("locdepgamma's significance filter still selects on the adjusted p", {
+  # The same regression seen through the filter: with `padj_bh` gone the
+  # filter matched nothing and emptied the table.
+  d <- poly_data()
+  r <- suppressWarnings(suppressMessages(
+    er2$locdepgamma(data = d, vars = names(d), computeCutoff = TRUE,
+                    iterations = 60, seed = 42, pValues = FALSE)))
+  all_p <- r$dir1Table$asDF$padjBH
+  expect_false(all(is.na(all_p)))
+
+  rs <- suppressWarnings(suppressMessages(
+    er2$locdepgamma(data = d, vars = names(d), computeCutoff = TRUE,
+                    iterations = 60, seed = 42, sigOnly = TRUE,
+                    pValues = FALSE)))
+  expect_equal(rs$dir1Table$rowCount, sum(!is.na(all_p) & all_p < 0.05))
+})
+
+test_that("locdepgamma bootstrap p-values match easyRasch2 and flag on adjusted p", {
+  # New in 3.1.0, mirroring the Q3 analysis: with expected ranges on, the
+  # default is now the Westfall-Young corrected p-value rather than the
+  # interval. The package drops its asymptotic columns on that path.
+  d <- poly_data()
+  r <- suppressWarnings(suppressMessages(
+    er2$locdepgamma(data = d, vars = names(d), computeCutoff = TRUE,
+                    iterations = 60, seed = 42)))
+  t1 <- r$dir1Table$asDF
+  expect_true(all(c("pValue", "pAdjusted", "gammaPair") %in% names(t1)))
+  expect_false(all(is.na(t1$pAdjusted)))
+  expect_true(all(is.na(t1$padjBH)))
+
+  cut <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepGammaCutoff(d, iterations = 60, parallel = FALSE,
+                                    seed = 42, hdci_width = 0.95)))
+  pk <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepGamma(d, cutoff = cut, p_value = TRUE,
+                              correction = "fwer",
+                              output = "dataframe")$direction1))
+  expect_equal(t1$pValue, pk$p_gamma)
+  expect_equal(t1$pAdjusted, pk$padj_gamma)
+  expect_equal(t1$gammaPair, pk$gamma_pair)
+  expect_identical(!is.na(t1$flagged) & t1$flagged == "TRUE", pk$flagged)
+
+  # the significance filter follows the adjusted p in force
+  rs <- suppressWarnings(suppressMessages(
+    er2$locdepgamma(data = d, vars = names(d), computeCutoff = TRUE,
+                    iterations = 60, seed = 42, sigOnly = TRUE)))
+  expect_equal(rs$dir1Table$rowCount,
+               sum(!is.na(pk$padj_gamma) & pk$padj_gamma < 0.05))
+})
+
+test_that("the two local dependence analyses share the package's defaults", {
+  # easyRasch2 1.2.0 moved both cutoff functions to 400 iterations and a
+  # descriptive 95% interval, and both flagging functions to the corrected
+  # p-value. The module follows, so a jamovi user and an R user who change
+  # nothing get the same answer.
+  for (opts in list(er2$locdepq3Options$new(vars = character()),
+                    er2$locdepgammaOptions$new(vars = character()))) {
+    expect_equal(opts$iterations, 400)
+    expect_equal(opts$hdciWidth, 95)
+    expect_true(opts$pValues)
+    expect_equal(opts$correction, "fwer")
+  }
 })

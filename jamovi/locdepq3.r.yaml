@@ -7,7 +7,7 @@ items:
     - name: q3Table
       title: Q3 Residual Correlation Matrix
       type: Table
-      refs: [easyRasch2jmv, easyRasch2, yen1984, christensen2017, zeileis2026, warm1989, ferreira2024, westfallyoung1993]
+      refs: [easyRasch2jmv, easyRasch2, yen1984, christensen2017, johansson2026_cutoffs, zeileis2026, warm1989, ferreira2024, westfallyoung1993]
       clearWith:
           - vars
           - computeCutoff

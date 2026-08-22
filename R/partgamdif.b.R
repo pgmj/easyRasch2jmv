@@ -65,6 +65,10 @@ partgamdifClass <- R6::R6Class(
         ))
       }
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$pgdifTable$setNote("recode", recode_msg)
+
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
         self$results$pgdifTable$setNote("duplicate", dup_msg)
@@ -212,7 +216,8 @@ partgamdifClass <- R6::R6Class(
                  "easyRasch2::RMdifGamma() and RMdifGammaCutoff() with ",
                  "the same seed.",
                  iteration_note(self$options$iterations, 250L),
-                 low_iteration_caveat(cutoff_res$actual_iterations))
+                 iteration_attrition_note(cutoff_res$actual_iterations,
+                                          self$options$iterations))
         } else if (!is.null(sim_fail_msg)) {
           paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
                  sim_fail_msg)

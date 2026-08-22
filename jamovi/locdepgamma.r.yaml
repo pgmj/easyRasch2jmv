@@ -8,7 +8,7 @@ items:
       title: 'Direction 1: rest score = total − Item 2'
       type: Table
       rows: 0
-      refs: [easyRasch2jmv, easyRasch2, christensen2013, mueller2022, kay2025]
+      refs: [easyRasch2jmv, easyRasch2, christensen2013, johansson2026_cutoffs, mueller2022, kay2025, ferreira2024, westfallyoung1993]
       clearWith:
           - vars
           - nPairs
@@ -19,6 +19,8 @@ items:
           - iterations
           - hdciWidth
           - seed
+          - pValues
+          - correction
       columns:
           - name: item1
             title: Item 1
@@ -47,13 +49,20 @@ items:
             format: zto
             visible: (showSE)
             superTitle: 95% CI
+          - name: gammaPair
+            title: Gamma pair
+            type: number
+            format: zto
+            visible: (computeCutoff)
           - name: padjBH
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
+            visible: (!(computeCutoff && pValues))
           - name: sig
             title: p-value sign.
             type: text
+            visible: (!(computeCutoff && pValues))
           - name: gammaLow
             title: Lower
             type: number
@@ -66,6 +75,16 @@ items:
             format: zto
             visible: (computeCutoff)
             superTitle: Expected range
+          - name: pValue
+            title: p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
+          - name: pAdjusted
+            title: Adj. p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
           - name: flagged
             title: Flagged
             type: text
@@ -85,6 +104,8 @@ items:
           - iterations
           - hdciWidth
           - seed
+          - pValues
+          - correction
       columns:
           - name: item1
             title: Item 1
@@ -113,13 +134,20 @@ items:
             format: zto
             visible: (showSE)
             superTitle: 95% CI
+          - name: gammaPair
+            title: Gamma pair
+            type: number
+            format: zto
+            visible: (computeCutoff)
           - name: padjBH
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
+            visible: (!(computeCutoff && pValues))
           - name: sig
             title: p-value sign.
             type: text
+            visible: (!(computeCutoff && pValues))
           - name: gammaLow
             title: Lower
             type: number
@@ -132,6 +160,16 @@ items:
             format: zto
             visible: (computeCutoff)
             superTitle: Expected range
+          - name: pValue
+            title: p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
+          - name: pAdjusted
+            title: Adj. p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
           - name: flagged
             title: Flagged
             type: text
@@ -179,5 +217,7 @@ items:
           - iterations
           - hdciWidth
           - seed
+          - pValues
+          - correction
           - showSE
 ...

@@ -1,3 +1,89 @@
+# easyRasch2jmv 3.1.0
+
+Conditional Item Infit and the two local dependence analyses now flag on the
+multiplicity-corrected bootstrap p-value rather than on the expected range,
+following Johansson (2026), <https://doi.org/10.31234/osf.io/7pqz4_v1> and
+easyRasch2 1.2.0. The remaining simulation-based analyses are unchanged and
+follow when their own studies are complete.
+
+## Changed defaults, Conditional Item Infit and both local dependence analyses
+
+- **Bootstrap p-values** default to on. They still require the simulation,
+  which stays off by default, so a fresh analysis does not run a bootstrap
+  until asked. New for *Partial Gamma Local Dependence*, which had no such
+  option, together with its **Multiple-comparison correction** setting.
+- **Number of simulation iterations** 250 to 400 in all three analyses, the
+  calibrated floor.
+- **HDCI width** 99 to 95. The range is a description of where a fitting
+  item or pair is expected to fall, not a decision rule.
+
+  The familywise cost of the range is worse for pairs than for items, since
+  pairs grow quadratically: a 95% range implies about 37% over the nine items
+  of a nine-item scale and about 84% over its 36 pairs. Turning bootstrap
+  p-values off now says so in both local dependence analyses.
+
+## Data coded from 1
+
+- Items coded with 1 as the lowest category are now recoded automatically by
+  subtracting 1, instead of being refused with "requires items scored
+  starting at 0". Every analysis states that it happened.
+
+  The test is deliberately narrow: the shift applies only when *every*
+  item's lowest observed response is exactly 1, which is the one arrangement
+  where 1-based coding is the obvious reading, and all items are then
+  shifted identically. Ragged minima (some items starting at 1, others
+  higher), a minimum above 1, and anything else still produce the same error
+  as before, and empty categories are handled downstream exactly as they are
+  today. A uniform shift is lossless, verified against the same data coded
+  from 0.
+
+## Conditional ICC
+
+- The note below the plot now explains the grouping *rule* and no longer
+  states how many groups were formed. The requested number is not always the
+  realised one: quantile groups merge where total scores tie at a boundary,
+  and equal-width intervals can end up with no respondents in them. From
+  easyRasch2 1.2.0 the figure caption reports the grouping actually used, so
+  the note points there rather than restating a number that could disagree
+  with it.
+
+## Table notes
+
+- Turning bootstrap p-values off now states the familywise error rate the
+  expected range implies, computed from the width and item count in use
+  (`1 - width^k`, so 37% for a 95% range over nine items).
+- The iteration caveat is two-tier: below 400 the correction is mildly
+  liberal, between 400 and 1000 error rates are calibrated but decisions
+  remain seed-dependent.
+- The advice that around 100 iterations could improve detection with small
+  samples is withdrawn. That advantage came from an expected range that had
+  not converged and carried an inflated familywise error rate.
+- **Every simulation-based analysis now reports iterations that were lost**,
+  not just runs that ended up short. A simulated dataset is discarded when it
+  cannot be refitted, usually because an item ended up with an unused
+  response category, and until now only Conditional Item Infit said so. A run
+  of 400 that delivers 391 previously looked like a run of 400.
+
+Requires easyRasch2 1.2.0 or later for the plot's interval to match the
+table's. Against 1.1.x the analysis still runs, but the dot plot draws a
+fixed 99.9% whisker regardless of the width setting.
+
+## Partial Gamma Local Dependence
+
+- **New: bootstrap p-values**, with the same *Multiple-comparison correction*
+  choices as *Yen's Q3*. With expected ranges on they are the default, and the
+  asymptotic adjusted p-value and significance columns give way to them. Turn
+  them off to flag against the expected range as before.
+- **New column: Gamma pair**, the larger of the pair's two rest-score
+  directions. It is the statistic that is tested, so a pair can be flagged
+  while the Partial gamma shown in one table sits inside the range.
+
+- The note under each table said a pair is flagged when its partial gamma
+  falls outside the expected range, and that the two tables together test
+  both rest-score directions. Since easyRasch2 1.2.0 each pair is tested once,
+  on the larger of its two directions, and carries the same result in both
+  tables. The notes now say so.
+
 # easyRasch2jmv 3.0.0
 
 The migration release: **all analyses now delegate their

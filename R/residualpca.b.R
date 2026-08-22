@@ -56,6 +56,9 @@ residualpcaClass <- R6::R6Class(
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
         self$results$pcaTable$setNote("sparse", sparse_msg)
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$pcaTable$setNote("recode", recode_msg)
 
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
@@ -224,7 +227,8 @@ residualpcaClass <- R6::R6Class(
             "99th percentile of the simulated first-contrast eigenvalues ",
             "(= ", round(cutoff_value, 3), ").",
             iteration_note(self$options$iterations, 250L),
-            low_iteration_caveat(cutoff_res$actual_iterations), "</p>"
+            iteration_attrition_note(cutoff_res$actual_iterations,
+                                     self$options$iterations), "</p>"
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(

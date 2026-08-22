@@ -34,6 +34,7 @@ iccplotClass <- R6::R6Class(
 
       sparse_msg <- sparse_note(df)
       dup_msg    <- duplicate_items_note(df)
+      recode_msg <- recode_note(data, vars)
 
       n_complete <- sum(complete.cases(df))
       if (n_complete == 0)
@@ -93,6 +94,8 @@ iccplotClass <- R6::R6Class(
           "identical to easyRasch2::RMitemCatProb().",
           if (!is.null(sparse_msg)) paste0(" ", sparse_msg) else "",
           if (!is.null(dup_msg)) paste0(" ", dup_msg) else "",
+          if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
+        if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
           "</p>"
         ))
       }, error = function(e) {

@@ -36,6 +36,7 @@ ciccClass <- R6::R6Class(
 
       sparse_msg <- sparse_note(df)
       dup_msg    <- duplicate_items_note(df)
+      recode_msg <- recode_note(data, vars)
 
       n_total    <- nrow(df)
       n_complete <- sum(complete.cases(df))
@@ -72,21 +73,36 @@ ciccClass <- R6::R6Class(
       # All grouping happens on the total-score scale (Buchardt et al.,
       # 2023: empirical means per value of the total score or per value
       # of the grouped total score).
+      # This note explains the grouping *rule*, which jamovi users cannot
+      # look up in a man page. It deliberately does not state how many
+      # groups were formed: the requested number is not always the realised
+      # one, and the figure caption drawn by easyRasch2::RMitemICCPlot()
+      # reports the realised grouping. Two statements that could disagree
+      # would be worse than one.
       method_note <- switch(self$options$method,
         quantile = paste0(
-          "Total-score grouping: ", self$options$classIntervals,
-          " quantile-based groups (approximately equal numbers of ",
-          "respondents per group)."
+          "Total-score grouping: quantile-based, aiming for ",
+          self$options$classIntervals, " groups with approximately equal ",
+          "numbers of respondents. Where total scores tie at a group ",
+          "boundary the groups either side merge, so fewer may be formed."
         ),
         width = paste0(
           "Total-score grouping: ", self$options$classIntervals,
-          " equal-width intervals over the observed total-score range."
+          " equal-width intervals over the observed total-score range. An ",
+          "interval that no respondent falls into is still defined but ",
+          "contributes no point."
         ),
         score = paste0(
           "Total-score grouping: each observed total score forms its own ",
           "group (the number-of-intervals setting does not apply)."
         )
       )
+      if (self$options$method != "score") {
+        method_note <- paste0(
+          method_note,
+          " The figure caption reports the grouping actually used."
+        )
+      }
       band_note <- if (isTRUE(self$options$errorBand)) paste0(
         " The shaded band around the expected curve is the model-implied ",
         self$options$confLevel, "% interval for the observed mean at each ",
@@ -114,6 +130,7 @@ ciccClass <- R6::R6Class(
         "easyRasch2::RMitemICCPlot().",
         if (!is.null(sparse_msg)) paste0(" ", sparse_msg) else "",
         if (!is.null(dup_msg)) paste0(" ", dup_msg) else "",
+        if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
         "</p>"
       ))
     },

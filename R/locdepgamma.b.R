@@ -72,6 +72,12 @@ locdepgammaClass <- R6::R6Class(
         self$results$dir2Table$setNote("sparse", sparse_msg)
       }
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg)) {
+        self$results$dir1Table$setNote("recode", recode_msg)
+        self$results$dir2Table$setNote("recode", recode_msg)
+      }
+
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg)) {
         self$results$dir1Table$setNote("duplicate", dup_msg)
@@ -147,10 +153,25 @@ locdepgammaClass <- R6::R6Class(
         # 4. Partial gamma LD via easyRasch2 (numerically identical to
         # RMlocdepGamma(); a wrapper around iarm::partgam_LD()). Missing
         # values are allowed -- iarm handles NA itself.
+        #
+        # `p_value` is passed explicitly rather than left to the package
+        # default, which is NULL from easyRasch2 1.2.0 and resolves on the
+        # presence of a cutoff object. The pValues option can hold a stale
+        # TRUE while greyed out (jamovi disables but does not reset nested
+        # options), hence the explicit computeCutoff gate, as in the Q3 and
+        # conditional infit analyses. The two branches return different
+        # columns: with p-values the asymptotic `padj_bh` and `Significance`
+        # are dropped in favour of `p_gamma` and `padj_gamma`.
+        use_pvalues <- compute_cutoff &&
+          isTRUE(self$options$pValues) &&
+          !is.null(cutoff_res)
+
         result_list <- suppressWarnings(suppressMessages(
           easyRasch2::RMlocdepGamma(
             df,
             cutoff = cutoff_res,
+            p_value = use_pvalues,
+            correction = self$options$correction,
             output = "dataframe"
           )
         ))
@@ -204,7 +225,8 @@ locdepgammaClass <- R6::R6Class(
         for (idx in seq_along(result_list)) {
           d <- result_list[[idx]]
           if (sig_only) {
-            d <- d[!is.na(d$padj_bh) & d$padj_bh < 0.05, , drop = FALSE]
+            padj <- if (use_pvalues) d$padj_gamma else d$padj_bh
+            d <- d[!is.na(padj) & padj < 0.05, , drop = FALSE]
           }
           if (gamma_thr > 0) {
             d <- d[!is.na(d$gamma) & abs(d$gamma) >= gamma_thr, , drop = FALSE]
@@ -235,13 +257,20 @@ locdepgammaClass <- R6::R6Class(
               se     = d$se[i],
               lower  = d$lower[i],
               upper  = d$upper[i],
-              padjBH = d$padj_bh[i],
-              sig    = d$Significance[i]
+              # Absent on the bootstrap p-value path, where the package drops
+              # them. NA keeps the row shape stable for the hidden columns.
+              padjBH = if (use_pvalues) NA_real_ else d$padj_bh[i],
+              sig    = if (use_pvalues) "" else d$Significance[i]
             )
             if (!is.null(cutoff_res)) {
+              vals$gammaPair <- d$gamma_pair[i]
               vals$gammaLow  <- d$gamma_low[i]
               vals$gammaHigh <- d$gamma_high[i]
               vals$flagged   <- ifelse(isTRUE(d$flagged[i]), "TRUE", "")
+            }
+            if (use_pvalues) {
+              vals$pValue     <- d$p_gamma[i]
+              vals$pAdjusted  <- d$padj_gamma[i]
             }
             if (rows_pre_created) {
               tables[[idx]]$setRow(rowNo = i, values = vals)
@@ -249,31 +278,64 @@ locdepgammaClass <- R6::R6Class(
               tables[[idx]]$addRow(rowKey = i, values = vals)
             }
           }
+          # Explains the asymptotic column, which the bootstrap p-value
+          # branch hides, so the note goes with it.
           tables[[idx]]$setNote(
             "bh",
-            paste0(
-              "BH = Benjamini-Hochberg false-discovery-rate correction ",
-              "for multiple testing."
-            )
+            if (use_pvalues) {
+              NULL
+            } else {
+              paste0(
+                "BH = Benjamini-Hochberg false-discovery-rate correction ",
+                "for multiple testing."
+              )
+            }
           )
           tables[[idx]]$setNote(
             "direction",
             paste0(
               "Partial gamma between Item 1 and Item 2, controlling for ",
               "the rest score (total score minus Item 2). Each item pair ",
-              "appears in both tables with the two items swapped, so the ",
-              "two tables together test both rest-score directions for ",
-              "every pair."
+              "appears in both tables with the two items swapped, so each ",
+              "table shows that pair's coefficient in one of the two ",
+              "rest-score directions."
             )
           )
           if (!is.null(cutoff_res)) {
-            tables[[idx]]$setNote("flag", paste0(
-              "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI ",
-              "of partial gamma values simulated under the fitted ",
-              "unidimensional model (no true local dependence). ",
-              "Flagged = TRUE when the observed gamma falls outside the ",
-              "expected range."
-            ))
+            pair_clause <- paste0(
+              "Gamma pair is the larger of the pair's two rest-score ",
+              "directions and is the statistic tested, so each pair is ",
+              "tested once and carries the same result in both tables. ",
+              "Partial gamma is this table's direction alone, which is why ",
+              "the two can differ."
+            )
+            if (use_pvalues) {
+              tables[[idx]]$setNote("flag", paste0(
+                "Flagged = TRUE when the adjusted p-value is below .05, ",
+                "indicating stronger association than the model predicts ",
+                "(positive local dependence; the test is one-sided, so only ",
+                "pairs above the expected range are flagged). ",
+                pair_clause,
+                " The expected range remains as the effect-size reference."
+              ))
+              tables[[idx]]$setNote("pvalues", paste0(
+                "p-value: probability of a partial gamma at least as large ",
+                "as observed under local independence, computed from the ",
+                cutoff_res$actual_iterations, " simulated datasets ",
+                "(Monte-Carlo, one-sided). Adj. p-value: corrected for ",
+                "multiple comparisons across the ", total_pairs,
+                " item pairs using ",
+                correction_label(self$options$correction), "."
+              ))
+            } else {
+              tables[[idx]]$setNote("flag", paste0(
+                "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI ",
+                "of partial gamma values simulated under the fitted ",
+                "unidimensional model (no true local dependence). ",
+                "Flagged = TRUE when Gamma pair falls outside that range. ",
+                pair_clause
+              ))
+            }
           }
           if (nrow(d) == 0L) {
             tables[[idx]]$setNote(
@@ -325,8 +387,17 @@ locdepgammaClass <- R6::R6Class(
             " simulation iterations (", cutoff_res$hdci_width * 100,
             "% HDCI); results are identical to easyRasch2::RMlocdepGamma() ",
             "and RMlocdepGammaCutoff() with the same seed.",
-            iteration_note(self$options$iterations, 250L),
-            low_iteration_caveat(cutoff_res$actual_iterations)
+            iteration_note(self$options$iterations, 400L, corrected = TRUE),
+            iteration_attrition_note(cutoff_res$actual_iterations,
+                                     self$options$iterations),
+            if (!use_pvalues) {
+              # Flagging falls back to the expected range, whose width sets a
+              # familywise rate over pairs that the user has not chosen.
+              interval_flagging_note(cutoff_res$hdci_width, total_pairs,
+                                     unit = "item pairs")
+            } else {
+              ""
+            }
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(" <b>Simulation-based expected ranges unavailable:</b> ",

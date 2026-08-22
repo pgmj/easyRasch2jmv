@@ -147,6 +147,7 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "easyRasch2",
                     "mueller2020",
                     "johansson2025_detecting",
+                    "johansson2026_cutoffs",
                     "mueller2022",
                     "vanbuuren2011",
                     "zeileis2026",

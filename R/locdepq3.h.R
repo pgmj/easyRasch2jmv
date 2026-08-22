@@ -8,10 +8,10 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            iterations = 250,
-            hdciWidth = 99,
+            iterations = 400,
+            hdciWidth = 95,
             seed = 42,
-            pValues = FALSE,
+            pValues = TRUE,
             correction = "fwer",
             nPairs = 10, ...) {
 
@@ -37,13 +37,13 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=250,
+                default=400,
                 min=50,
                 max=5000)
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99,
+                default=95,
                 min=50,
                 max=99.9)
             private$..seed <- jmvcore::OptionInteger$new(
@@ -54,7 +54,7 @@ locdepq3Options <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..pValues <- jmvcore::OptionBool$new(
                 "pValues",
                 pValues,
-                default=FALSE)
+                default=TRUE)
             private$..correction <- jmvcore::OptionList$new(
                 "correction",
                 correction,
@@ -125,6 +125,7 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "easyRasch2",
                     "yen1984",
                     "christensen2017",
+                    "johansson2026_cutoffs",
                     "zeileis2026",
                     "warm1989",
                     "ferreira2024",
@@ -329,10 +330,10 @@ locdepq3 <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    iterations = 250,
-    hdciWidth = 99,
+    iterations = 400,
+    hdciWidth = 95,
     seed = 42,
-    pValues = FALSE,
+    pValues = TRUE,
     correction = "fwer",
     nPairs = 10) {
 

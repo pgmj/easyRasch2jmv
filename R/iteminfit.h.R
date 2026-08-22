@@ -8,10 +8,10 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         initialize = function(
             vars = NULL,
             computeCutoff = FALSE,
-            hdciWidth = 99,
-            iterations = 250,
+            hdciWidth = 95,
+            iterations = 400,
             seed = 42,
-            pValues = FALSE,
+            pValues = TRUE,
             correction = "fwer",
             sortByInfit = FALSE, ...) {
 
@@ -37,13 +37,13 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99,
+                default=95,
                 min=50,
                 max=99.9)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=250,
+                default=400,
                 min=50)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
@@ -52,7 +52,7 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..pValues <- jmvcore::OptionBool$new(
                 "pValues",
                 pValues,
-                default=FALSE)
+                default=TRUE)
             private$..correction <- jmvcore::OptionList$new(
                 "correction",
                 correction,
@@ -119,6 +119,7 @@ iteminfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "easyRasch2",
                     "mueller2020",
                     "johansson2025_detecting",
+                    "johansson2026_cutoffs",
                     "mueller2022",
                     "zeileis2026",
                     "warm1989",
@@ -244,20 +245,28 @@ iteminfitBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' RMitemInfitPlot() with the same seed and iterations. Single-core
 #' sequential processing is used.
 #' 
-#' Note on iterations: more simulation iterations are generally
-#' recommended for publication-ready results. Conditional infit is an
-#' exception: with small samples, around 100 iterations can yield
-#' better detection power than a larger number (Johansson, 2025).
+#' Note on iterations: 400 is a calibrated floor and 1000 to 2000 is
+#' advisable for a final analysis (Johansson, 2026). Below 400 the
+#' multiple-comparison correction is mildly liberal, and while error
+#' rates are calibrated from 400 onward, decisions remain somewhat
+#' seed-dependent until well past it. An earlier recommendation that
+#' around 100 iterations could give better detection with small
+#' samples is withdrawn: that advantage came from an expected range
+#' that had not converged, and was paid for with an inflated
+#' familywise error rate.
 #' 
-#' Optionally, bootstrap p-values can be added: each item's observed
+#' Bootstrap p-values are computed by default: each item's observed
 #' infit is compared against its simulated distribution (Monte-Carlo
 #' p-value), with correction for multiple comparisons across items --
 #' Westfall-Young step-down (familywise error rate, the default;
 #' Ferreira, 2024), Benjamini-Hochberg, or Benjamini-Yekutieli (false
-#' discovery rate). Flagging is then based on the adjusted p-value
-#' (< 0.05) instead of the expected range. At least 1000 iterations
-#' are recommended when reporting p-values. Results match
-#' easyRasch2::RMitemInfit() with p_value = TRUE.
+#' discovery rate). Flagging is based on the adjusted p-value
+#' (< 0.05). Turning them off flags against the expected range
+#' instead, which applies one interval to every item at once and so
+#' implies a familywise error rate of 1 - width^k over k items, 37\%
+#' for a 95\% range over nine items. The range is best read as a
+#' description of where a fitting item's infit is expected to fall.
+#' Results match easyRasch2::RMitemInfit().
 #' 
 #' @param data .
 #' @param vars .
@@ -286,10 +295,10 @@ iteminfit <- function(
     data,
     vars,
     computeCutoff = FALSE,
-    hdciWidth = 99,
-    iterations = 250,
+    hdciWidth = 95,
+    iterations = 400,
     seed = 42,
-    pValues = FALSE,
+    pValues = TRUE,
     correction = "fwer",
     sortByInfit = FALSE) {
 

@@ -8,7 +8,7 @@ items:
       title: Pooled Conditional Item Infit MSQ
       type: Table
       rows: (vars)
-      refs: [easyRasch2jmv, easyRasch2, mueller2020, johansson2025_detecting, mueller2022, vanbuuren2011, zeileis2026, warm1989, kay2025]
+      refs: [easyRasch2jmv, easyRasch2, mueller2020, johansson2025_detecting, johansson2026_cutoffs, mueller2022, vanbuuren2011, zeileis2026, warm1989, kay2025]
       clearWith:
           - vars
           - auxVars

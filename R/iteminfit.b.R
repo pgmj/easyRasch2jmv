@@ -38,6 +38,9 @@ iteminfitClass <- R6::R6Class(
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
         self$results$infitTable$setNote("sparse", sparse_msg)
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$infitTable$setNote("recode", recode_msg)
 
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
@@ -202,11 +205,8 @@ iteminfitClass <- R6::R6Class(
             "misfit",
             paste0(
               "Flagged: adjusted p-value < 0.05; observed infit below 1 = ",
-              "overfit (item is more predictable than the model expects), ",
-              "above 1 = underfit (noisier than expected). Note the ",
-              "direction is inverted relative to the item-restscore ",
-              "analyses. The expected-range columns remain as the ",
-              "effect-size reference."
+              "overfit, above 1 = underfit. Note the direction is inverted ",
+              "relative to the item-restscore analyses."
             )
           )
           table$setNote(
@@ -246,11 +246,18 @@ iteminfitClass <- R6::R6Class(
             cutoff_res$actual_iterations, " simulation iterations (",
             method_label, ") drawn from the same n = ", n_complete,
             " complete cases.",
-            iteration_note(self$options$iterations, 250L, infit = TRUE),
-            low_iteration_caveat(cutoff_res$actual_iterations),
-            if (use_pvalues)
-              pvalue_iteration_caveat(cutoff_res$actual_iterations)
-            else "",
+            iteration_note(self$options$iterations, 400L, corrected = TRUE),
+            iteration_attrition_note(
+              cutoff_res$actual_iterations,
+              self$options$iterations
+            ),
+            if (use_pvalues) {
+              pvalue_iteration_caveat(cutoff_res$actual_iterations, floor = 400L)
+            } else {
+              # Flagging falls back to the expected range, whose width sets
+              # a familywise error rate the user has not chosen explicitly.
+              interval_flagging_note(cutoff_res$hdci_width, nrow(results))
+            },
             "</p>"
           )
           self$results$cutoffNote$setContent(note_html)

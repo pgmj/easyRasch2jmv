@@ -107,6 +107,9 @@ locdepq3Class <- R6::R6Class(
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
         self$results$q3Table$setNote("sparse", sparse_msg)
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$q3Table$setNote("recode", recode_msg)
 
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
@@ -242,8 +245,9 @@ locdepq3Class <- R6::R6Class(
               "to give the dynamic cut-off applied in the correlation ",
               "matrix above. See the item-pair table below for per-pair ",
               "intervals.",
-              iteration_note(iterations, 250L),
-              low_iteration_caveat(cutoff_res$actual_iterations)
+              iteration_note(iterations, 400L, corrected = TRUE),
+              iteration_attrition_note(cutoff_res$actual_iterations,
+                                       iterations)
             ))
           }
 
@@ -323,7 +327,11 @@ locdepq3Class <- R6::R6Class(
                 "These per-pair intervals complement the global cutoff used ",
                 "by the tables above. Pairs are sorted by deviation from ",
                 "the simulated per-pair median (the black dots in the ",
-                "figure), descending."
+                "figure), descending.",
+                # Flagging falls back to the expected range, whose width sets
+                # a familywise rate over pairs that the user has not chosen.
+                interval_flagging_note(cutoff_res$hdci_width, nrow(pairs_df),
+                                       unit = "item pairs")
               ))
             }
           }

@@ -174,12 +174,15 @@ targetingClass <- R6::R6Class(
             "are finite at extreme scores."
           )
         }
+        recode_msg <- recode_note(data, vars)
         self$results$targetingNote$setContent(paste0(
           "<p>Analysis based on N = ", n_total, " respondents (rows with ",
           "partially missing responses are retained by the estimation). ",
           method_clause,
           " Results are identical to easyRasch2::RMtargeting() and ",
-          "RMitemParameters().</p>"
+          "RMitemParameters().",
+          if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
+          "</p>"
         ))
 
       }, error = function(e) {

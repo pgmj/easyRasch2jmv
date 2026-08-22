@@ -50,4 +50,9 @@ children:
               - type: TextBox
                 name: plotPairs
                 format: number
+              - type: CheckBox
+                name: pValues
+                children:
+                  - type: ComboBox
+                    name: correction
 ...

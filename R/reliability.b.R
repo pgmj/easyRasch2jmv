@@ -72,6 +72,9 @@ reliabilityClass <- R6::R6Class(
       sparse_msg <- sparse_note(df)
       if (!is.null(sparse_msg))
         self$results$relTable$setNote("sparse", sparse_msg)
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$relTable$setNote("recode", recode_msg)
 
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))

@@ -88,6 +88,10 @@ lrdifClass <- R6::R6Class(
         ))
       }
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$lrtTable$setNote("recode", recode_msg)
+
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
         self$results$lrtTable$setNote("duplicate", dup_msg)

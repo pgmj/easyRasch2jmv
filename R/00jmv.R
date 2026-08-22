@@ -85,6 +85,13 @@
         `title`="Detecting Item Misfit in Rasch Models", 
         `publisher`="Educational Methods & Psychometrics", 
         `url`="https://doi.org/10.61186/emp.2025.5"), 
+    `johansson2026_cutoffs`=list(
+        `type`="article", 
+        `author`="Johansson, M.", 
+        `year`=2026, 
+        `title`="Simulation-based cutoffs for conditional item fit in Rasch models: Iterations, multiplicity correction, and decision stability", 
+        `publisher`="PsyArXiv", 
+        `url`="https://doi.org/10.31234/osf.io/7pqz4_v1"), 
     `ferreira2024`=list(
         `type`="article", 
         `author`="Ferreira, J. A.", 

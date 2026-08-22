@@ -46,6 +46,10 @@ iteminfitmiClass <- R6::R6Class(
       if (!is.null(sparse_msg))
         self$results$infitTable$setNote("sparse", sparse_msg)
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$infitTable$setNote("recode", recode_msg)
+
       dup_msg <- duplicate_items_note(df_items)
       if (!is.null(dup_msg))
         self$results$infitTable$setNote("duplicate", dup_msg)
@@ -343,8 +347,9 @@ iteminfitmiClass <- R6::R6Class(
             " total simulation iterations across ",
             cutoff_res$n_imputations, " imputed datasets (",
             round(hdci_width * 100, 1), "% HDCI).",
-            iteration_note(sim_iterations, 500L, infit = TRUE),
-            low_iteration_caveat(cutoff_res$actual_iterations)
+            iteration_note(sim_iterations, 500L, corrected = TRUE),
+            iteration_attrition_note(cutoff_res$actual_iterations,
+                                     sim_iterations)
           )
         } else if (!is.null(sim_fail_msg)) {
           paste0(

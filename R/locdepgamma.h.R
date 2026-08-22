@@ -12,9 +12,11 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             gammaThreshold = 0,
             sortByGamma = FALSE,
             computeCutoff = FALSE,
-            iterations = 250,
-            hdciWidth = 99,
+            iterations = 400,
+            hdciWidth = 95,
             seed = 42,
+            pValues = TRUE,
+            correction = "fwer",
             plotPairs = 10,
             showSE = FALSE, ...) {
 
@@ -59,13 +61,13 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=250,
+                default=400,
                 min=50,
                 max=5000)
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99,
+                default=95,
                 min=50,
                 max=99.9)
             private$..seed <- jmvcore::OptionInteger$new(
@@ -73,6 +75,18 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 seed,
                 default=42,
                 min=0)
+            private$..pValues <- jmvcore::OptionBool$new(
+                "pValues",
+                pValues,
+                default=TRUE)
+            private$..correction <- jmvcore::OptionList$new(
+                "correction",
+                correction,
+                options=list(
+                    "fwer",
+                    "fdr_bh",
+                    "fdr_by"),
+                default="fwer")
             private$..plotPairs <- jmvcore::OptionInteger$new(
                 "plotPairs",
                 plotPairs,
@@ -93,6 +107,8 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             self$.addOption(private$..iterations)
             self$.addOption(private$..hdciWidth)
             self$.addOption(private$..seed)
+            self$.addOption(private$..pValues)
+            self$.addOption(private$..correction)
             self$.addOption(private$..plotPairs)
             self$.addOption(private$..showSE)
         }),
@@ -106,6 +122,8 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         iterations = function() private$..iterations$value,
         hdciWidth = function() private$..hdciWidth$value,
         seed = function() private$..seed$value,
+        pValues = function() private$..pValues$value,
+        correction = function() private$..correction$value,
         plotPairs = function() private$..plotPairs$value,
         showSE = function() private$..showSE$value),
     private = list(
@@ -118,6 +136,8 @@ locdepgammaOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         ..iterations = NA,
         ..hdciWidth = NA,
         ..seed = NA,
+        ..pValues = NA,
+        ..correction = NA,
         ..plotPairs = NA,
         ..showSE = NA)
 )
@@ -147,8 +167,11 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "easyRasch2jmv",
                     "easyRasch2",
                     "christensen2013",
+                    "johansson2026_cutoffs",
                     "mueller2022",
-                    "kay2025"),
+                    "kay2025",
+                    "ferreira2024",
+                    "westfallyoung1993"),
                 clearWith=list(
                     "vars",
                     "nPairs",
@@ -158,7 +181,9 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "computeCutoff",
                     "iterations",
                     "hdciWidth",
-                    "seed"),
+                    "seed",
+                    "pValues",
+                    "correction"),
                 columns=list(
                     list(
                         `name`="item1", 
@@ -194,14 +219,22 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `visible`="(showSE)", 
                         `superTitle`="95% CI"),
                     list(
+                        `name`="gammaPair", 
+                        `title`="Gamma pair", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)"),
+                    list(
                         `name`="padjBH", 
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto,pvalue", 
+                        `visible`="(!(computeCutoff && pValues))"),
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
-                        `type`="text"),
+                        `type`="text", 
+                        `visible`="(!(computeCutoff && pValues))"),
                     list(
                         `name`="gammaLow", 
                         `title`="Lower", 
@@ -216,6 +249,18 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
+                    list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjusted", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
@@ -235,7 +280,9 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "computeCutoff",
                     "iterations",
                     "hdciWidth",
-                    "seed"),
+                    "seed",
+                    "pValues",
+                    "correction"),
                 columns=list(
                     list(
                         `name`="item1", 
@@ -271,14 +318,22 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `visible`="(showSE)", 
                         `superTitle`="95% CI"),
                     list(
+                        `name`="gammaPair", 
+                        `title`="Gamma pair", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)"),
+                    list(
                         `name`="padjBH", 
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto,pvalue", 
+                        `visible`="(!(computeCutoff && pValues))"),
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
-                        `type`="text"),
+                        `type`="text", 
+                        `visible`="(!(computeCutoff && pValues))"),
                     list(
                         `name`="gammaLow", 
                         `title`="Lower", 
@@ -293,6 +348,18 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
+                    list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjusted", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
@@ -338,6 +405,8 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "iterations",
                     "hdciWidth",
                     "seed",
+                    "pValues",
+                    "correction",
                     "showSE")))}))
 
 locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -387,6 +456,8 @@ locdepgammaBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param iterations .
 #' @param hdciWidth .
 #' @param seed .
+#' @param pValues .
+#' @param correction .
 #' @param plotPairs .
 #' @param showSE .
 #' @return A results object containing:
@@ -413,9 +484,11 @@ locdepgamma <- function(
     gammaThreshold = 0,
     sortByGamma = FALSE,
     computeCutoff = FALSE,
-    iterations = 250,
-    hdciWidth = 99,
+    iterations = 400,
+    hdciWidth = 95,
     seed = 42,
+    pValues = TRUE,
+    correction = "fwer",
     plotPairs = 10,
     showSE = FALSE) {
 
@@ -439,6 +512,8 @@ locdepgamma <- function(
         iterations = iterations,
         hdciWidth = hdciWidth,
         seed = seed,
+        pValues = pValues,
+        correction = correction,
         plotPairs = plotPairs,
         showSE = showSE)
 

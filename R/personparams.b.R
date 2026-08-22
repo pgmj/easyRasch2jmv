@@ -53,6 +53,10 @@ personparamsClass <- R6::R6Class(
       # response validation, per-item variation, identical-items check
       df <- prepare_item_data(data, vars)
 
+      recode_msg <- recode_note(data, vars)
+      if (!is.null(recode_msg))
+        self$results$summaryTable$setNote("recode", recode_msg)
+
       dup_msg <- duplicate_items_note(df)
       if (!is.null(dup_msg))
         self$results$summaryTable$setNote("duplicate", dup_msg)

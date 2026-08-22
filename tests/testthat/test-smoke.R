@@ -196,3 +196,31 @@ test_that("tree-based DIF runs on polytomous and dichotomous data", {
     er2$diftree(data = dd, vars = setdiff(names(dd), "grp"),
                 covariates = "grp")))
 })
+
+test_that("cicc note explains the grouping rule without claiming a count", {
+  d <- dich_data()
+  strip <- function(x) gsub("<[^>]+>", "", x)
+
+  q <- suppressWarnings(suppressMessages(
+    er2$cicc(data = d, vars = names(d), method = "quantile",
+             classIntervals = 4)))
+  qt <- strip(q$ciccNote$content)
+  expect_match(qt, "aiming for 4 groups")
+  expect_match(qt, "the groups either side merge")
+  expect_match(qt, "figure caption reports the grouping actually used")
+
+  w <- suppressWarnings(suppressMessages(
+    er2$cicc(data = d, vars = names(d), method = "width",
+             classIntervals = 4)))
+  wt <- strip(w$ciccNote$content)
+  expect_match(wt, "4 equal-width intervals")
+  expect_match(wt, "contributes no point")
+  expect_match(wt, "figure caption reports the grouping actually used")
+
+  # score-level grouping has nothing that can differ, so no pointer
+  s <- suppressWarnings(suppressMessages(
+    er2$cicc(data = d, vars = names(d), method = "score")))
+  st <- strip(s$ciccNote$content)
+  expect_match(st, "does not apply")
+  expect_false(grepl("figure caption reports", st))
+})

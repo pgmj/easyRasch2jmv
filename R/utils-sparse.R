@@ -45,6 +45,38 @@ sparse_note <- function(df, min_n = 3L) {
   )
 }
 
+#' Footnote text for the 1-based recode, or NULL when none was applied
+#'
+#' Rasch analysis needs items scored from 0, and jamovi users often bring
+#' data coded from 1, so [prepare_item_data()] applies the shift rather than
+#' refusing the data. It is silent data handling, so every analysis states it.
+#'
+#' Takes the *raw* input and re-derives the condition rather than reading a
+#' flag off the prepared data.frame. An attribute would not survive: several
+#' analyses rebuild or subset the frame immediately after preparing it (see
+#' the `as.data.frame(matrix(...))` in `cicc`), which drops attributes and
+#' would silently suppress the note in exactly the analyses that need it.
+#'
+#' @param data The raw analysis data.
+#' @param vars Item variable names, as passed to [prepare_item_data()].
+#' @return Character scalar, or NULL when no recode happened.
+#' @noRd
+recode_note <- function(data, vars) {
+  converted <- try(
+    to_numeric_responses_df(data[, vars, drop = FALSE]),
+    silent = TRUE
+  )
+  if (inherits(converted, "try-error") || !is_one_based(converted)) {
+    return(NULL)
+  }
+  paste0(
+    "Every item's lowest response was 1, so 1 was subtracted from all ",
+    "items to give the 0-based scoring that Rasch analysis requires. ",
+    "This does not change the results, but response categories are ",
+    "reported from 0, so category 1 in your data appears as 0 here."
+  )
+}
+
 #' Footnote text for sparse categories within DIF groups, or NULL
 #'
 #' Category ranges are fixed at the whole-sample per-item maximum, so a
