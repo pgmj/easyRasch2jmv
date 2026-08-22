@@ -2,7 +2,7 @@
 
 Conditional Item Infit and the two local dependence analyses now flag on the
 multiplicity-corrected bootstrap p-value rather than on the expected range,
-following Johansson (2026), <https://doi.org/10.31234/osf.io/7pqz4_v1> and
+following Johansson (2026), <https://doi.org/10.31234/osf.io/7pqz4_v2> and
 easyRasch2 1.2.0. The remaining simulation-based analyses are unchanged and
 follow when their own studies are complete.
 
