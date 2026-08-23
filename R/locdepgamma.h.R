@@ -220,7 +220,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `superTitle`="95% CI"),
                     list(
                         `name`="gammaPair", 
-                        `title`="Gamma pair", 
+                        `title`="Gamma pair (max)", 
                         `type`="number", 
                         `format`="zto", 
                         `visible`="(computeCutoff)"),
@@ -319,7 +319,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `superTitle`="95% CI"),
                     list(
                         `name`="gammaPair", 
-                        `title`="Gamma pair", 
+                        `title`="Gamma pair (max)", 
                         `type`="number", 
                         `format`="zto", 
                         `visible`="(computeCutoff)"),

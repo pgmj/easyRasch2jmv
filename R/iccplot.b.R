@@ -95,7 +95,6 @@ iccplotClass <- R6::R6Class(
           if (!is.null(sparse_msg)) paste0(" ", sparse_msg) else "",
           if (!is.null(dup_msg)) paste0(" ", dup_msg) else "",
           if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
-        if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
           "</p>"
         ))
       }, error = function(e) {

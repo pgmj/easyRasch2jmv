@@ -50,7 +50,7 @@ items:
             visible: (showSE)
             superTitle: 95% CI
           - name: gammaPair
-            title: Gamma pair
+            title: Gamma pair (max)
             type: number
             format: zto
             visible: (computeCutoff)
@@ -135,7 +135,7 @@ items:
             visible: (showSE)
             superTitle: 95% CI
           - name: gammaPair
-            title: Gamma pair
+            title: Gamma pair (max)
             type: number
             format: zto
             visible: (computeCutoff)

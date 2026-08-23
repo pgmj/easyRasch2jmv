@@ -556,3 +556,30 @@ test_that("the two local dependence analyses share the package's defaults", {
     expect_equal(opts$correction, "fwer")
   }
 })
+
+test_that("the 1-based recode note is stated once, not twice", {
+  # Regression: iccplot appended `recode_msg` to its figure note on two
+  # consecutive lines, so a user with 1-based data read "This does not change
+  # the results ..." twice under the plot.
+  #
+  # The analyses that attach the note to a table are safe by construction,
+  # since setNote() is keyed and a second call overwrites. The three that have
+  # no table build an HTML note by pasting fragments, which is where a
+  # duplicated fragment survives, so those are the ones checked here.
+  skip_on_cran()
+  d <- poly_data()
+  d1 <- d + 1L # every item's lowest response becomes 1, triggering the recode
+
+  once <- function(html) {
+    txt <- gsub("<[^>]*>", "", html)
+    lengths(regmatches(txt, gregexpr("does not change the results", txt)))
+  }
+  q <- function(expr) suppressWarnings(suppressMessages(expr))
+
+  expect_equal(once(q(er2$iccplot(data = d1, vars = names(d1)))$iccNote$content), 1L)
+  expect_equal(once(q(er2$cicc(data = d1, vars = names(d1)))$ciccNote$content), 1L)
+  expect_equal(once(q(er2$targeting(data = d1, vars = names(d1)))$targetingNote$content), 1L)
+
+  # and nothing is said at all when the data are already 0-based
+  expect_equal(once(q(er2$iccplot(data = d, vars = names(d)))$iccNote$content), 0L)
+})

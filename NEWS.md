@@ -74,7 +74,7 @@ fixed 99.9% whisker regardless of the width setting.
   choices as *Yen's Q3*. With expected ranges on they are the default, and the
   asymptotic adjusted p-value and significance columns give way to them. Turn
   them off to flag against the expected range as before.
-- **New column: Gamma pair**, the larger of the pair's two rest-score
+- **New column: Gamma pair (max)**, the larger of the pair's two rest-score
   directions. It is the statistic that is tested, so a pair can be flagged
   while the Partial gamma shown in one table sits inside the range.
 

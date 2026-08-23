@@ -303,11 +303,14 @@ locdepgammaClass <- R6::R6Class(
           )
           if (!is.null(cutoff_res)) {
             pair_clause <- paste0(
-              "Gamma pair is the larger of the pair's two rest-score ",
+              "Gamma pair (max) is the larger of the pair's two rest-score ",
               "directions and is the statistic tested, so each pair is ",
               "tested once and carries the same result in both tables. ",
               "Partial gamma is this table's direction alone, which is why ",
-              "the two can differ."
+              "the two can differ. For a pair that is negative in both ",
+              "directions the larger value is the one closer to zero, since ",
+              "the test is one-sided and looks for excess positive ",
+              "association."
             )
             if (use_pvalues) {
               tables[[idx]]$setNote("flag", paste0(
@@ -332,7 +335,8 @@ locdepgammaClass <- R6::R6Class(
                 "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI ",
                 "of partial gamma values simulated under the fitted ",
                 "unidimensional model (no true local dependence). ",
-                "Flagged = TRUE when Gamma pair falls outside that range. ",
+                "Flagged = TRUE when Gamma pair (max) falls outside that ",
+                "range. ",
                 pair_clause
               ))
             }
