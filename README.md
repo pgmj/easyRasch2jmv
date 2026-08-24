@@ -11,6 +11,14 @@ analysis. All analyses delegate their computations to the
 are numerically identical to easyRasch2 with the same seeds and
 iterations.
 
+A distinguishing feature, inherited from easyRasch2, is the use of
+parametric-bootstrap critical values in place of rule-of-thumb cutoffs. In
+the Conditional Item Infit and the two local dependence analyses, items and
+item pairs are flagged on a multiplicity-corrected bootstrap *p*-value
+(Westfall-Young family-wise, or FDR) once simulation-based cutoffs are
+enabled, which controls the error rate across the whole set of tests rather
+than leaving it to an interval width (Johansson, 2025, 2026).
+
 ## Analyses
 
 ### Item fit
@@ -19,7 +27,10 @@ iterations.
   `easyRasch2` package (`iarm::out_infit()` on a CML fit with WLE person
   estimates; Müller, 2020), with optional simulation-based cutoffs
   (Johansson, 2025) and a dot-plot of observed vs simulated
-  distributions. Numerically identical to `easyRasch2::RMitemInfit()` /
+  distributions. With cutoffs enabled, items flag on the
+  multiplicity-corrected bootstrap *p*-value by default, with the
+  expected range shown alongside as a reference (Johansson, 2026).
+  Numerically identical to `easyRasch2::RMitemInfit()` /
   `RMitemInfitCutoff()` with the same seed and iterations.
 - **Conditional Item Infit (Multiple Imputation)** — pooled infit MSQ
   via Rubin's rules across `m` `mice` imputations (with optional
@@ -38,18 +49,23 @@ iterations.
 
 ### Local dependence
 
-- **Q3 Residual Correlation Matrix** — Yen's Q3 via the `easyRasch2`
-  package (CML item estimation with WLE person estimates), with
-  optional simulation-based cutoffs (Christensen et al., 2017;
+- **Q3 Residual Correlation Matrix** — Yen's Q3 (Yen, 1984) via the
+  `easyRasch2` package (CML item estimation with WLE person estimates),
+  with optional simulation-based cutoffs (Christensen et al., 2017;
   [Johansson, 2024](https://pgmj.github.io/simcutoffs.html)), a Q3
-  heatmap, and a per-pair distribution plot. Numerically identical to
+  heatmap, and a per-pair distribution plot. With cutoffs enabled, item
+  pairs flag on the multiplicity-corrected bootstrap *p*-value by
+  default (Johansson, 2026). Numerically identical to
   `easyRasch2::RMlocdepQ3()` / `RMlocdepQ3Cutoff()` / `RMlocdepQ3Plot()`
   with the same seed and iterations.
 - **Partial Gamma Local Dependence** — partial-gamma coefficients per
   item pair in both rest-score directions, with optional
   simulation-based per-pair expected ranges and a per-pair distribution
   plot; via `easyRasch2::RMlocdepGamma()` / `RMlocdepGammaCutoff()` /
-  `RMlocdepGammaPlot()`.
+  `RMlocdepGammaPlot()`. With cutoffs enabled, each pair is tested once
+  on the larger of its two directions (the *Gamma pair (max)* column)
+  and flagged on the multiplicity-corrected bootstrap *p*-value by
+  default (Johansson, 2026).
 
 ### Dimensionality / unidimensionality
 
@@ -65,6 +81,12 @@ iterations.
   plus each item's standardized loading against its simulated expected
   range; computed by `easyRasch2::RMdimCFACutoff()` / `RMdimCFA()` with
   figures from `RMdimCFAPlot()`.
+- **Martin-Löf Test** — likelihood-ratio test of unidimensionality
+  against an a priori two-subscale partition of the items, generalised
+  to polytomous models (Christensen, Bjorner, Kreiner & Petersen, 2002),
+  with a Monte Carlo p-value under the unidimensional null (Christensen &
+  Kreiner, 2007) and optional Besag-Clifford sequential stopping; via
+  `easyRasch2::RMdimMartinLof()`.
 
 ### Differential item functioning
 
@@ -77,8 +99,15 @@ iterations.
   DIF variables, with optional simulation-based expected ranges and a
   response-distribution tileplot; via `easyRasch2::RMdifGamma()` /
   `RMdifGammaCutoff()` / `RMplotTile()`.
+- **Tree-Based DIF** — model-based recursive partitioning for DIF via
+  `easyRasch2::RMdifTree()` (psychotree Rasch/PCM trees; Strobl et al.,
+  2015), splitting the sample wherever item parameters are unstable
+  along one or more covariates, so groups need not be pre-specified.
+  Each split's items get an A/B/C effect size (Mantel-Haenszel ETS Delta
+  for dichotomous data, partial gamma for polytomous; Henninger et al.,
+  2023, 2025), with optional purification and pruning.
 
-### Reliability, targeting, score conversion
+### Reliability and targeting
 
 - **Reliability** — Cronbach's α, the WLE-based PSI, marginal
   reliability (Green, 1984), and RMU from plausible values (Bignardi,
@@ -90,9 +119,21 @@ iterations.
   (CML item parameters via `psychotools`, WLE person locations; MML
   fallback under sparse categories). Threshold table with Wald CIs from
   `easyRasch2::RMitemParameters()`.
-- **Sum Score to Logit Transformation** — raw-score → person-location
-  lookup, with WLE (CML via `psychotools`) or EAP (MML via `mirt`),
-  computed by `easyRasch2::RMscoreSE()`.
+
+### Person statistics
+
+- **Person Fit** — per-respondent conditional infit and outfit MSQ and
+  the standardized log-likelihood lz, each with Monte-Carlo resampled
+  p-values and a person-fit map; via `easyRasch2::RMpersonFit()`. The
+  asymptotic person-fit nulls are unreliable, so significance comes from
+  resampling under the fitted model (Müller, 2020; Sinharay, 2016).
+- **Person Parameters** — per-respondent latent locations (theta,
+  logits) with standard error of measurement, by WLE (Warm, 1989; the
+  default) or EAP, via `easyRasch2::RMpersonParameters()`. Theta, SEM,
+  sum score, items answered, and an extreme-score flag can be **saved as
+  new variables** in the dataset. Includes the sum-score-to-logit lookup
+  that was previously a separate analysis, identical to
+  `easyRasch2::RMscoreSE()`.
 
 ### Visualization
 
@@ -133,6 +174,45 @@ These can be loaded from Jamovi's **Open** → **Data Library** after installing
 the module.
 
 
+## How to cite
+
+If you use easyRasch2jmv in published work, please cite it. All analyses are
+computed by the easyRasch2 R package, so please cite that as well.
+
+**easyRasch2jmv** (this jamovi module)
+
+Johansson, M. (2026). easyRasch2jmv: A Jamovi module based on easyRasch2
+(Version 3.1.0) [Computer software].
+<https://github.com/pgmj/easyRasch2jmv>
+
+```bibtex
+@Manual{easyRasch2jmv,
+  title  = {{easyRasch2jmv}: A {Jamovi} module based on {easyRasch2}},
+  author = {Magnus Johansson},
+  year   = {2026},
+  note   = {jamovi module version 3.1.0},
+  url    = {https://github.com/pgmj/easyRasch2jmv},
+}
+```
+
+**easyRasch2** (the underlying R package)
+
+Johansson, M. (2026). easyRasch2: Psychometric Analysis with Rasch Measurement
+Theory (Version 1.2.0) [R].
+<https://doi.org/10.32614/CRAN.package.easyRasch2>
+
+```bibtex
+@Manual{easyRasch2,
+  title  = {{easyRasch2}: Psychometric Analysis with {Rasch} Measurement Theory},
+  author = {Magnus Johansson},
+  year   = {2026},
+  note   = {R package version 1.2.0},
+  doi    = {10.32614/CRAN.package.easyRasch2},
+  url    = {https://doi.org/10.32614/CRAN.package.easyRasch2},
+}
+```
+
+
 ## References
 
 - Bignardi, G., Kievit, R., & Bürkner, P. C. (2025). A general method for
@@ -142,27 +222,63 @@ the module.
   models with principal component analysis on standardized residuals.
   *Educational and Psychological Measurement, 70*(5), 717–731.
   <https://doi.org/10.1177/0013164410379322>
+- Christensen, K. B., Bjorner, J. B., Kreiner, S., & Petersen, J. H. (2002).
+  Testing unidimensionality in polytomous Rasch models. *Psychometrika, 67*(4),
+  563–574. <https://doi.org/10.1007/BF02295132>
+- Christensen, K. B., & Kreiner, S. (2007). A Monte Carlo approach to
+  unidimensionality testing in polytomous Rasch models. *Applied Psychological
+  Measurement, 31*(1), 20–30. <https://doi.org/10.1177/0146621605286204>
 - Christensen, K. B., Makransky, G., & Horton, M. (2017). Critical values for
-  Yen's Q3: Identification of local dependence in the Rasch model using
-  residual correlations. *Applied Psychological Measurement, 41*(3), 178–194.
+  Yen's Q3: Identification of local dependence in the Rasch model using residual
+  correlations. *Applied Psychological Measurement, 41*(3), 178–194.
   <https://doi.org/10.1177/0146621616677520>
+- Ferreira, J. A. (2024). Methods of testing a 'small' or 'moderate' number of
+  hypotheses simultaneously. *Journal of Statistical Theory and Practice,
+  19*(6). <https://doi.org/10.1007/s42519-024-00412-4>
+- Green, B. F., Bock, R. D., Humphreys, L. G., Linn, R. L., & Reckase, M. D.
+  (1984). Technical guidelines for assessing computerized adaptive tests.
+  *Journal of Educational Measurement, 21*(4), 347–360.
+  <https://doi.org/10.1111/j.1745-3984.1984.tb01039.x>
+- Henninger, M., Debelak, R., & Strobl, C. (2023). A new stopping criterion for
+  Rasch trees based on the Mantel-Haenszel effect size measure for differential
+  item functioning. *Educational and Psychological Measurement, 83*(1), 181–212.
+  <https://doi.org/10.1177/00131644221077135>
+- Henninger, M., Radek, J., Debelak, R., & Strobl, C. (2025). Partial credit
+  trees meet the partial gamma coefficient for quantifying DIF and DSF in
+  polytomous items. *Behaviormetrika, 52*, 221–257.
+  <https://doi.org/10.1007/s41237-024-00243-4>
 - Johansson, M. (2024). Simulation-based cutoff values for Rasch item fit and
   residual correlations. <https://pgmj.github.io/simcutoffs.html>
-- Johansson, M. (2025). Detecting item misfit in Rasch models.
-  *Educational Methods & Psychometrics, 3*(18).
-  <https://doi.org/10.61186/emp.2025.5>
+- Johansson, M. (2025). Detecting item misfit in Rasch models. *Educational
+  Methods & Psychometrics, 3*(18). <https://doi.org/10.61186/emp.2025.5>
+- Johansson, M. (2026). Simulation-based cutoffs for conditional item fit in
+  Rasch models: Iterations, multiplicity correction, and decision stability.
+  *PsyArXiv*. <https://doi.org/10.31234/osf.io/7pqz4_v2>
 - Kreiner, S. (2011). A note on item-restscore association in Rasch models.
   *Applied Psychological Measurement, 35*(7), 557–561.
   <https://doi.org/10.1177/0146621611410227>
-- Mair, P., & Hatzinger, R. (2007). Extended Rasch modeling: The eRm package
-  for the application of IRT models in R. *Journal of Statistical Software,
-  20*(9). <https://doi.org/10.18637/jss.v020.i09>
+- Mair, P., & Hatzinger, R. (2007). Extended Rasch modeling: The eRm package for
+  the application of IRT models in R. *Journal of Statistical Software, 20*(9).
+  <https://doi.org/10.18637/jss.v020.i09>
 - Müller, M. (2020). Item fit statistics for Rasch analysis: Can we trust them?
   *Journal of Statistical Distributions and Applications, 7*(1), 5.
   <https://doi.org/10.1186/s40488-020-00108-7>
 - Rosseel, Y. (2012). lavaan: An R package for structural equation modeling.
   *Journal of Statistical Software, 48*(2), 1–36.
   <https://doi.org/10.18637/jss.v048.i02>
+- Sinharay, S. (2016). Assessment of person fit using resampling-based
+  approaches. *Journal of Educational Measurement, 53*(1), 63–85.
+  <https://doi.org/10.1111/jedm.12101>
+- Strobl, C., Kopf, J., & Zeileis, A. (2015). Rasch trees: A new method for
+  detecting differential item functioning in the Rasch model. *Psychometrika,
+  80*(2), 289–316. <https://doi.org/10.1007/s11336-013-9388-3>
+- Warm, T. A. (1989). Weighted likelihood estimation of ability in item response
+  theory. *Psychometrika, 54*(3), 427–450. <https://doi.org/10.1007/BF02294627>
+- Westfall, P. H., & Young, S. S. (1993). *Resampling-based multiple testing:
+  Examples and methods for p-value adjustment*. Wiley.
+- Yen, W. M. (1984). Effects of local item dependence on the fit and equating
+  performance of the three-parameter logistic model. *Applied Psychological
+  Measurement, 8*(2), 125–145. <https://doi.org/10.1177/014662168400800201>
 
 
 ## Credits
