@@ -196,10 +196,10 @@ Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
 
 **jamovi** (intentionally with lower case 'j')
 
-The jamovi project. (2026). jamovi [Computer Software] (Version 2.7) [Computer software]. <https://www.jamovi.org>
+The jamovi project. (2026). jamovi (Version 2.7) [Computer software]. <https://www.jamovi.org>
 
 ```bibtex
-@Manual{thejamoviprojectJamoviComputerSoftware2026,
+@Manual{thejamoviproject2026,
 	title  = {jamovi [{Computer} {Software}]},
 	author = {The jamovi project},
 	year   = {2026},
