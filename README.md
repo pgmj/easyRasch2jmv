@@ -5,7 +5,7 @@
 <a href="https://doi.org/10.5281/zenodo.20136864" target="_blank"><img src="https://zenodo.org/badge/1199494308.svg" alt="DOI"></a>
 <!-- badges: end -->
 
-A [Jamovi](https://www.jamovi.org/) module for Rasch Measurement Theory
+A [jamovi](https://www.jamovi.org/) module for Rasch Measurement Theory
 analysis. All analyses delegate their computations to the
 [easyRasch2](https://github.com/pgmj/easyRasch2) R package, so results
 are numerically identical to easyRasch2 with the same seeds and
@@ -155,12 +155,12 @@ alongside the jamovi module: `easyRasch2`, `eRm`, `iarm`, `lavaan`,
 
 ## Installation
 
-In Jamovi, click on **Modules** (far top right) and choose **"Jamovi Library"**. Search for *easyRasch* and install from there.
+In jamovi, click on **Modules** (far top right) and choose **"jamovi Library"**. Search for *easyRasch* and install from there.
 
 For development version (see NEWS.md for changelog):
 
 1. Download the latest `.jmo` file from the [Releases](https://github.com/pgmj/easyRasch2jmv/releases) page.
-2. In Jamovi, go to the **Modules** menu (⊞) → **Sideload**.
+2. In jamovi, go to the **Modules** menu (⊞) → **Sideload**.
 3. Select the downloaded `.jmo` file.
 
 ## Sample Data
@@ -170,28 +170,41 @@ Two sample datasets are bundled with the module, both from R package `eRm`:
 - **pcmdat2** — Polytomous dataset (50 persons × 5 items, scored 0–3)
 - **raschdat3** — Dichotomous dataset (50 persons × 8 items, scored 0–1)
 
-These can be loaded from Jamovi's **Open** → **Data Library** after installing
+These can be loaded from jamovi's **Open** → **Data Library** after installing
 the module.
 
 
 ## How to cite
 
-If you use easyRasch2jmv in published work, please cite it. All analyses are
-computed by the easyRasch2 R package, so please cite that as well.
+If you use easyRasch2jmv in published work, please cite it and jamovi itself. All analyses are computed by the easyRasch2 R package, so please cite that as well. If you use the Zotero reference manager, you can copy the bibtex below and use File -> Import from clipboard.
 
 **easyRasch2jmv** (this jamovi module)
 
-Johansson, M. (2026). easyRasch2jmv: A Jamovi module based on easyRasch2
+Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
 (Version 3.1.0) [Computer software].
 <https://github.com/pgmj/easyRasch2jmv>
 
 ```bibtex
 @Manual{easyRasch2jmv,
-  title  = {{easyRasch2jmv}: A {Jamovi} module based on {easyRasch2}},
+  title  = {{easyRasch2jmv}: A {jamovi} module based on {easyRasch2}},
   author = {Magnus Johansson},
   year   = {2026},
   note   = {jamovi module version 3.1.0},
   url    = {https://github.com/pgmj/easyRasch2jmv},
+}
+```
+
+**jamovi**
+
+The jamovi project. (2026). Jamovi [Computer Software] (Version 2.7) [Computer software]. <https://www.jamovi.org>
+
+```bibtex
+@Manual{thejamoviprojectJamoviComputerSoftware2026,
+	title  = {jamovi [{Computer} {Software}]},
+	author = {The jamovi project},
+	year   = {2026},
+  note   = {jamovi version 2.7},
+	url    = {https://www.jamovi.org},
 }
 ```
 
