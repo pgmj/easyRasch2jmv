@@ -203,7 +203,7 @@ The jamovi project. (2026). Jamovi [Computer Software] (Version 2.7) [Computer s
 	title  = {jamovi [{Computer} {Software}]},
 	author = {The jamovi project},
 	year   = {2026},
-  note   = {jamovi version 2.7},
+	note   = {jamovi version 2.7},
 	url    = {https://www.jamovi.org},
 }
 ```
