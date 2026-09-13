@@ -44,7 +44,8 @@ iteminfitOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 "iterations",
                 iterations,
                 default=400,
-                min=50)
+                min=50,
+                max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,

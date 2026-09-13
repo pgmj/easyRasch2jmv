@@ -41,7 +41,7 @@ children:
                 format: number
 
   - type: CollapseBox
-    label: Save to dataset
+    label: Save to Dataset
     collapsed: false
     children:
       - type: Output

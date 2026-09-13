@@ -41,7 +41,8 @@ martinlofOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 "iterations",
                 iterations,
                 default=250,
-                min=100)
+                min=100,
+                max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,

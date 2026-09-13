@@ -63,6 +63,7 @@ refs:
         year: 2013
         title: 'Rasch Models in Health'
         publisher: 'Iste and Wiley, pp. 133–135'
+        url: https://doi.org/10.1002/9781118574454
 
     easyRasch2:
         type: software
@@ -118,6 +119,7 @@ refs:
         year: 1993
         title: 'Resampling-Based Multiple Testing'
         publisher: 'Wiley'
+        url: https://www.wiley.com/en-us/Resampling+Based+Multiple+Testing:+Examples+and+Methods+for+p+Value+Adjustment-p-9780471557616
 
     strobl2015:
         type: article
@@ -227,6 +229,7 @@ refs:
         year: 1979
         title: 'Best Test Design'
         publisher: 'MESA Press'
+        url: https://research.acer.edu.au/measurement/1/
 
     vanbuuren2011:
         type: article

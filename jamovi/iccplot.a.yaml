@@ -2,6 +2,7 @@
 name: iccplot
 title: Item Probability Curves
 menuGroup: easyRasch2jmv
+menuSubgroup: Item probability curves
 version: '1.0.0'
 jas: '1.2'
 

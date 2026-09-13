@@ -181,7 +181,7 @@ If you use easyRasch2jmv in published work, please cite it and jamovi itself. Al
 **easyRasch2jmv** (this jamovi module)
 
 Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
-(Version 3.1.0) [Computer software].
+(Version 3.1.1) [Computer software].
 <https://github.com/pgmj/easyRasch2jmv>
 
 ```bibtex
@@ -189,7 +189,7 @@ Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
   title  = {{easyRasch2jmv}: A {jamovi} module based on {easyRasch2}},
   author = {Magnus Johansson},
   year   = {2026},
-  note   = {jamovi module version 3.1.0},
+  note   = {jamovi module version 3.1.1},
   url    = {https://github.com/pgmj/easyRasch2jmv},
 }
 ```

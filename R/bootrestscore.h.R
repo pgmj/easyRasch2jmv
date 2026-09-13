@@ -33,7 +33,8 @@ bootrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 "iterations",
                 iterations,
                 default=250,
-                min=50)
+                min=50,
+                max=5000)
             private$..samplesize <- jmvcore::OptionInteger$new(
                 "samplesize",
                 samplesize,

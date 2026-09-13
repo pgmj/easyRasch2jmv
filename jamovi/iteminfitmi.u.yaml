@@ -15,7 +15,7 @@ children:
             name: vars
             isTarget: true
       - type: TargetLayoutBox
-        label: Auxiliary variables (optional)
+        label: Auxiliary Variables (optional)
         children:
           - type: VariablesListBox
             name: auxVars

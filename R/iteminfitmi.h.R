@@ -85,7 +85,8 @@ iteminfitmiOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 "iterations",
                 iterations,
                 default=500,
-                min=50)
+                min=50,
+                max=5000)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..auxVars)

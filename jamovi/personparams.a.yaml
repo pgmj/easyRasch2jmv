@@ -2,6 +2,7 @@
 name: personparams
 title: Person Parameters
 menuGroup: easyRasch2jmv
+menuSubgroup: Person-level
 version: '1.0.0'
 jas: '1.2'
 

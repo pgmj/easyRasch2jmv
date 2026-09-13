@@ -1,7 +1,7 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 3.1.0
+version: 3.1.1
 jms: '1.0'
 authors:
   - Magnus Johansson
@@ -35,6 +35,7 @@ analyses:
       Results match easyRasch2::RMitemInfit(), RMitemInfitCutoff(), and
       RMitemInfitPlot() with the same seed and iterations. Single-core
       sequential processing is used.
+    menuSubgroup: Item fit
   - title: Item-Restscore Correlations
     name: itemrestscore
     ns: easyRasch2jmv
@@ -51,6 +52,7 @@ analyses:
       over-discrimination / often LD, negative = under-discrimination /
       often noise), BH-adjusted p-values, and item locations. Results match
       easyRasch2::RMitemRestscore().
+    menuSubgroup: Item fit
   - title: Bootstrap Item-Restscore
     name: bootrestscore
     ns: easyRasch2jmv
@@ -69,6 +71,7 @@ analyses:
       not practically misfitting. The bootstrap is numerically identical
       to easyRasch2::RMitemRestscoreBoot() with the same seed and
       iterations. Single-core sequential processing is used.
+    menuSubgroup: Item fit
   - title: Conditional Item Infit (Multiple Imputation)
     name: iteminfitmi
     ns: easyRasch2jmv
@@ -83,6 +86,24 @@ analyses:
       conditional infit computation (iarm::out_infit()), and Rubin's-rules
       pooling to easyRasch2::RMitemInfitMI(). Results match RMitemInfitMI()
       and RMitemInfitCutoffMI() run on the same imputed datasets and seed.
+    menuSubgroup: Item fit
+  - title: Item Characteristic Curves (CICC)
+    name: cicc
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuTitle: Item Characteristic Curves (CICC)
+    description: |-
+      Conditional item characteristic curves (Buchardt, Christensen &
+      Jensen, 2023): the model-expected item score as a function of the
+      total score (the exact conditional expectation), with observed mean
+      item scores overlaid per total-score group. Groups are formed on
+      the total-score scale -- quantile-based (approximately equal
+      numbers of respondents), equal-width score intervals, or one group
+      per total score -- and observed means that deviate from the
+      expected curve indicate localized item misfit. Drawn by
+      easyRasch2::RMitemICCPlot() (CML item estimation via psychotools).
+    menuSubgroup: Item fit
   - title: Dynamic CFA Fit-Index Cutoffs
     name: cfacutoff
     ns: easyRasch2jmv
@@ -100,6 +121,7 @@ analyses:
       to percentile cutoffs from the simulated null distribution. Also
       reports each item's observed standardized loading against its
       simulated expected range, with figures for both views.
+    menuSubgroup: Dimensionality
   - title: PCA of Standardized Rasch Residuals
     name: residualpca
     ns: easyRasch2jmv
@@ -117,6 +139,7 @@ analyses:
       contrast. Optionally determines a simulation-based cutoff for the
       first eigenvalue via parametric bootstrap
       (easyRasch2::RMdimResidualPCACutoff(); Chou & Wang, 2010).
+    menuSubgroup: Dimensionality
   - title: Martin-Löf Test
     name: martinlof
     ns: easyRasch2jmv
@@ -133,6 +156,7 @@ analyses:
       & Kreiner, 2007), because the asymptotic chi-square approximation
       is biased toward conservatism at realistic sample sizes,
       especially with polytomous items.
+    menuSubgroup: Dimensionality
   - title: Partial Gamma Local Dependence
     name: locdepgamma
     ns: easyRasch2jmv
@@ -153,6 +177,7 @@ analyses:
       easyRasch2::RMlocdepGamma(), RMlocdepGammaCutoff(), and
       RMlocdepGammaPlot() with the same seed and iterations. Single-core
       sequential processing is used.
+    menuSubgroup: Local dependence
   - title: Q3 Residual Correlation Matrix
     name: locdepq3
     ns: easyRasch2jmv
@@ -170,6 +195,7 @@ analyses:
       per-pair distribution plot. Results match easyRasch2::RMlocdepQ3(),
       RMlocdepQ3Cutoff(), and RMlocdepQ3Plot() with the same seed and
       iterations. Single-core sequential processing is used.
+    menuSubgroup: Local dependence
   - title: Andersen LR-test DIF
     name: lrdif
     ns: easyRasch2jmv
@@ -186,6 +212,7 @@ analyses:
       Results are identical to easyRasch2::RMdifLR(). A
       response-distribution tileplot (easyRasch2::RMplotTile()) is
       available for inspecting per-group category counts.
+    menuSubgroup: DIF
   - title: Tree-Based DIF
     name: diftree
     ns: easyRasch2jmv
@@ -202,6 +229,7 @@ analyses:
       can be examined at once, continuous covariates (e.g. age) are
       handled natively (the algorithm finds the optimal cutpoint), and
       interactions emerge as nested splits.
+    menuSubgroup: DIF
   - title: Partial Gamma DIF
     name: partgamdif
     ns: easyRasch2jmv
@@ -221,22 +249,7 @@ analyses:
       seed and iterations. A response-distribution tileplot
       (easyRasch2::RMplotTile()) is available for inspecting per-group
       category counts. Single-core sequential processing is used.
-  - title: Item Characteristic Curves (CICC)
-    name: cicc
-    ns: easyRasch2jmv
-    category: analyses
-    menuGroup: easyRasch2jmv
-    menuTitle: Item Characteristic Curves (CICC)
-    description: |-
-      Conditional item characteristic curves (Buchardt, Christensen &
-      Jensen, 2023): the model-expected item score as a function of the
-      total score (the exact conditional expectation), with observed mean
-      item scores overlaid per total-score group. Groups are formed on
-      the total-score scale -- quantile-based (approximately equal
-      numbers of respondents), equal-width score intervals, or one group
-      per total score -- and observed means that deviate from the
-      expected curve indicate localized item misfit. Drawn by
-      easyRasch2::RMitemICCPlot() (CML item estimation via psychotools).
+    menuSubgroup: DIF
   - title: Item Probability Curves
     name: iccplot
     ns: easyRasch2jmv
@@ -252,6 +265,7 @@ analyses:
       eRm::plotjointICC); polytomous data as category probability curves
       with one facet per item, drawn by easyRasch2::RMitemCatProb().
       Probabilities are identical to RMitemCatProb().
+    menuSubgroup: Item probability curves
   - title: Targeting Plot
     name: targeting
     ns: easyRasch2jmv
@@ -269,6 +283,7 @@ analyses:
       are weighted likelihood estimates (WLE), finite at extreme scores.
       Results are identical to easyRasch2::RMtargeting() and the
       threshold table to easyRasch2::RMitemParameters().
+    menuSubgroup: Targeting
   - title: Reliability
     name: reliability
     ns: easyRasch2jmv
@@ -287,6 +302,7 @@ analyses:
       Bürkner (2025) split-half correlation method. A large gap between
       PSI and Marginal suggests the sample is off-target relative to the
       scale.
+    menuSubgroup: Person-level
   - title: Person Parameters
     name: personparams
     ns: easyRasch2jmv
@@ -302,6 +318,7 @@ analyses:
       is then estimated from the items they answered, so respondents
       with partially missing responses are retained. Results are
       identical to easyRasch2::RMpersonParameters().
+    menuSubgroup: Person-level
   - title: Person Fit
     name: personfit
     ns: easyRasch2jmv
@@ -322,6 +339,7 @@ analyses:
       location with the location re-estimated per pattern. Results are
       identical to easyRasch2::RMpersonFit() with the same seed and
       iterations. Single-core sequential processing is used.
+    menuSubgroup: Person-level
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

@@ -2,6 +2,7 @@
 name: iteminfit
 title: Conditional Item Infit
 menuGroup: easyRasch2jmv
+menuSubgroup: Item fit
 version: '1.0.0'
 jas: '1.2'
 
@@ -74,6 +75,7 @@ options:
       type: Integer
       default: 400
       min: 50
+      max: 5000
 
     - name: seed
       title: Random seed

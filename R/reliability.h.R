@@ -45,12 +45,14 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 "draws",
                 draws,
                 default=1000,
-                min=100)
+                min=100,
+                max=10000)
             private$..rmuIter <- jmvcore::OptionInteger$new(
                 "rmuIter",
                 rmuIter,
                 default=50,
-                min=5)
+                min=5,
+                max=500)
             private$..confInt <- jmvcore::OptionNumber$new(
                 "confInt",
                 confInt,
@@ -77,7 +79,8 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 "bootIter",
                 bootIter,
                 default=1000,
-                min=100)
+                min=100,
+                max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,

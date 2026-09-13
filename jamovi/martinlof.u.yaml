@@ -9,13 +9,13 @@ children:
     stretchFactor: 1
     children:
       - type: TargetLayoutBox
-        label: Subscale 1 items
+        label: Subscale 1 Items
         children:
           - type: VariablesListBox
             name: subscale1
             isTarget: true
       - type: TargetLayoutBox
-        label: Subscale 2 items
+        label: Subscale 2 Items
         children:
           - type: VariablesListBox
             name: subscale2

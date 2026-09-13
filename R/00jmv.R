@@ -56,7 +56,8 @@
         `author`="Christensen, K. B., Kreiner, S., & Mesbah, M. (Eds.)", 
         `year`=2013, 
         `title`="Rasch Models in Health", 
-        `publisher`="Iste and Wiley, pp. 133\u2013135"), 
+        `publisher`="Iste and Wiley, pp. 133\u2013135", 
+        `url`="https://doi.org/10.1002/9781118574454"), 
     `easyRasch2`=list(
         `type`="software", 
         `author`="Johansson, M.", 
@@ -104,7 +105,8 @@
         `author`="Westfall, P. H., & Young, S. S.", 
         `year`=1993, 
         `title`="Resampling-Based Multiple Testing", 
-        `publisher`="Wiley"), 
+        `publisher`="Wiley", 
+        `url`="https://www.wiley.com/en-us/Resampling+Based+Multiple+Testing:+Examples+and+Methods+for+p+Value+Adjustment-p-9780471557616"), 
     `strobl2015`=list(
         `type`="article", 
         `author`="Strobl, C., Kopf, J., & Zeileis, A.", 
@@ -199,7 +201,8 @@
         `author`="Wright, B. D. & Stone, M. H.", 
         `year`=1979, 
         `title`="Best Test Design", 
-        `publisher`="MESA Press"), 
+        `publisher`="MESA Press", 
+        `url`="https://research.acer.edu.au/measurement/1/"), 
     `vanbuuren2011`=list(
         `type`="article", 
         `author`="van Buuren, S., & Groothuis-Oudshoorn, K.", 

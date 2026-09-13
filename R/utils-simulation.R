@@ -11,15 +11,24 @@
 #' so the populating code can format both uniformly. Returns a character
 #' message on failure (typically a non-converging WLSMV fit).
 #'
+#' The items are refitted under placeholder names `V1...Vk`. jamovi variable
+#' names may contain spaces or start with a digit (`Item 1`, `3 months`),
+#' which lavaan's model syntax cannot express: it rejects such names as
+#' undefined variables, and neither back-quoting nor double-quoting them
+#' parses (verified with lavaan 0.6-21). Only the fit indices are returned,
+#' so the names never surface; the fit is unchanged by the renaming.
+#'
 #' @noRd
 run_observed_cfa_fit <- function(df, estimator) {
-  fmla <- paste0("F1 =~ ", paste(names(df), collapse = " + "))
+  safe <- paste0("V", seq_along(df))
+  names(df) <- safe
+  fmla <- paste0("F1 =~ ", paste(safe, collapse = " + "))
   tryCatch({
     fit <- suppressWarnings(suppressMessages(
       lavaan::cfa(
         model     = fmla,
         data      = df,
-        ordered   = names(df),
+        ordered   = safe,
         estimator = estimator,
         warn      = FALSE,
         verbose   = FALSE

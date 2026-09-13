@@ -1,3 +1,49 @@
+# easyRasch2jmv 3.1.1
+
+Maintenance release following a jamovi library audit. No analysis results
+change.
+
+## Menu
+
+- The analyses are grouped into subgroups instead of one flat list of 18:
+  Item fit, Dimensionality, Local dependence, DIF, Item probability curves,
+  Targeting, and Person-level.
+
+## Dynamic CFA Fit-Index Cutoffs
+
+- The standardized loadings table is now built before the analysis runs, one
+  row per selected item with the item names already filled in. Previously it
+  appeared as an empty placeholder and restructured itself once the
+  simulation finished.
+- Item names that are not valid R names, such as `Item 1` or `3 months`, no
+  longer break the observed-fit fallback used when the cutoff simulation
+  fails. lavaan cannot parse such names, so the fit runs under placeholder
+  names and the item names are restored afterwards. The same fix is in
+  easyRasch2, where these names made the cutoff simulation itself fail.
+
+## Simulation settings
+
+- The iteration settings that had no upper limit now have one, matching the
+  three analyses that already did. Iterations are capped at 5000 in Bootstrap
+  Item-Restscore, Dynamic CFA Fit-Index Cutoffs, Conditional Item Infit,
+  Conditional Item Infit (Multiple Imputation), Martin-Löf Test, Partial
+  Gamma DIF, and Person Fit. In Reliability, plausible-value draws are capped
+  at 10000, RMU iterations at 500, and bootstrap iterations at 5000.
+
+  Each of these drives a sequential simulation loop, so run time is linear in
+  the value and one extra digit was enough to make jamovi look like it had
+  stopped responding. An analysis saved with a value above a new limit will
+  reopen at the limit.
+
+## References and labels
+
+- The three book references now carry a link, so every entry in the analysis
+  reference lists is clickable. These were the only three of 34 without one.
+- Five variable-box and section labels are title-cased to match the rest of
+  the module: `Subscale 1 Items` and `Subscale 2 Items` in Martin-Löf Test,
+  `Auxiliary Variables (optional)` in Conditional Item Infit (Multiple
+  Imputation), and `Save to Dataset` in Person Fit and Person Parameters.
+
 # easyRasch2jmv 3.1.0
 
 Conditional Item Infit and the two local dependence analyses now flag on the

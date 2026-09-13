@@ -2,6 +2,7 @@
 name: diftree
 title: Tree-Based DIF
 menuGroup: easyRasch2jmv
+menuSubgroup: DIF
 version: '1.0.0'
 jas: '1.2'
 

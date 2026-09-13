@@ -2,6 +2,7 @@
 name: locdepgamma
 title: Partial Gamma Local Dependence
 menuGroup: easyRasch2jmv
+menuSubgroup: Local dependence
 version: '1.0.0'
 jas: '1.2'
 

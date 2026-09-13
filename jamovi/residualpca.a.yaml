@@ -2,6 +2,7 @@
 name: residualpca
 title: PCA of Standardized Rasch Residuals
 menuGroup: easyRasch2jmv
+menuSubgroup: Dimensionality
 version: '1.0.0'
 jas: '1.2'
 

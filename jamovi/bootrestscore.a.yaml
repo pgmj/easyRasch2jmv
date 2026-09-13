@@ -2,6 +2,7 @@
 name: bootrestscore
 title: Bootstrap Item-Restscore
 menuGroup: easyRasch2jmv
+menuSubgroup: Item fit
 version: '1.0.0'
 jas: '1.2'
 
@@ -38,6 +39,7 @@ options:
       type: Integer
       default: 250
       min: 50
+      max: 5000
 
     - name: samplesize
       title: Bootstrap sample size

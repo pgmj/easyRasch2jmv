@@ -34,7 +34,7 @@ items:
     - name: loadingsTable
       title: Standardized Loadings vs Simulated Expected Range
       type: Table
-      rows: 0
+      rows: (vars)
       clearWith:
           - vars
           - estimator

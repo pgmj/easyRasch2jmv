@@ -2,6 +2,7 @@
 name: martinlof
 title: Martin-Löf Test
 menuGroup: easyRasch2jmv
+menuSubgroup: Dimensionality
 version: '1.0.0'
 jas: '1.2'
 
@@ -44,7 +45,7 @@ options:
       type: Data
 
     - name: subscale1
-      title: Subscale 1 items
+      title: Subscale 1 Items
       type: Variables
       suggested:
         - continuous
@@ -54,7 +55,7 @@ options:
       rejectInf: true
 
     - name: subscale2
-      title: Subscale 2 items
+      title: Subscale 2 Items
       type: Variables
       suggested:
         - continuous
@@ -68,6 +69,7 @@ options:
       type: Integer
       default: 250
       min: 100
+      max: 5000
 
     - name: seed
       title: Random seed

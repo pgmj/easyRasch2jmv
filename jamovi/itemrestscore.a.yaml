@@ -2,6 +2,7 @@
 name: itemrestscore
 title: Item-Restscore Correlations
 menuGroup: easyRasch2jmv
+menuSubgroup: Item fit
 version: '1.0.0'
 jas: '1.2'
 

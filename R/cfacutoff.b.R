@@ -5,12 +5,15 @@ cfacutoffClass <- R6::R6Class(
   private = list(
 
     # ---------------------------------------------------------------------
-    # .init -- the three rows exist via r.yaml (rows: 3); pre-fill the
-    # design-fixed index labels so the table renders meaningfully before
-    # .run() finishes.
+    # .init -- both tables are structured from r.yaml (cfaTable rows: 3,
+    # loadingsTable rows: (vars)); pre-fill the labels that are fixed by the
+    # design so the tables render meaningfully before .run() finishes. The
+    # simulation takes a while, and without this the panel would sit empty
+    # and then restructure.
     # ---------------------------------------------------------------------
     .init = function() {
-      if (is.null(self$options$vars) || length(self$options$vars) < 4)
+      vars <- self$options$vars
+      if (is.null(vars) || length(vars) < 4)
         return()
       table <- self$results$cfaTable
       idx_names <- c("CFI", "RMSEA", "SRMR")
@@ -19,6 +22,16 @@ cfacutoffClass <- R6::R6Class(
           index    = idx_names[i],
           observed = NA_real_,
           cutoff   = NA_real_,
+          flagged  = ""
+        ))
+      }
+      lt <- self$results$loadingsTable
+      for (i in seq_along(vars)) {
+        lt$setRow(rowNo = i, values = list(
+          item     = vars[i],
+          observed = NA_real_,
+          low      = NA_real_,
+          high     = NA_real_,
           flagged  = ""
         ))
       }
@@ -201,9 +214,11 @@ cfacutoffClass <- R6::R6Class(
 
         # 5b. Loadings table: observed standardized loadings vs the
         # per-item expected range from the same simulation.
+        # One row per selected item, structured in .init; RMdimCFA returns
+        # the loadings in item order, so row i is vars[i].
         lt <- self$results$loadingsTable
         for (i in seq_len(nrow(load_df))) {
-          lt$addRow(rowKey = i, values = list(
+          lt$setRow(rowNo = i, values = list(
             item     = load_df$Item[i],
             observed = load_df$Observed[i],
             low      = load_df$Expected_low[i],

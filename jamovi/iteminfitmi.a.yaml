@@ -2,6 +2,7 @@
 name: iteminfitmi
 title: Conditional Item Infit (Multiple Imputation)
 menuGroup: easyRasch2jmv
+menuSubgroup: Item fit
 version: '1.0.0'
 jas: '1.2'
 
@@ -42,7 +43,7 @@ options:
       rejectInf: true
 
     - name: auxVars
-      title: Auxiliary variables (optional)
+      title: Auxiliary Variables (optional)
       type: Variables
       default: null
       suggested:
@@ -106,5 +107,6 @@ options:
       type: Integer
       default: 500
       min: 50
+      max: 5000
 
 ...
