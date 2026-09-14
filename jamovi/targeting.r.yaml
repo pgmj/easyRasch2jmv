@@ -14,6 +14,7 @@ items:
       requiresData: true
       clearWith:
         - vars
+        - panel
         - robust
         - sortItems
         - bins
@@ -21,6 +22,11 @@ items:
         - xlimHigh
         - showCi
         - ciLevel
+        - categoryLabels
+        - rowGap
+        - viridisOption
+        - viridisBegin
+        - viridisEnd
 
     # Columns are built at run time: the wide (default) layout has one
     # column per threshold, whose count depends on the observed response
@@ -40,4 +46,6 @@ items:
       type: Html
       clearWith:
         - vars
+        - panel
+        - categoryLabels
 ...

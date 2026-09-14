@@ -150,11 +150,25 @@ targetingClass <- R6::R6Class(
         # Rows with no valid responses contribute nothing to estimation
         n_total <- sum(rowSums(!is.na(df)) > 0)
 
+        # Response-category labels for the "categories" panel, recovered
+        # from the jamovi factor levels when every item agrees on them.
+        # NULL falls back to the category scores inside the package.
+        cat_labels <- if (isTRUE(self$options$categoryLabels)) {
+          shared_category_labels(
+            data, vars,
+            n_categories = as.integer(max(as.matrix(df), na.rm = TRUE)) + 1L
+          )
+        } else {
+          NULL
+        }
+
         # Save state for the plot: the figure is drawn by
         # easyRasch2::RMtargeting() inside the render function (the CML/WLE
         # refit it performs there is cheap); storing the data + options
         # keeps the saved analysis small.
-        self$results$targetingPlot$setState(list(df = df))
+        self$results$targetingPlot$setState(list(
+          df = df, category_labels = cat_labels
+        ))
 
         # Estimation-method / sample-size note
         method_clause <- if (use_mml) {
@@ -174,11 +188,40 @@ targetingClass <- R6::R6Class(
             "are finite at extreme scores."
           )
         }
+        panel_clause <- if (self$options$panel == "categories") {
+          paste0(
+            " The bottom panel shows, for each item, the range of person ",
+            "locations over which each response category is the most likely ",
+            "answer, with the threshold estimates and their confidence ",
+            "intervals beneath. A category marked in red is never the most ",
+            "likely response at any location, and a threshold marked in red ",
+            "is disordered relative to the category scores. Neither is a ",
+            "test; both are descriptions of the estimated thresholds.",
+            if (!is.null(cat_labels)) {
+              " Category labels are taken from the value labels of the selected variables."
+            } else if (isTRUE(self$options$categoryLabels)) {
+              paste0(
+                " Categories are labelled by their scores: the selected ",
+                "variables carry no value labels, do not all share the same ",
+                "ones, or have more labels than observed categories."
+              )
+            } else {
+              ""
+            }
+          )
+        } else {
+          paste0(
+            " The bottom panel is the dot-and-whisker plot of item ",
+            "thresholds. Switch <i>Bottom panel</i> to see where each ",
+            "response category is the most likely answer."
+          )
+        }
         recode_msg <- recode_note(data, vars)
         self$results$targetingNote$setContent(paste0(
           "<p>Analysis based on N = ", n_total, " respondents (rows with ",
           "partially missing responses are retained by the estimation). ",
           method_clause,
+          panel_clause,
           " Results are identical to easyRasch2::RMtargeting() and ",
           "RMitemParameters().",
           if (!is.null(recode_msg)) paste0(" ", recode_msg) else "",
@@ -193,9 +236,10 @@ targetingClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     # Person-item targeting plot (Wright map) — drawn by
     # easyRasch2::RMtargeting(): back-to-back person / threshold histograms
-    # plus a per-item threshold dot plot with optional CIs. Every module
-    # option maps directly; xlim auto-expands inside the package so
-    # nothing is clipped.
+    # above either the response-category band panel (the default since
+    # easyRasch2 1.3.0) or the dot-and-whisker threshold plot that
+    # preceded it. Every module option maps directly; xlim auto-expands
+    # inside the package so nothing is clipped.
     # ---------------------------------------------------------------------
     .targetingPlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
@@ -207,14 +251,20 @@ targetingClass <- R6::R6Class(
       p <- suppressWarnings(suppressMessages(
         easyRasch2::RMtargeting(
           image$state$df,
-          robust     = isTRUE(self$options$robust),
-          sort_items = self$options$sortItems,
-          bins       = self$options$bins,
-          xlim       = c(self$options$xlimLow, self$options$xlimHigh),
-          ci_level   = if (isTRUE(self$options$showCi))
-                         self$options$ciLevel / 100
-                       else NULL,
-          output     = "patchwork"
+          panel           = self$options$panel,
+          robust          = isTRUE(self$options$robust),
+          sort_items      = self$options$sortItems,
+          bins            = self$options$bins,
+          xlim            = c(self$options$xlimLow, self$options$xlimHigh),
+          ci_level        = if (isTRUE(self$options$showCi))
+                              self$options$ciLevel / 100
+                            else NULL,
+          category_labels = image$state$category_labels,
+          viridis_option  = self$options$viridisOption,
+          viridis_begin   = self$options$viridisBegin,
+          viridis_end     = self$options$viridisEnd,
+          row_gap         = self$options$rowGap,
+          output          = "patchwork"
         )
       ))
       p <- er2_bump_text(p)

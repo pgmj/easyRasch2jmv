@@ -1,0 +1,403 @@
+---
+name: personchange
+title: Person Change
+jrs: '1.1'
+
+items:
+    # The pairing table sits above the figure, deliberately breaking the
+    # figure-first layout used by the Targeting Plot. Items are matched by
+    # their position in the two variable boxes, so a mispaired analysis
+    # produces a perfectly plausible-looking scatter. The check has to
+    # precede the result it validates.
+    - name: pairingTable
+      title: Item Pairing
+      type: Table
+      rows: 0
+      refs: [easyRasch2jmv, easyRasch2]
+      clearWith:
+          - vars1
+          - vars2
+      columns:
+          - name: pair
+            title: '#'
+            type: integer
+          - name: item1
+            title: Time 1
+            type: text
+          - name: item2
+            title: Time 2
+            type: text
+          - name: cats
+            title: Response categories
+            type: text
+
+    - name: changePlot
+      title: Person Locations at the Two Occasions
+      type: Image
+      width: 600
+      height: 550
+      renderFun: .changePlot
+      requiresData: true
+      refs: [easyRasch2jmv, easyRasch2, jacobsontruax1991, caronni2026, zumbo2026, warm1989, zeileis2026]
+      clearWith:
+          - vars1
+          - vars2
+          - id
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - estimateRetestSd
+          - retestIter
+          - seed
+          - thetaMin
+          - thetaMax
+
+    - name: summaryTable
+      title: Change Summary
+      type: Table
+      rows: 0
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - estimateRetestSd
+          - retestIter
+          - seed
+          - thetaMin
+          - thetaMax
+      columns:
+          - name: statistic
+            title: Statistic
+            type: text
+          - name: value
+            title: Value
+            type: number
+            format: zto
+          - name: notes
+            title: Notes
+            type: text
+
+    - name: critPlot
+      title: Critical Values Across the Scale
+      type: Image
+      width: 650
+      height: 500
+      renderFun: .critPlot
+      requiresData: true
+      visible: (conditionalCrit)
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - estimateRetestSd
+          - retestIter
+          - seed
+          - thetaMin
+          - thetaMax
+
+    - name: changeTable
+      title: Per-Respondent Results
+      type: Table
+      rows: 0
+      visible: (showTable)
+      clearWith:
+          - vars1
+          - vars2
+          - id
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - estimateRetestSd
+          - retestIter
+          - seed
+          - thetaMin
+          - thetaMax
+          - flaggedOnly
+      columns:
+          - name: id
+            title: ID
+            type: text
+          - name: sumT1
+            title: Sum
+            type: integer
+            superTitle: Time 1
+          - name: thetaT1
+            title: Theta
+            type: number
+            format: zto
+            superTitle: Time 1
+          - name: sumT2
+            title: Sum
+            type: integer
+            superTitle: Time 2
+          - name: thetaT2
+            title: Theta
+            type: number
+            format: zto
+            superTitle: Time 2
+          - name: change
+            title: Change
+            type: number
+            format: zto
+          - name: seDiff
+            title: SE
+            type: number
+            format: zto
+          - name: rci
+            title: RCI
+            type: number
+            format: zto
+          - name: pValue
+            title: p
+            type: number
+            format: zto,pvalue
+          - name: critLower
+            title: Lower
+            type: number
+            format: zto
+            superTitle: Critical
+          - name: critUpper
+            title: Upper
+            type: number
+            format: zto
+            superTitle: Critical
+          - name: changeClass
+            title: Classification
+            type: text
+          - name: retestTip
+            title: Retest SD tip
+            type: number
+            format: zto
+
+    - name: retestTable
+      title: Retest SD Estimated from These Data
+      type: Table
+      rows: 0
+      visible: (estimateRetestSd)
+      refs: [easyRasch2jmv, easyRasch2]
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - retestIter
+          - retestBoot
+          - retestBootIter
+          - confInt
+          - seed
+          - thetaMin
+          - thetaMax
+      columns:
+          - name: quantity
+            title: Quantity
+            type: text
+          - name: value
+            title: Estimate
+            type: number
+            format: zto
+          - name: lower
+            title: Lower
+            type: number
+            format: zto
+            superTitle: Interval
+          - name: upper
+            title: Upper
+            type: number
+            format: zto
+            superTitle: Interval
+
+    # Hidden cache. The exact enumeration is the expensive part and jamovi
+    # reruns .run on every option change, including the output-variable
+    # toggles and the table switches, which do not affect it. Mirrors the
+    # simCache element in Person Fit: the signature check makes reuse
+    # self-validating rather than relying on clearWith alone.
+    #
+    # clearWith is still required, and lists everything the enumeration
+    # depends on. Omit it and the element takes jmvcore's Html default of
+    # "*", which discards the state on any option change and leaves the
+    # cache cold on exactly the toggles it exists to absorb.
+    - name: changeCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars1
+          - vars2
+          - id
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - thetaMin
+          - thetaMax
+
+    - name: changeNote
+      title: ''
+      type: Html
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - estimateRetestSd
+
+    # Output variables written into the dataset (paired with the a.yaml
+    # Output options of the same names).
+    - name: outputThetaT1
+      title: Person location, time 1
+      type: Output
+      varTitle: theta_t1
+      varDescription: >
+        Person location on the latent variable at occasion 1 (logits),
+        from the easyRasch2jmv Person Change analysis.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputThetaT2
+      title: Person location, time 2
+      type: Output
+      varTitle: theta_t2
+      varDescription: >
+        Person location on the latent variable at occasion 2 (logits),
+        from the easyRasch2jmv Person Change analysis.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputChange
+      title: Change (logits)
+      type: Output
+      varTitle: change
+      varDescription: >
+        Occasion 2 minus occasion 1 person location, in logits. This is
+        the magnitude of change, from the easyRasch2jmv Person Change
+        analysis.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - thetaMin
+          - thetaMax
+
+    - name: outputSeDiff
+      title: SE of the change
+      type: Output
+      varTitle: se_diff
+      varDescription: >
+        Standard error of the change (logits), from the easyRasch2jmv
+        Person Change analysis. Depends on which null is in force.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - thetaMin
+          - thetaMax
+
+    - name: outputRci
+      title: Change index (RCI)
+      type: Output
+      varTitle: rci
+      varDescription: >
+        Rasch change index, change divided by its standard error
+        (unitless). A decision statistic, not a measure of how much a
+        respondent changed: do not rank respondents by it. From the
+        easyRasch2jmv Person Change analysis.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - thetaMin
+          - thetaMax
+
+    - name: outputPValue
+      title: p-value
+      type: Output
+      varTitle: p_change
+      varDescription: >
+        p-value for the change index against the enumerated null, from
+        the easyRasch2jmv Person Change analysis.
+      measureType: continuous
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - thetaMin
+          - thetaMax
+
+    - name: outputClass
+      title: Change classification
+      type: Output
+      varTitle: change_class
+      varDescription: >
+        Classification of each respondent as decrease, none detected, or
+        increase, at the error rate in force. From the easyRasch2jmv
+        Person Change analysis.
+      measureType: nominal
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - nullType
+          - retestSd
+          - alpha
+          - direction
+          - conditionalCrit
+          - thetaMin
+          - thetaMax
+...

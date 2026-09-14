@@ -47,4 +47,30 @@ children:
       - type: TextBox
         name: ciLevel
         format: number
+
+  - type: CollapseBox
+    label: Bottom panel
+    collapsed: true
+    children:
+      - type: LayoutBox
+        margin: large
+        children:
+          - type: ComboBox
+            name: panel
+          - type: CheckBox
+            name: categoryLabels
+          - type: TextBox
+            name: rowGap
+            format: number
+      - type: LayoutBox
+        margin: large
+        children:
+          - type: ComboBox
+            name: viridisOption
+          - type: TextBox
+            name: viridisBegin
+            format: number
+          - type: TextBox
+            name: viridisEnd
+            format: number
 ...

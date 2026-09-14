@@ -271,4 +271,52 @@ refs:
         publisher: 'Educational and Psychological Measurement, 70(5), 717–731'
         url: https://doi.org/10.1177/0013164410379322
 
+    jacobsontruax1991:
+        type: article
+        author: Jacobson, N. S., & Truax, P.
+        year: 1991
+        title: 'Clinical significance: A statistical approach to defining meaningful change in psychotherapy research'
+        publisher: 'Journal of Consulting and Clinical Psychology, 59(1), 12-19'
+        url: https://doi.org/10.1037/0022-006X.59.1.12
+
+    caronni2026:
+        type: article
+        author: Caronni, A., Picardi, M., Scarano, S., Rota, V., & Amadei, M.
+        year: 2026
+        title: "Improving single-subject change assessment: deriving the minimal detectable change of questionnaires' ordinal scores from Rasch analysis measures"
+        publisher: 'Disability and Rehabilitation, 48(7), 2169-2186'
+        url: https://doi.org/10.1080/09638288.2025.2547398
+
+    maassen2004:
+        type: article
+        author: Maassen, G. H.
+        year: 2004
+        title: 'The standard error in the Jacobson and Truax Reliable Change Index'
+        publisher: 'Journal of Clinical and Experimental Neuropsychology, 26(5), 643-657'
+        url: https://doi.org/10.1080/13803390409609791
+
+    zumbo2026:
+        type: article
+        author: Zumbo, B. D.
+        year: 2026
+        title: 'Conditional standard error of measurement as an estimand of individual score precision'
+        publisher: 'Psychometrika'
+        url: https://doi.org/10.1017/psy.2026.10141
+
+    mcneishdumas2025:
+        type: article
+        author: McNeish, D., & Dumas, D.
+        year: 2025
+        title: 'Reliability representativeness: How well does coefficient alpha summarize reliability across the score distribution?'
+        publisher: 'Behavior Research Methods, 57(3), 93'
+        url: https://doi.org/10.3758/s13428-025-02611-8
+
+    milanzi2015:
+        type: article
+        author: Milanzi, E., Molenberghs, G., Alonso, A., Verbeke, G., & De Boeck, P.
+        year: 2015
+        title: 'Reliability measures in item response theory: Manifest versus latent correlation functions'
+        publisher: 'British Journal of Mathematical and Statistical Psychology, 68(1), 43-64'
+        url: https://doi.org/10.1111/bmsp.12033
+
 ...

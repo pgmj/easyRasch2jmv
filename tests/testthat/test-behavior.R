@@ -583,3 +583,228 @@ test_that("the 1-based recode note is stated once, not twice", {
   # and nothing is said at all when the data are already 0-based
   expect_equal(once(q(er2$iccplot(data = d, vars = names(d)))$iccNote$content), 0L)
 })
+
+# --- 3.2.0 -------------------------------------------------------------------
+
+test_that("marginal reliability is labelled as the curve mean", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(data = d, vars = names(d)))
+  metrics <- r$relTable$asDF$metric
+  # The formula changed in easyRasch2 1.3.0 and values moved upward, so the
+  # old bare "Marginal" label would silently describe a different quantity.
+  expect_true("Marginal (curve mean)" %in% metrics)
+  expect_false("Marginal" %in% metrics)
+  expect_match(r$relTable$notes$context$note, "latent-density-weighted")
+  expect_match(r$relTable$notes$marginalchange$note, "3.2.0")
+})
+
+test_that("the reliability curve is off by default and reports Green when on", {
+  d <- poly_data()
+  off <- suppressWarnings(er2$reliability(data = d, vars = names(d)))
+  expect_false(off$curveTable$visible)
+
+  on <- suppressWarnings(er2$reliability(data = d, vars = names(d),
+                                         showCurve = TRUE))
+  ct <- on$curveTable$asDF
+  expect_true(any(grepl("Green", ct$metric)))
+  # The curve mean in the summary must be the same quantity as the table row
+  # above it, which is the whole reason for folding the curve in here.
+  rel <- on$relTable$asDF
+  expect_equal(
+    ct$value[ct$metric == "Marginal (curve mean)"],
+    rel$estimate[rel$metric == "Marginal (curve mean)"],
+    tolerance = 1e-8
+  )
+  # Green's subtractive coefficient is the lower of the two.
+  expect_lt(ct$value[grepl("Green", ct$metric)],
+            ct$value[ct$metric == "Marginal (curve mean)"])
+})
+
+test_that("a reliability benchmark adds a row and names the theta range", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(
+    data = d, vars = names(d), showCurve = TRUE,
+    useBenchmark = TRUE, benchmark = 0.7))
+  ct <- r$curveTable$asDF
+  row <- ct[grepl("benchmark", ct$metric), ]
+  expect_equal(nrow(row), 1L)
+  expect_true(row$value >= 0 && row$value <= 100)
+  # jamovi renders table cells with white-space: nowrap, so the cell note
+  # carries only the range and the sentence explaining it is a footnote.
+  expect_match(row$notes, "^theta -?[0-9.]+ to -?[0-9.]+$")
+  expect_match(r$curveTable$notes$bench$note, "0.7")
+})
+
+test_that("no curve summary cell note is long enough to widen the table", {
+  # Cells do not wrap in jamovi. A long note is one unbreakable line that
+  # pushes the table, column headers included, past the results pane.
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(
+    data = d, vars = names(d), showCurve = TRUE,
+    useBenchmark = TRUE, benchmark = 0.7))
+  expect_lt(max(nchar(r$curveTable$asDF$notes), na.rm = TRUE), 40L)
+})
+
+test_that("the targeting bottom panel defaults to category bands", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$targeting(data = d, vars = names(d)))
+  expect_match(r$targetingNote$content, "most likely")
+  alt <- suppressWarnings(er2$targeting(data = d, vars = names(d),
+                                        panel = "thresholds"))
+  expect_match(alt$targetingNote$content, "dot-and-whisker")
+})
+
+test_that("category labels are taken from factor levels only when they agree", {
+  d <- poly_data()
+  items <- names(d)
+  labs <- c("Never", "Sometimes", "Often", "Always")
+
+  # Text-labelled factors, all agreeing: labels are recovered.
+  f <- d
+  for (v in items) f[[v]] <- factor(f[[v]], levels = 0:3, labels = labs)
+  expect_equal(er2$shared_category_labels(f, items, 4L), labs)
+
+  # Numeric-string levels carry nothing the category scores do not show.
+  n <- d
+  for (v in items) n[[v]] <- factor(n[[v]], levels = 0:3)
+  expect_null(er2$shared_category_labels(n, items, 4L))
+
+  # One item disagreeing is enough to fall back.
+  g <- f
+  g[[items[1]]] <- factor(d[[items[1]]], levels = 0:3,
+                          labels = c("A", "B", "C", "D"))
+  expect_null(er2$shared_category_labels(g, items, 4L))
+
+  # A count mismatch falls back rather than guessing an alignment.
+  expect_null(er2$shared_category_labels(f, items, 3L))
+
+  # Plain numerics have no levels at all.
+  expect_null(er2$shared_category_labels(d, items, 4L))
+})
+
+test_that("the HDCI heading names the width in force", {
+  d <- poly_data()
+  r95 <- suppressWarnings(er2$reliability(data = d, vars = names(d)))
+  expect_equal(r95$relTable$getColumn("lower")$superTitle, "95% HDCI")
+  r90 <- suppressWarnings(er2$reliability(data = d, vars = names(d),
+                                          confInt = 90))
+  expect_equal(r90$relTable$getColumn("upper")$superTitle, "90% HDCI")
+})
+
+test_that("the curve summary separates the sample from the latent SD", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(data = d, vars = names(d),
+                                        showCurve = TRUE))
+  ct <- r$curveTable$asDF
+  val <- function(m) ct$value[ct$metric == m]
+
+  # Two views of one distribution. The SDs differ by measurement error, which
+  # only inflates the estimates. The means agree on data like this, where
+  # extreme scores are rare; they part when extremes are common, because a
+  # WLE estimate at the floor or ceiling is a bounded extrapolation that drags
+  # the mean of the estimates inward. Before easyRasch2 1.3.1 the latent mean
+  # was not estimated at all but held at 0.
+  expect_gt(val("SD theta"), val("Latent SD (logits)"))
+  expect_lt(mean(poly_data()[[1]] %in% range(poly_data()[[1]])), 1)
+  expect_equal(val("Latent mean (logits)"), val("Mean theta"),
+               tolerance = 0.15)
+
+  # Average information is the average SEM restated, not a separate
+  # average over the grid, so the two rows must agree exactly.
+  expect_equal(val("Average test information"),
+               1 / val("Average SEM (logits)")^2, tolerance = 1e-10)
+})
+
+test_that("the marginal note explains the PSI gap without enabling the curve", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(data = d, vars = names(d)))
+  # The marginal value is always shown, so its explanation cannot live only
+  # in the optional curve section.
+  expect_true("offtarget" %in% names(r$relTable$notes))
+  expect_match(r$relTable$notes$offtarget$note, "estimated latent distribution")
+})
+
+test_that("hidden cache elements declare a clearWith that outlives display toggles", {
+  # The declaration is what keeps a cache alive between runs, not the
+  # signature check in .run(). An element that names no clearWith takes
+  # jmvcore's Html default of "*", and jmvcore then drops its state on any
+  # option change at all, so the cache is cold every single run. setState()
+  # in a test writes straight past that path, which is why this asserts the
+  # declaration itself.
+  cw <- function(el) unlist(el$.__enclos_env__$private$.clearWith)
+
+  d <- poly_data()
+  rel <- er2$reliabilityClass$new(
+    options = er2$reliabilityOptions$new(vars = names(d)), data = d)$results
+  for (el in list(rel$relCache, rel$curveCache)) {
+    expect_false(identical(cw(el), "*"))
+    expect_false("showCurve" %in% cw(el))
+  }
+  # Each half names its own options and not the other half's.
+  expect_true(all(c("estim", "bootAlpha", "bootIter", "seed", "confInt") %in%
+                    cw(rel$relCache)))
+  expect_false(any(c("nNodes", "benchmark") %in% cw(rel$relCache)))
+  expect_true(all(c("nNodes", "benchmark", "curveStatistic") %in%
+                    cw(rel$curveCache)))
+  expect_false(any(c("confInt", "bootIter") %in% cw(rel$curveCache)))
+
+  cd <- change_data()
+  chg <- er2$personchangeClass$new(
+    options = er2$personchangeOptions$new(vars1 = change_t1(),
+                                          vars2 = change_t2()),
+    data = cd)$results
+  expect_false(identical(cw(chg$changeCache), "*"))
+  # The toggles the cache exists to absorb must not appear in the list.
+  expect_false(any(c("showTable", "flaggedOnly", "estimateRetestSd") %in%
+                     cw(chg$changeCache)))
+  expect_true(all(c("vars1", "vars2", "anchor", "method", "alpha") %in%
+                    cw(chg$changeCache)))
+})
+
+test_that("reliability caches its estimates separately from the curve", {
+  # Two caches, one per half. jamovi reruns .run() on every option
+  # change, so without these, ticking the curve on recomputed the
+  # mirt plausible values and the bootstrap for a table that cannot move.
+  # Tampered-value probe as elsewhere: if the tampered number reaches the
+  # table, the cached object was reused rather than recomputed.
+  d <- poly_data()
+
+  run_seeded <- function(rel_state, curve_state, ...) {
+    opts <- er2$reliabilityOptions$new(vars = names(d), seed = 42, ...)
+    an <- er2$reliabilityClass$new(options = opts, data = d)
+    if (!is.null(rel_state)) an$results$relCache$setState(rel_state)
+    if (!is.null(curve_state)) an$results$curveCache$setState(curve_state)
+    an$run()
+    an$results
+  }
+
+  res0 <- run_seeded(NULL, NULL, showCurve = TRUE)
+  rel_state <- res0$relCache$state
+  curve_state <- res0$curveCache$state
+  expect_false(is.null(rel_state$rel_sig))
+  expect_false(is.null(curve_state$curve_sig))
+
+  rel_t <- rel_state
+  rel_t$results$estimate[1] <- 0.4321
+  curve_t <- curve_state
+  curve_t$loc$theta[] <- 2.5
+
+  # A curve option moves neither signature's other half: the estimates
+  # come back cached, the curve is recomputed.
+  r <- run_seeded(rel_t, curve_t, showCurve = TRUE,
+                  curveStatistic = "information")
+  expect_equal(r$relTable$asDF$estimate[1], 0.4321)
+  ct0 <- r$curveTable$asDF
+  expect_false(isTRUE(all.equal(ct0$value[ct0$metric == "Mean theta"], 2.5)))
+
+  # The HDCI width is in the estimates' signature but not the curve's, so
+  # the tampered person locations survive while the estimates do not.
+  r2 <- run_seeded(rel_t, curve_t, showCurve = TRUE, confInt = 90)
+  ct <- r2$curveTable$asDF
+  expect_equal(ct$value[ct$metric == "Mean theta"], 2.5)
+  expect_false(isTRUE(all.equal(r2$relTable$asDF$estimate[1], 0.4321)))
+
+  # An option the estimates do depend on forces the real computation.
+  r3 <- run_seeded(rel_t, curve_t, showCurve = TRUE, estim = "EAP")
+  expect_false(isTRUE(all.equal(r3$relTable$asDF$estimate[1], 0.4321)))
+})

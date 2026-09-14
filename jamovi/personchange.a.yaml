@@ -1,0 +1,230 @@
+---
+name: personchange
+title: Person Change
+menuGroup: easyRasch2jmv
+menuSubgroup: Person-level
+version: '1.0.0'
+jas: '1.2'
+
+description:
+    main: |
+        Tests, for each respondent, whether their location on the latent
+        variable moved between two occasions by more than measurement
+        error allows, using the easyRasch2 R package
+        (RMpersonChange()). The statistic is the Rasch change index,
+        RCI = (theta2 - theta1) / SE_diff, referred to an exactly
+        enumerated null rather than to a normal distribution. Results
+        are identical to easyRasch2::RMpersonChange().
+
+        The two occasions are supplied as two sets of variables in the
+        same dataset, one row per respondent. **Items are paired by
+        their order in the two boxes**, not by name, so the first item
+        under Time 1 is matched with the first item under Time 2, and so
+        on. The pairing table above the figure shows which item was
+        matched with which, and should be checked before the results are
+        read. Data must be in wide format, with both occasions on the
+        same row.
+
+        Why not 1.96: the sum score is a sufficient statistic, so theta
+        takes only as many values as there are scores and its standard
+        error is a function of the score rather than a constant. A
+        respondent who moves to an extreme score produces a large change
+        and a large standard error together, which damps the ratio and
+        pulls both tails of the null inward. The critical value
+        therefore sits below 1.96, and further below on shorter scales.
+        Enumerating the null costs nothing here and needs no simulation,
+        no iterations and no random seed, so this analysis is
+        deterministic.
+
+        Read the change column for magnitude, in logits, and the change
+        index only for the decision. The index mixes how far a
+        respondent moved with how precisely each of their positions was
+        pinned down, so respondents must not be ranked by it.
+
+options:
+    - name: data
+      type: Data
+
+    - name: vars1
+      title: Time 1 items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+      rejectInf: true
+
+    - name: vars2
+      title: Time 2 items
+      type: Variables
+      suggested:
+          - continuous
+          - ordinal
+      permitted:
+          - numeric
+      rejectInf: true
+
+    - name: id
+      title: Respondent ID (optional)
+      type: Variable
+      default: NULL
+      suggested:
+          - nominal
+          - id
+      permitted:
+          - factor
+          - numeric
+          - id
+
+    - name: anchor
+      title: Item calibration
+      type: List
+      options:
+          - name: stack
+            title: Both occasions together
+          - name: t1
+            title: Time 1 only
+          - name: t2
+            title: Time 2 only
+      default: stack
+
+    - name: method
+      title: Estimation method
+      type: List
+      options:
+          - name: WLE
+            title: WLE (Warm's weighted likelihood)
+          - name: EAP
+            title: EAP (expected a posteriori)
+      default: WLE
+
+    - name: nullType
+      title: Null hypothesis
+      type: List
+      options:
+          - name: measurement
+            title: Measurement error only
+          - name: retest
+            title: Measurement error and occasion fluctuation
+      default: measurement
+
+    - name: retestSd
+      title: Retest SD per occasion (logits)
+      type: Number
+      default: 0.3
+      min: 0.001
+      max: 5
+
+    - name: alpha
+      title: Error rate per respondent (alpha)
+      type: Number
+      default: 0.05
+      min: 0.001
+      max: 0.2
+
+    - name: direction
+      title: Direction tested
+      type: List
+      options:
+          - name: two.sided
+            title: Two-sided
+          - name: increase
+            title: Increase in theta only
+          - name: decrease
+            title: Decrease in theta only
+      default: two.sided
+
+    - name: conditionalCrit
+      title: Critical values per respondent
+      type: Bool
+      default: false
+
+    - name: showTable
+      title: Per-respondent results table
+      type: Bool
+      default: false
+
+    - name: flaggedOnly
+      title: Flagged respondents only
+      type: Bool
+      default: false
+
+    - name: estimateRetestSd
+      title: Estimate the retest SD from these data
+      type: Bool
+      default: false
+
+    - name: retestIter
+      title: Retest SD simulation iterations
+      type: Integer
+      default: 500
+      min: 50
+      max: 5000
+
+    - name: retestBoot
+      title: Bootstrap interval for the retest SD
+      type: Bool
+      default: true
+
+    - name: retestBootIter
+      title: Retest SD bootstrap iterations
+      type: Integer
+      default: 500
+      min: 50
+      max: 5000
+
+    - name: confInt
+      title: Interval width (%)
+      type: Number
+      default: 95
+      min: 50
+      max: 99.9
+
+    - name: seed
+      title: Random seed (retest SD only)
+      type: Integer
+      default: 42
+
+    - name: thetaMin
+      title: Theta range (lower)
+      type: Number
+      default: -10
+      min: -20
+      max: 0
+
+    - name: thetaMax
+      title: Theta range (upper)
+      type: Number
+      default: 10
+      min: 0
+      max: 20
+
+    - name: outputThetaT1
+      title: Person location, time 1
+      type: Output
+
+    - name: outputThetaT2
+      title: Person location, time 2
+      type: Output
+
+    - name: outputChange
+      title: Change (logits)
+      type: Output
+
+    - name: outputSeDiff
+      title: SE of the change
+      type: Output
+
+    - name: outputRci
+      title: Change index (RCI)
+      type: Output
+
+    - name: outputPValue
+      title: p-value
+      type: Output
+
+    - name: outputClass
+      title: Change classification
+      type: Output
+...

@@ -16,19 +16,48 @@ er2_axis_margins <- function() {
   )
 }
 
-#' Italic plot.caption theme element
+#' Left-aligned plot.caption theme element
 #'
 #' Returns a `ggplot2::theme()` setting `plot.caption` to render
-#' left-aligned at 9 pt. Pair with
+#' left-aligned at `er2_caption_size()`. Pair with
 #' \code{\link{er2_caption}} when building the caption text so it
 #' starts with a "Note. " prefix and wraps at a reasonable line width.
 #'
 #' @return A `ggplot2::theme()` object.
 #' @noRd
 er2_plot_caption <- function() {
-  ggplot2::theme(
-    plot.caption = ggplot2::element_text(hjust = 0, size = 10)
-  )
+  ggplot2::theme(plot.caption = er2_caption_element())
+}
+
+#' Caption text size, in points
+#'
+#' One place, so module-drawn captions and the captions on package-drawn
+#' figures come out the same size. Raised in 3.2.0 for readability on
+#' jamovi's fixed-size canvases: module-drawn captions were 10 pt and
+#' package-drawn ones 9 pt, and both are now 10.5.
+#'
+#' @return Numeric scalar.
+#' @noRd
+er2_caption_size <- function() 10.5
+
+#' Caption theme element, matching the class easyRasch2 uses
+#'
+#' ggplot2 refuses to merge two theme elements of different classes, so a
+#' caption element handed to a package-drawn figure has to be the same class
+#' as the one already there. easyRasch2 uses `ggtext::element_markdown()` when
+#' `ggtext` is installed, so that its italic "*Note.*" prefix can sit beside
+#' roman body text, and a plain `element_text()` otherwise. This follows the
+#' same test, which is why `ggtext` is declared in `Imports:`: without it in
+#' the bundle the two would disagree and the size change would not apply.
+#'
+#' @return A ggplot2 theme element.
+#' @noRd
+er2_caption_element <- function() {
+  if (requireNamespace("ggtext", quietly = TRUE)) {
+    ggtext::element_markdown(hjust = 0, size = er2_caption_size())
+  } else {
+    ggplot2::element_text(hjust = 0, size = er2_caption_size())
+  }
 }
 
 #' "Note." caption-text prefix with line wrapping
@@ -61,15 +90,28 @@ er2_caption <- function(text, width = 90L) {
 #' 10 pt caption from `er2_plot_caption()` -- survive untouched.
 #' patchwork objects get the theme applied to every panel via `&`.
 #'
+#' The caption is the exception: package figures set `plot.caption` to their
+#' own absolute size, which an additive bump to the root `text` element does
+#' not reach, so it is restated here at `er2_caption_size()`. Without that a
+#' package-drawn figure and a module-drawn one would disagree about caption
+#' size on the same results panel.
+#'
 #' @param p A `ggplot` or `patchwork` object.
 #' @param size Base text size in points. Default 15 (13 suits dense
 #'   multi-facet grids, matching the module's previous faceted plots).
 #' @return The re-themed plot object.
 #' @noRd
 er2_bump_text <- function(p, size = 15) {
-  th <- ggplot2::theme(text = ggplot2::element_text(size = size))
+  th <- ggplot2::theme(
+    text = ggplot2::element_text(size = size),
+    plot.caption = er2_caption_element()
+  )
   if (inherits(p, "patchwork")) {
-    return(p & th)
+    # Panels that deliberately blank their caption cannot take a text
+    # element, so the caption size is applied to the assembled plot and the
+    # per-panel pass carries the text bump alone.
+    out <- p & ggplot2::theme(text = ggplot2::element_text(size = size))
+    return(out + ggplot2::theme(plot.caption = er2_caption_element()))
   }
   p + th
 }

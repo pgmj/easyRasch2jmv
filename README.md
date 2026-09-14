@@ -110,15 +110,22 @@ than leaving it to an interval width (Johansson, 2025, 2026).
 ### Reliability and targeting
 
 - **Reliability** — Cronbach's α, the WLE-based PSI, marginal
-  reliability (Green, 1984), and RMU from plausible values (Bignardi,
-  Kievit & Bürkner, 2025), computed by `easyRasch2::RMreliability()`;
-  optional bootstrap HDCIs for α, PSI, and Marginal.
+  reliability, and RMU from plausible values (Bignardi, Kievit &
+  Bürkner, 2025), computed by `easyRasch2::RMreliability()`; optional
+  bootstrap HDCIs for α, PSI, and Marginal. Marginal reliability is the
+  latent-density-weighted mean of the conditional reliability; before
+  version 3.2.0 it was Green's (1984) subtractive coefficient and its
+  values were lower. Optionally adds the **conditional precision curve**
+  (`easyRasch2::RMreliabilityCurve()`): SEM, test information, or
+  conditional reliability across the latent scale, with the respondent
+  distribution behind it and an optional reliability benchmark.
 - **Targeting Plot** — Wright-map style person-item targeting with
-  back-to-back histograms of person and item threshold locations, plus
-  a threshold-location dot plot, drawn by `easyRasch2::RMtargeting()`
-  (CML item parameters via `psychotools`, WLE person locations; MML
-  fallback under sparse categories). Threshold table with Wald CIs from
-  `easyRasch2::RMitemParameters()`.
+  back-to-back histograms of person and item threshold locations, above
+  a panel of response-category bands showing where each category is the
+  most likely answer, drawn by `easyRasch2::RMtargeting()` (CML item
+  parameters via `psychotools`, WLE person locations; MML fallback under
+  sparse categories). The previous threshold dot plot remains available.
+  Threshold table with Wald CIs from `easyRasch2::RMitemParameters()`.
 
 ### Person statistics
 
@@ -134,6 +141,20 @@ than leaving it to an interval width (Johansson, 2025, 2026).
   new variables** in the dataset. Includes the sum-score-to-logit lookup
   that was previously a separate analysis, identical to
   `easyRasch2::RMscoreSE()`.
+- **Person Change** — tests, per respondent, whether their latent
+  location moved between two occasions by more than measurement error
+  allows, via `easyRasch2::RMpersonChange()`. The two occasions go in
+  two variable boxes and are paired **by their order in the boxes**, so
+  a pairing table is shown above the figure. Critical values are
+  enumerated exactly rather than taken from a normal distribution: on
+  short scales they sit well below 1.96, so the analysis needs no
+  simulation, iteration count or seed. Occasion-to-occasion fluctuation
+  can be treated as noise by supplying a per-occasion retest SD, which
+  can also be estimated from a stability study
+  (`easyRasch2::RMretestSD()`). Locations, the change, its standard
+  error, the change index, the p-value and the classification can be
+  **saved as new variables**. The single-respondent case needs item
+  parameters from an external calibration and is available only in R.
 
 ### Visualization
 
@@ -181,7 +202,7 @@ If you use easyRasch2jmv in published work, please cite it and jamovi itself. Al
 **easyRasch2jmv** (this jamovi module)
 
 Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
-(Version 3.1.1) [Computer software].
+(Version 3.2.0) [Computer software].
 <https://github.com/pgmj/easyRasch2jmv>
 
 ```bibtex
@@ -189,7 +210,7 @@ Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
   title  = {{easyRasch2jmv}: A {jamovi} module based on {easyRasch2}},
   author = {Magnus Johansson},
   year   = {2026},
-  note   = {jamovi module version 3.1.1},
+  note   = {jamovi module version 3.2.0},
   url    = {https://github.com/pgmj/easyRasch2jmv},
 }
 ```
@@ -231,6 +252,11 @@ Theory (Version 1.2.0) [R].
 - Bignardi, G., Kievit, R., & Bürkner, P. C. (2025). A general method for
   estimating reliability using Bayesian measurement uncertainty. PsyArXiv.
   <https://doi.org/10.31234/osf.io/h54k8>
+- Caronni, A., Picardi, M., Scarano, S., Rota, V., & Amadei, M. (2026).
+  Improving single-subject change assessment: deriving the minimal detectable
+  change of questionnaires' ordinal scores from Rasch analysis measures.
+  *Disability and Rehabilitation, 48*(7), 2169–2186.
+  <https://doi.org/10.1080/09638288.2025.2547398>
 - Chou, Y.-T., & Wang, W.-C. (2010). Checking dimensionality in item-response
   models with principal component analysis on standardized residuals.
   *Educational and Psychological Measurement, 70*(5), 717–731.
@@ -260,6 +286,10 @@ Theory (Version 1.2.0) [R].
   trees meet the partial gamma coefficient for quantifying DIF and DSF in
   polytomous items. *Behaviormetrika, 52*, 221–257.
   <https://doi.org/10.1007/s41237-024-00243-4>
+- Jacobson, N. S., & Truax, P. (1991). Clinical significance: A statistical
+  approach to defining meaningful change in psychotherapy research. *Journal of
+  Consulting and Clinical Psychology, 59*(1), 12–19.
+  <https://doi.org/10.1037/0022-006X.59.1.12>
 - Johansson, M. (2024). Simulation-based cutoff values for Rasch item fit and
   residual correlations. <https://pgmj.github.io/simcutoffs.html>
 - Johansson, M. (2025). Detecting item misfit in Rasch models. *Educational
@@ -270,9 +300,20 @@ Theory (Version 1.2.0) [R].
 - Kreiner, S. (2011). A note on item-restscore association in Rasch models.
   *Applied Psychological Measurement, 35*(7), 557–561.
   <https://doi.org/10.1177/0146621611410227>
+- Maassen, G. H. (2004). The standard error in the Jacobson and Truax Reliable
+  Change Index. *Journal of Clinical and Experimental Neuropsychology, 26*(5),
+  643–657. <https://doi.org/10.1080/13803390409609791>
 - Mair, P., & Hatzinger, R. (2007). Extended Rasch modeling: The eRm package for
   the application of IRT models in R. *Journal of Statistical Software, 20*(9).
   <https://doi.org/10.18637/jss.v020.i09>
+- McNeish, D., & Dumas, D. (2025). Reliability representativeness: How well
+  does coefficient alpha summarize reliability across the score distribution?
+  *Behavior Research Methods, 57*(3), 93.
+  <https://doi.org/10.3758/s13428-025-02611-8>
+- Milanzi, E., Molenberghs, G., Alonso, A., Verbeke, G., & De Boeck, P. (2015).
+  Reliability measures in item response theory: Manifest versus latent
+  correlation functions. *British Journal of Mathematical and Statistical
+  Psychology, 68*(1), 43–64. <https://doi.org/10.1111/bmsp.12033>
 - Müller, M. (2020). Item fit statistics for Rasch analysis: Can we trust them?
   *Journal of Statistical Distributions and Applications, 7*(1), 5.
   <https://doi.org/10.1186/s40488-020-00108-7>
@@ -292,6 +333,9 @@ Theory (Version 1.2.0) [R].
 - Yen, W. M. (1984). Effects of local item dependence on the fit and equating
   performance of the three-parameter logistic model. *Applied Psychological
   Measurement, 8*(2), 125–145. <https://doi.org/10.1177/014662168400800201>
+- Zumbo, B. D. (2026). Conditional standard error of measurement as an estimand
+  of individual score precision. *Psychometrika*.
+  <https://doi.org/10.1017/psy.2026.10141>
 
 
 ## Credits

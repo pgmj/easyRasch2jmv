@@ -1,13 +1,96 @@
-# easyRasch2jmv 3.1.1
+# easyRasch2jmv 3.2.0
 
-Maintenance release following a jamovi library audit. No analysis results
-change.
+Built against easyRasch2 1.3.1. Adds a longitudinal analysis, folds the new
+conditional-precision curve into Reliability, and changes two results: marginal
+reliability and the bottom panel of the targeting plot. Also carries the
+jamovi library-audit items that were prepared for 3.1.1, which was never
+released.
+
+## New analysis: Person Change
+
+- **Person Change** tests, for each respondent, whether their location on the
+  latent variable moved between two occasions by more than measurement error
+  allows (easyRasch2::RMpersonChange()). It sits under *Person-level* beside
+  Person Parameters and Person Fit.
+
+  The two occasions go in two variable boxes and are **paired by their order in
+  the boxes, not by name**. A pairing table is shown above the figure for that
+  reason: a mispaired analysis runs without complaint and produces a
+  plausible-looking result. Data must be in wide format, both occasions on the
+  same row.
+
+- **Critical values are enumerated exactly, and there is no setting for them.**
+  The sum score is a sufficient statistic, so a respondent who moves to an
+  extreme score produces a large change and a large standard error together and
+  the ratio is damped. Both tails of the null are pulled in, so the critical
+  value sits below 1.96, and further below on short scales. Enumerating it
+  needs no simulation, no iteration count and no random seed, and the analysis
+  repeats identically.
+
+- Occasion-to-occasion fluctuation can be treated as noise rather than change
+  by switching the null and supplying a per-occasion retest SD. A retest SD can
+  also be **estimated from the two occasions** (easyRasch2::RMretestSD()),
+  valid only when they are a stability study with no expected change. It is
+  reported rather than applied, so the value in force is always the one shown
+  in the options.
+
+- Critical values can be computed **per respondent** instead of pooled. An
+  extra figure then plots each respondent's critical value against their own
+  location, which shows the values pulling in toward the ends of the scale
+  where fewer scores remain attainable.
+
+- The per-respondent results table is off by default, with a flagged-only
+  filter. Person locations, the change, its standard error, the change index,
+  the p-value and the classification can be saved to the dataset.
+
+- **Not available in jamovi: the single-respondent case.** It needs item
+  parameters from an external calibration, which there is no way to supply
+  here. Use easyRasch2::RMpersonChange() in R.
+
+## Reliability
+
+- **Marginal reliability changes formula and its values move upward**, more so
+  on short scales. It is now the latent-density-weighted mean of the
+  conditional reliability rather than Green's (1984) subtractive coefficient,
+  which could fall below zero and was floored there. The row is renamed
+  *Marginal (curve mean)*.
+
+- New optional **conditional precision curve**
+  (easyRasch2::RMreliabilityCurve()): the standard error of measurement, test
+  information, or conditional reliability across the latent scale, with the
+  respondent distribution behind it. A benchmark shades the region reaching a
+  given reliability and reports the share of respondents inside it. The
+  accompanying summary reports the superseded Green coefficient alongside the
+  new one, so results from earlier versions can be reconciled, together with
+  the sample's mean and SD person location, the mean and SD of the latent
+  distribution fitted to them, and the average SEM and test information.
+
+- The grouped heading over the confidence bounds now names the width in force,
+  as `95% HDCI` rather than a bare `HDCI`.
+
+## Targeting Plot
+
+- **The bottom panel now draws response-category bands**, showing where each
+  category is the most likely answer, with the threshold estimates and their
+  confidence intervals beneath. Categories that are never most likely, and
+  threshold reversals, are marked in red. Estimates are unchanged. The previous
+  dot-and-whisker panel is still available under *Bottom panel*.
+
+- The band palette, its start and end points, and the spacing between item rows
+  are adjustable. Where the selected variables carry value labels and agree on
+  them, the categories are labelled with those instead of their scores.
+
+## Figures
+
+- Captions are slightly larger and the same size everywhere. They were 10 pt on
+  figures the module drew and 9 pt on figures drawn by easyRasch2; both are now
+  10.5 pt.
 
 ## Menu
 
-- The analyses are grouped into subgroups instead of one flat list of 18:
-  Item fit, Dimensionality, Local dependence, DIF, Item probability curves,
-  Targeting, and Person-level.
+- The analyses are grouped into subgroups instead of one flat list: Item fit,
+  Dimensionality, Local dependence, DIF, Item probability curves, Targeting,
+  and Person-level.
 
 ## Dynamic CFA Fit-Index Cutoffs
 
@@ -37,8 +120,8 @@ change.
 
 ## References and labels
 
-- The three book references now carry a link, so every entry in the analysis
-  reference lists is clickable. These were the only three of 34 without one.
+- Every entry in the analysis reference lists now carries a link. Six
+  references are new, for Person Change and the reliability curve.
 - Five variable-box and section labels are title-cased to match the rest of
   the module: `Subscale 1 Items` and `Subscale 2 Items` in Martin-Löf Test,
   `Auxiliary Variables (optional)` in Conditional Item Infit (Multiple

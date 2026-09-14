@@ -1,8 +1,8 @@
 Package: easyRasch2jmv
 Type: Package
 Title: easyRasch2 for Jamovi
-Version: 3.1.1
-Date: 2026-08-26
+Version: 3.2.0
+Date: 2026-09-14
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description:  Provides Rasch analysis functions for jamovi. All analyses delegate
@@ -17,7 +17,7 @@ Encoding: UTF-8
 Imports:
     jmvcore (>= 0.8.5),
     R6,
-    easyRasch2 (>= 1.3.0),
+    easyRasch2 (>= 1.3.1),
     eRm,
     iarm,
     lavaan,
@@ -27,6 +27,7 @@ Imports:
     stats,
     ggplot2,
     ggdist,
+    ggtext,
     scales,
     patchwork,
     mice,
@@ -34,7 +35,7 @@ Imports:
     psychotree,
     partykit,
     difR
-Remotes: pgmj/easyRasch2@e11ab1a0ac2bac8b9ff79d0fe95e02e46c50893b
+Remotes: pgmj/easyRasch2@238b13082bfb2413b181097d1754592dbfa0e0c2
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

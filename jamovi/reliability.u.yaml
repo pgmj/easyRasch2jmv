@@ -56,3 +56,40 @@ children:
               - type: TextBox
                 name: bootIter
                 format: number
+
+  # The curve is a headline result, not an estimation detail, so it sits in
+  # the main panel and its sub-options nest under the checkbox in the same
+  # way the bootstrap iterations nest under Bootstrap CIs above.
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: showCurve
+        children:
+          - type: LayoutBox
+            margin: large
+            children:
+              - type: ComboBox
+                name: curveStatistic
+              - type: CheckBox
+                name: curveReference
+              - type: CheckBox
+                name: showDensity
+              - type: CheckBox
+                name: useBenchmark
+                children:
+                  - type: TextBox
+                    name: benchmark
+                    format: number
+              - type: CheckBox
+                name: curveBoot
+                children:
+                  - type: LayoutBox
+                    margin: large
+                    children:
+                      - type: TextBox
+                        name: curveBootIter
+                        format: number
+              - type: TextBox
+                name: nNodes
+                format: number

@@ -14,8 +14,17 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             thetaMin = -10,
             thetaMax = 10,
             bootAlpha = FALSE,
-            bootIter = 1000,
-            seed = 42, ...) {
+            bootIter = 200,
+            seed = 42,
+            showCurve = FALSE,
+            curveStatistic = "sem",
+            curveReference = TRUE,
+            showDensity = TRUE,
+            useBenchmark = FALSE,
+            benchmark = 0.8,
+            curveBoot = FALSE,
+            curveBootIter = 200,
+            nNodes = 161, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -78,13 +87,59 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             private$..bootIter <- jmvcore::OptionInteger$new(
                 "bootIter",
                 bootIter,
-                default=1000,
+                default=200,
                 min=100,
                 max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,
                 default=42)
+            private$..showCurve <- jmvcore::OptionBool$new(
+                "showCurve",
+                showCurve,
+                default=FALSE)
+            private$..curveStatistic <- jmvcore::OptionList$new(
+                "curveStatistic",
+                curveStatistic,
+                options=list(
+                    "sem",
+                    "reliability",
+                    "information"),
+                default="sem")
+            private$..curveReference <- jmvcore::OptionBool$new(
+                "curveReference",
+                curveReference,
+                default=TRUE)
+            private$..showDensity <- jmvcore::OptionBool$new(
+                "showDensity",
+                showDensity,
+                default=TRUE)
+            private$..useBenchmark <- jmvcore::OptionBool$new(
+                "useBenchmark",
+                useBenchmark,
+                default=FALSE)
+            private$..benchmark <- jmvcore::OptionNumber$new(
+                "benchmark",
+                benchmark,
+                default=0.8,
+                min=0.5,
+                max=0.99)
+            private$..curveBoot <- jmvcore::OptionBool$new(
+                "curveBoot",
+                curveBoot,
+                default=FALSE)
+            private$..curveBootIter <- jmvcore::OptionInteger$new(
+                "curveBootIter",
+                curveBootIter,
+                default=200,
+                min=50,
+                max=2000)
+            private$..nNodes <- jmvcore::OptionInteger$new(
+                "nNodes",
+                nNodes,
+                default=161,
+                min=51,
+                max=501)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..estim)
@@ -96,6 +151,15 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             self$.addOption(private$..bootAlpha)
             self$.addOption(private$..bootIter)
             self$.addOption(private$..seed)
+            self$.addOption(private$..showCurve)
+            self$.addOption(private$..curveStatistic)
+            self$.addOption(private$..curveReference)
+            self$.addOption(private$..showDensity)
+            self$.addOption(private$..useBenchmark)
+            self$.addOption(private$..benchmark)
+            self$.addOption(private$..curveBoot)
+            self$.addOption(private$..curveBootIter)
+            self$.addOption(private$..nNodes)
         }),
     active = list(
         vars = function() private$..vars$value,
@@ -107,7 +171,16 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         thetaMax = function() private$..thetaMax$value,
         bootAlpha = function() private$..bootAlpha$value,
         bootIter = function() private$..bootIter$value,
-        seed = function() private$..seed$value),
+        seed = function() private$..seed$value,
+        showCurve = function() private$..showCurve$value,
+        curveStatistic = function() private$..curveStatistic$value,
+        curveReference = function() private$..curveReference$value,
+        showDensity = function() private$..showDensity$value,
+        useBenchmark = function() private$..useBenchmark$value,
+        benchmark = function() private$..benchmark$value,
+        curveBoot = function() private$..curveBoot$value,
+        curveBootIter = function() private$..curveBootIter$value,
+        nNodes = function() private$..nNodes$value),
     private = list(
         ..vars = NA,
         ..estim = NA,
@@ -118,7 +191,16 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         ..thetaMax = NA,
         ..bootAlpha = NA,
         ..bootIter = NA,
-        ..seed = NA)
+        ..seed = NA,
+        ..showCurve = NA,
+        ..curveStatistic = NA,
+        ..curveReference = NA,
+        ..showDensity = NA,
+        ..useBenchmark = NA,
+        ..benchmark = NA,
+        ..curveBoot = NA,
+        ..curveBootIter = NA,
+        ..nNodes = NA)
 )
 
 reliabilityResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -126,7 +208,11 @@ reliabilityResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
     inherit = jmvcore::Group,
     active = list(
         relTable = function() private$.items[["relTable"]],
-        relNote = function() private$.items[["relNote"]]),
+        relNote = function() private$.items[["relNote"]],
+        curvePlot = function() private$.items[["curvePlot"]],
+        curveTable = function() private$.items[["curveTable"]],
+        relCache = function() private$.items[["relCache"]],
+        curveCache = function() private$.items[["curveCache"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -197,7 +283,92 @@ reliabilityResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     "thetaMax",
                     "bootAlpha",
                     "bootIter",
-                    "seed")))}))
+                    "seed")))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="curvePlot",
+                title="Conditional Precision Across the Scale",
+                width=650,
+                height=500,
+                renderFun=".curvePlot",
+                requiresData=TRUE,
+                visible="(showCurve)",
+                refs=list(
+                    "easyRasch2jmv",
+                    "easyRasch2",
+                    "green1984",
+                    "mcneishdumas2025",
+                    "milanzi2015"),
+                clearWith=list(
+                    "vars",
+                    "showCurve",
+                    "curveStatistic",
+                    "curveReference",
+                    "showDensity",
+                    "useBenchmark",
+                    "benchmark",
+                    "curveBoot",
+                    "curveBootIter",
+                    "nNodes",
+                    "confInt",
+                    "seed")))
+            self$add(jmvcore::Table$new(
+                options=options,
+                name="curveTable",
+                title="Conditional Precision Summary",
+                rows=0,
+                visible="(showCurve)",
+                clearWith=list(
+                    "vars",
+                    "showCurve",
+                    "useBenchmark",
+                    "benchmark",
+                    "nNodes"),
+                columns=list(
+                    list(
+                        `name`="metric", 
+                        `title`="Quantity", 
+                        `type`="text"),
+                    list(
+                        `name`="value", 
+                        `title`="Value", 
+                        `type`="number", 
+                        `format`="zto"),
+                    list(
+                        `name`="notes", 
+                        `title`="Notes", 
+                        `type`="text"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="relCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "estim",
+                    "draws",
+                    "rmuIter",
+                    "confInt",
+                    "bootAlpha",
+                    "bootIter",
+                    "seed",
+                    "thetaMin",
+                    "thetaMax")))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="curveCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars",
+                    "curveStatistic",
+                    "curveReference",
+                    "showDensity",
+                    "useBenchmark",
+                    "benchmark",
+                    "nNodes",
+                    "thetaMin",
+                    "thetaMax")))}))
 
 reliabilityBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "reliabilityBase",
@@ -226,19 +397,33 @@ reliabilityBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' computed by the easyRasch2 R package (results are identical to
 #' easyRasch2::RMreliability()): Cronbach's alpha (closed-form), the
 #' WLE-based Person Separation Index (PSI; CML item parameters via
-#' psychotools, min/max scorers excluded), the marginal reliability
-#' (Green, 1984; CML test information integrated over the estimated
-#' latent distribution), and Relative Measurement Uncertainty (RMU)
-#' computed from mirt plausible values using the Bignardi, Kievit &
-#' Bürkner (2025) split-half correlation method. A large gap between
-#' PSI and Marginal suggests the sample is off-target relative to the
-#' scale.
+#' psychotools, min/max scorers excluded), the marginal reliability,
+#' and Relative Measurement Uncertainty (RMU) computed from mirt
+#' plausible values using the Bignardi, Kievit & Bürkner (2025)
+#' split-half correlation method. A large gap between PSI and
+#' Marginal suggests the sample is off-target relative to the scale.
+#' 
+#' Marginal reliability is the latent-density-weighted mean of the
+#' conditional reliability, sigma^2 / (sigma^2 + SEM(theta)^2), which
+#' is what the reliability curve below averages. Before module
+#' version 3.2.0 it was Green's (1984) subtractive coefficient, which
+#' could fall below zero and was floored there. Values are now
+#' higher, more so on short scales.
 #' 
 #' A non-parametric bootstrap can optionally be enabled: respondents
 #' are resampled and Cronbach's alpha, PSI, and Marginal reliability
 #' are recomputed natively per resample to yield HDCIs (no model
 #' refitting via mirt is involved, so it is fast enough for the jamovi
 #' UI). The RMU interval is always reported.
+#' 
+#' A conditional-precision curve can also be shown
+#' (easyRasch2::RMreliabilityCurve()): the standard error of
+#' measurement, the test information, or the conditional reliability
+#' across the latent scale, with the respondent distribution behind
+#' it. Where a single coefficient reports one number for the whole
+#' scale, the curve shows how precision varies with a respondent's
+#' location, and a benchmark can shade the region reaching a given
+#' reliability and report the share of respondents inside it.
 #' 
 #' @param data .
 #' @param vars .
@@ -251,10 +436,23 @@ reliabilityBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param bootAlpha .
 #' @param bootIter .
 #' @param seed .
+#' @param showCurve .
+#' @param curveStatistic .
+#' @param curveReference .
+#' @param showDensity .
+#' @param useBenchmark .
+#' @param benchmark .
+#' @param curveBoot .
+#' @param curveBootIter .
+#' @param nNodes .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$relTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$relNote} \tab \tab \tab \tab \tab a html \cr
+#'   \code{results$curvePlot} \tab \tab \tab \tab \tab an image \cr
+#'   \code{results$curveTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$relCache} \tab \tab \tab \tab \tab a html \cr
+#'   \code{results$curveCache} \tab \tab \tab \tab \tab a html \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -274,8 +472,17 @@ reliability <- function(
     thetaMin = -10,
     thetaMax = 10,
     bootAlpha = FALSE,
-    bootIter = 1000,
-    seed = 42) {
+    bootIter = 200,
+    seed = 42,
+    showCurve = FALSE,
+    curveStatistic = "sem",
+    curveReference = TRUE,
+    showDensity = TRUE,
+    useBenchmark = FALSE,
+    benchmark = 0.8,
+    curveBoot = FALSE,
+    curveBootIter = 200,
+    nNodes = 161) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("reliability requires jmvcore to be installed (restart may be required)")
@@ -297,7 +504,16 @@ reliability <- function(
         thetaMax = thetaMax,
         bootAlpha = bootAlpha,
         bootIter = bootIter,
-        seed = seed)
+        seed = seed,
+        showCurve = showCurve,
+        curveStatistic = curveStatistic,
+        curveReference = curveReference,
+        showDensity = showDensity,
+        useBenchmark = useBenchmark,
+        benchmark = benchmark,
+        curveBoot = curveBoot,
+        curveBootIter = curveBootIter,
+        nNodes = nNodes)
 
     analysis <- reliabilityClass$new(
         options = options,

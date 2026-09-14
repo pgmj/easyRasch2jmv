@@ -15,6 +15,12 @@
 #'   this declaration. Used by the Tree-Based DIF analysis.
 #' - `mirt`: the MML fallback for sparse response categories in the Targeting
 #'   plot, the RMU reliability estimate, and EAPsum person parameters.
+#' - `ggtext`: easyRasch2 draws every figure caption with
+#'   `ggtext::element_markdown()` when `ggtext` is installed and a plain
+#'   `element_text()` otherwise, so without it in the bundle a jamovi user's
+#'   captions would lose the italic "*Note.*" prefix and the module could not
+#'   restyle them (ggplot2 refuses to merge theme elements of different
+#'   classes). Declared here so the appearance is the same for everyone.
 #'
 #' This function exists only so `R CMD check` sees the references and does not
 #' report "All declared Imports should be used". It is never called.
@@ -24,4 +30,5 @@ ignore_unused_imports <- function() {
   difR::mantelHaenszel
   mirt::mirt
   partykit::ctree
+  ggtext::element_markdown
 }

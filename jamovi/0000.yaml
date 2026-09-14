@@ -1,12 +1,12 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 3.1.1
+version: 3.2.0
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-08-22'
+date: '2026-09-14'
 type: R
 description: >
   Provides Rasch analysis functions for jamovi. All analyses delegate their
@@ -14,7 +14,8 @@ description: >
   estimation via psychotools with Warm's weighted likelihood person estimates;
   iarm for the conditional item-fit and partial-gamma statistics; eRm for
   Andersen's LR test; lavaan for the CFA checks), so results are numerically
-  identical to easyRasch2 with the same seeds and iterations.
+  identical to easyRasch2 with the same seeds and iterations. Built against
+  easyRasch2 1.3.0.
 analyses:
   - title: Conditional Item Infit
     name: iteminfit
@@ -272,17 +273,18 @@ analyses:
     menuGroup: easyRasch2jmv
     menuTitle: Targeting Plot
     category: analyses
-    description: |
+    description: |-
       Person-item targeting plot (Wright map): back-to-back histograms
-      of person locations and item threshold locations, plus a dot plot
-      of individual item thresholds with optional confidence intervals,
-      drawn by the easyRasch2 R package. Item thresholds are estimated
-      with CML (psychotools); when any response category has fewer than
-      3 observations the analysis falls back to MML (mirt), which is
-      more numerically stable under sparse categories. Person locations
-      are weighted likelihood estimates (WLE), finite at extreme scores.
-      Results are identical to easyRasch2::RMtargeting() and the
-      threshold table to easyRasch2::RMitemParameters().
+      of person locations and item threshold locations, above a bottom
+      panel showing where each response category is the most likely
+      answer, drawn by the easyRasch2 R package. Item thresholds are
+      estimated with CML (psychotools); when any response category has
+      fewer than 3 observations the analysis falls back to MML (mirt),
+      which is more numerically stable under sparse categories. Person
+      locations are weighted likelihood estimates (WLE), finite at
+      extreme scores. Results are identical to
+      easyRasch2::RMtargeting() and the threshold table to
+      easyRasch2::RMitemParameters().
     menuSubgroup: Targeting
   - title: Reliability
     name: reliability
@@ -295,13 +297,11 @@ analyses:
       computed by the easyRasch2 R package (results are identical to
       easyRasch2::RMreliability()): Cronbach's alpha (closed-form), the
       WLE-based Person Separation Index (PSI; CML item parameters via
-      psychotools, min/max scorers excluded), the marginal reliability
-      (Green, 1984; CML test information integrated over the estimated
-      latent distribution), and Relative Measurement Uncertainty (RMU)
-      computed from mirt plausible values using the Bignardi, Kievit &
-      Bürkner (2025) split-half correlation method. A large gap between
-      PSI and Marginal suggests the sample is off-target relative to the
-      scale.
+      psychotools, min/max scorers excluded), the marginal reliability,
+      and Relative Measurement Uncertainty (RMU) computed from mirt
+      plausible values using the Bignardi, Kievit & Bürkner (2025)
+      split-half correlation method. A large gap between PSI and
+      Marginal suggests the sample is off-target relative to the scale.
     menuSubgroup: Person-level
   - title: Person Parameters
     name: personparams
@@ -340,6 +340,21 @@ analyses:
       identical to easyRasch2::RMpersonFit() with the same seed and
       iterations. Single-core sequential processing is used.
     menuSubgroup: Person-level
+  - title: Person Change
+    name: personchange
+    ns: easyRasch2jmv
+    category: analyses
+    menuGroup: easyRasch2jmv
+    menuSubgroup: Person-level
+    menuTitle: Person Change
+    description: |-
+      Tests, for each respondent, whether their location on the latent
+      variable moved between two occasions by more than measurement
+      error allows, using the easyRasch2 R package
+      (RMpersonChange()). The statistic is the Rasch change index,
+      RCI = (theta2 - theta1) / SE_diff, referred to an exactly
+      enumerated null rather than to a normal distribution. Results
+      are identical to easyRasch2::RMpersonChange().
 datasets:
   - name: pcmdat2
     path: eRm_pcmdat2.csv

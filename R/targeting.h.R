@@ -14,7 +14,13 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             xlimHigh = 4,
             longFormat = FALSE,
             showCi = TRUE,
-            ciLevel = 95, ...) {
+            ciLevel = 95,
+            panel = "categories",
+            categoryLabels = TRUE,
+            rowGap = 1,
+            viridisOption = "G",
+            viridisBegin = 0.9,
+            viridisEnd = 0.2, ...) {
 
             super$initialize(
                 package="easyRasch2jmv",
@@ -73,6 +79,44 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 default=95,
                 min=50,
                 max=99.9)
+            private$..panel <- jmvcore::OptionList$new(
+                "panel",
+                panel,
+                options=list(
+                    "categories",
+                    "thresholds"),
+                default="categories")
+            private$..categoryLabels <- jmvcore::OptionBool$new(
+                "categoryLabels",
+                categoryLabels,
+                default=TRUE)
+            private$..rowGap <- jmvcore::OptionNumber$new(
+                "rowGap",
+                rowGap,
+                default=1,
+                min=0.8,
+                max=2)
+            private$..viridisOption <- jmvcore::OptionList$new(
+                "viridisOption",
+                viridisOption,
+                options=list(
+                    "G",
+                    "D",
+                    "E",
+                    "F"),
+                default="G")
+            private$..viridisBegin <- jmvcore::OptionNumber$new(
+                "viridisBegin",
+                viridisBegin,
+                default=0.9,
+                min=0,
+                max=1)
+            private$..viridisEnd <- jmvcore::OptionNumber$new(
+                "viridisEnd",
+                viridisEnd,
+                default=0.2,
+                min=0,
+                max=1)
 
             self$.addOption(private$..vars)
             self$.addOption(private$..robust)
@@ -83,6 +127,12 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..longFormat)
             self$.addOption(private$..showCi)
             self$.addOption(private$..ciLevel)
+            self$.addOption(private$..panel)
+            self$.addOption(private$..categoryLabels)
+            self$.addOption(private$..rowGap)
+            self$.addOption(private$..viridisOption)
+            self$.addOption(private$..viridisBegin)
+            self$.addOption(private$..viridisEnd)
         }),
     active = list(
         vars = function() private$..vars$value,
@@ -93,7 +143,13 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         xlimHigh = function() private$..xlimHigh$value,
         longFormat = function() private$..longFormat$value,
         showCi = function() private$..showCi$value,
-        ciLevel = function() private$..ciLevel$value),
+        ciLevel = function() private$..ciLevel$value,
+        panel = function() private$..panel$value,
+        categoryLabels = function() private$..categoryLabels$value,
+        rowGap = function() private$..rowGap$value,
+        viridisOption = function() private$..viridisOption$value,
+        viridisBegin = function() private$..viridisBegin$value,
+        viridisEnd = function() private$..viridisEnd$value),
     private = list(
         ..vars = NA,
         ..robust = NA,
@@ -103,7 +159,13 @@ targetingOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..xlimHigh = NA,
         ..longFormat = NA,
         ..showCi = NA,
-        ..ciLevel = NA)
+        ..ciLevel = NA,
+        ..panel = NA,
+        ..categoryLabels = NA,
+        ..rowGap = NA,
+        ..viridisOption = NA,
+        ..viridisBegin = NA,
+        ..viridisEnd = NA)
 )
 
 targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
@@ -136,13 +198,19 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 requiresData=TRUE,
                 clearWith=list(
                     "vars",
+                    "panel",
                     "robust",
                     "sortItems",
                     "bins",
                     "xlimLow",
                     "xlimHigh",
                     "showCi",
-                    "ciLevel")))
+                    "ciLevel",
+                    "categoryLabels",
+                    "rowGap",
+                    "viridisOption",
+                    "viridisBegin",
+                    "viridisEnd")))
             self$add(jmvcore::Table$new(
                 options=options,
                 name="thresholdTable",
@@ -158,7 +226,9 @@ targetingResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 name="targetingNote",
                 title="",
                 clearWith=list(
-                    "vars")))}))
+                    "vars",
+                    "panel",
+                    "categoryLabels")))}))
 
 targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "targetingBase",
@@ -184,15 +254,24 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Targeting Plot
 #'
 #' Person-item targeting plot (Wright map): back-to-back histograms
-#' of person locations and item threshold locations, plus a dot plot
-#' of individual item thresholds with optional confidence intervals,
-#' drawn by the easyRasch2 R package. Item thresholds are estimated
-#' with CML (psychotools); when any response category has fewer than
-#' 3 observations the analysis falls back to MML (mirt), which is
-#' more numerically stable under sparse categories. Person locations
-#' are weighted likelihood estimates (WLE), finite at extreme scores.
-#' Results are identical to easyRasch2::RMtargeting() and the
-#' threshold table to easyRasch2::RMitemParameters().
+#' of person locations and item threshold locations, above a bottom
+#' panel showing where each response category is the most likely
+#' answer, drawn by the easyRasch2 R package. Item thresholds are
+#' estimated with CML (psychotools); when any response category has
+#' fewer than 3 observations the analysis falls back to MML (mirt),
+#' which is more numerically stable under sparse categories. Person
+#' locations are weighted likelihood estimates (WLE), finite at
+#' extreme scores. Results are identical to
+#' easyRasch2::RMtargeting() and the threshold table to
+#' easyRasch2::RMitemParameters().
+#' 
+#' The bottom panel draws each item as a bar partitioned into
+#' response-category bands, with the threshold estimates and their
+#' confidence intervals as a coloured row beneath it. Categories
+#' that are never the most likely response, and thresholds that are
+#' disordered relative to the category scores, are marked in red.
+#' The previous dot-and-whisker panel of item thresholds remains
+#' available.
 #' 
 #' @param data .
 #' @param vars .
@@ -204,6 +283,12 @@ targetingBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param longFormat .
 #' @param showCi .
 #' @param ciLevel .
+#' @param panel .
+#' @param categoryLabels .
+#' @param rowGap .
+#' @param viridisOption .
+#' @param viridisBegin .
+#' @param viridisEnd .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$targetingPlot} \tab \tab \tab \tab \tab an image \cr
@@ -228,7 +313,13 @@ targeting <- function(
     xlimHigh = 4,
     longFormat = FALSE,
     showCi = TRUE,
-    ciLevel = 95) {
+    ciLevel = 95,
+    panel = "categories",
+    categoryLabels = TRUE,
+    rowGap = 1,
+    viridisOption = "G",
+    viridisBegin = 0.9,
+    viridisEnd = 0.2) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
         stop("targeting requires jmvcore to be installed (restart may be required)")
@@ -249,7 +340,13 @@ targeting <- function(
         xlimHigh = xlimHigh,
         longFormat = longFormat,
         showCi = showCi,
-        ciLevel = ciLevel)
+        ciLevel = ciLevel,
+        panel = panel,
+        categoryLabels = categoryLabels,
+        rowGap = rowGap,
+        viridisOption = viridisOption,
+        viridisBegin = viridisBegin,
+        viridisEnd = viridisEnd)
 
     analysis <- targetingClass$new(
         options = options,

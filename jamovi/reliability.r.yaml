@@ -54,4 +54,92 @@ items:
           - bootIter
           - seed
 
+    - name: curvePlot
+      title: Conditional Precision Across the Scale
+      type: Image
+      width: 650
+      height: 500
+      renderFun: .curvePlot
+      requiresData: true
+      visible: (showCurve)
+      refs: [easyRasch2jmv, easyRasch2, green1984, mcneishdumas2025, milanzi2015]
+      clearWith:
+          - vars
+          - showCurve
+          - curveStatistic
+          - curveReference
+          - showDensity
+          - useBenchmark
+          - benchmark
+          - curveBoot
+          - curveBootIter
+          - nNodes
+          - confInt
+          - seed
+
+    - name: curveTable
+      title: Conditional Precision Summary
+      type: Table
+      rows: 0
+      visible: (showCurve)
+      clearWith:
+          - vars
+          - showCurve
+          - useBenchmark
+          - benchmark
+          - nNodes
+      columns:
+          - name: metric
+            title: Quantity
+            type: text
+          - name: value
+            title: Value
+            type: number
+            format: zto
+          - name: notes
+            title: Notes
+            type: text
+
+    # Hidden caches, one per half of this analysis. jamovi reruns .run() on
+    # every option change, including ones that cannot move a given result:
+    # turning the curve on used to recompute the whole Reliability Estimates
+    # table, mirt plausible values and bootstrap included.
+    #
+    # clearWith is what keeps the state alive, not the signature check in
+    # .run(). An element that declares no clearWith gets jmvcore's Html
+    # default of "*", which discards the state on any option change at all
+    # and leaves the cache permanently cold. Each list below names exactly
+    # what its half depends on, and neither names showCurve, which is the
+    # point. The signature check then validates what survives.
+    - name: relCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - estim
+          - draws
+          - rmuIter
+          - confInt
+          - bootAlpha
+          - bootIter
+          - seed
+          - thetaMin
+          - thetaMax
+
+    - name: curveCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars
+          - curveStatistic
+          - curveReference
+          - showDensity
+          - useBenchmark
+          - benchmark
+          - nNodes
+          - thetaMin
+          - thetaMax
+
 ...

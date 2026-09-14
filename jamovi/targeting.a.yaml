@@ -9,15 +9,24 @@ jas: '1.2'
 description:
     main: |
         Person-item targeting plot (Wright map): back-to-back histograms
-        of person locations and item threshold locations, plus a dot plot
-        of individual item thresholds with optional confidence intervals,
-        drawn by the easyRasch2 R package. Item thresholds are estimated
-        with CML (psychotools); when any response category has fewer than
-        3 observations the analysis falls back to MML (mirt), which is
-        more numerically stable under sparse categories. Person locations
-        are weighted likelihood estimates (WLE), finite at extreme scores.
-        Results are identical to easyRasch2::RMtargeting() and the
-        threshold table to easyRasch2::RMitemParameters().
+        of person locations and item threshold locations, above a bottom
+        panel showing where each response category is the most likely
+        answer, drawn by the easyRasch2 R package. Item thresholds are
+        estimated with CML (psychotools); when any response category has
+        fewer than 3 observations the analysis falls back to MML (mirt),
+        which is more numerically stable under sparse categories. Person
+        locations are weighted likelihood estimates (WLE), finite at
+        extreme scores. Results are identical to
+        easyRasch2::RMtargeting() and the threshold table to
+        easyRasch2::RMitemParameters().
+
+        The bottom panel draws each item as a bar partitioned into
+        response-category bands, with the threshold estimates and their
+        confidence intervals as a coloured row beneath it. Categories
+        that are never the most likely response, and thresholds that are
+        disordered relative to the category scores, are marked in red.
+        The previous dot-and-whisker panel of item thresholds remains
+        available.
 
 options:
     - name: data
@@ -84,4 +93,54 @@ options:
       default: 95
       min: 50
       max: 99.9
+
+    - name: panel
+      title: Bottom panel
+      type: List
+      options:
+          - name: categories
+            title: Response category bands
+          - name: thresholds
+            title: Item threshold dot plot
+      default: categories
+
+    - name: categoryLabels
+      title: Label categories with their value labels
+      type: Bool
+      default: true
+
+    - name: rowGap
+      title: Spacing between item rows
+      type: Number
+      default: 1
+      min: 0.8
+      max: 2
+
+    - name: viridisOption
+      title: Category band palette
+      type: List
+      options:
+          - name: G
+            title: Mako
+          - name: D
+            title: Viridis
+          - name: E
+            title: Cividis
+          - name: F
+            title: Rocket
+      default: G
+
+    - name: viridisBegin
+      title: Palette start
+      type: Number
+      default: 0.9
+      min: 0
+      max: 1
+
+    - name: viridisEnd
+      title: Palette end
+      type: Number
+      default: 0.2
+      min: 0
+      max: 1
 ...

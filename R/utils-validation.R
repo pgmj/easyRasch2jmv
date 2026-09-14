@@ -494,3 +494,49 @@ interval_flagging_note <- function(width, n_comparisons, unit = "items") {
     "p-value, which targets 5% directly (Johansson, 2026)."
   )
 }
+
+#' Response-category labels shared by every selected item, or NULL
+#'
+#' The `"categories"` panel of `easyRasch2::RMtargeting()` takes one label per
+#' response category, shared across the whole scale. jamovi variables often
+#' carry those labels already, as factor levels, which the R package cannot see
+#' for its own users. This recovers them when it is safe to do so and returns
+#' `NULL` otherwise, so the caller falls back to the category scores.
+#'
+#' Deliberately narrow. Labels are taken only from factors whose levels cannot
+#' be parsed as numbers, which is the one case where [to_numeric_responses()]
+#' maps responses to 0-based factor positions and the level order therefore
+#' *is* the category order. Numeric-string levels (`"0"`, `"1"`, ...) carry no
+#' information the category scores do not already show, and `haven_labelled`
+#' vectors are keyed by value rather than position, so a shift applied by
+#' [prepare_item_data()] would misalign them. Both return `NULL`.
+#'
+#' All selected items must agree on the labels, and there must be exactly one
+#' per observed category. A scale whose items have different response options,
+#' or an unused top category, falls back rather than guessing.
+#'
+#' @param data The raw analysis data.
+#' @param vars Character vector of selected item variable names.
+#' @param n_categories Number of response categories in the prepared data,
+#'   i.e. the highest observed score plus one.
+#' @return Character vector of length `n_categories`, or `NULL`.
+#' @noRd
+shared_category_labels <- function(data, vars, n_categories) {
+  if (!is.finite(n_categories) || n_categories < 2L) return(NULL)
+
+  labs <- NULL
+  for (v in vars) {
+    x <- data[[v]]
+    if (inherits(x, "haven_labelled") || !is.null(attr(x, "labels")))
+      return(NULL)
+    if (!is.factor(x)) return(NULL)
+    levs <- levels(x)
+    if (length(levs) == 0L) return(NULL)
+    # Numeric-string levels add nothing over the category scores
+    if (all(!is.na(suppressWarnings(as.numeric(levs))))) return(NULL)
+    if (is.null(labs)) labs <- levs else if (!identical(labs, levs)) return(NULL)
+  }
+
+  if (is.null(labs) || length(labs) != n_categories) return(NULL)
+  labs
+}
