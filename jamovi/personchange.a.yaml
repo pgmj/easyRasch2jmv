@@ -151,7 +151,7 @@ options:
       default: false
 
     - name: estimateRetestSd
-      title: Estimate the retest SD from these data
+      title: Retest SD estimated from these data
       type: Bool
       default: false
 

@@ -1,3 +1,56 @@
+# easyRasch2jmv 3.2.1
+
+Responses to the 3.2.0 audit. No results change.
+
+## Person Change
+
+- Two computations that sat outside `changeCache` now use it. The pooled
+  critical value behind the conditional figure's reference line is a second
+  `RMpersonChange()` enumeration, and it moved onto the cache's cold path.
+  The retest SD simulation (`RMretestSD()`, 500 iterations by default plus an
+  optional 500-iteration bootstrap) gained its own cache element, keyed on the
+  options that move it. Both used to rerun on every option change, so
+  toggling a *Save to dataset* checkbox with both boxes ticked cost a full
+  recomputation. With both ticked on 150 respondents and 6 items, that toggle
+  goes from 6.4 s to 0.7 s.
+- The item pairing table is built and labelled as soon as variables are
+  dropped in, rather than after the enumeration finishes. It exists to be
+  checked before the figure it validates, and it used to appear last and go
+  blank again on every option change.
+- The retest SD table's four rows are created up front for the same reason.
+
+## Reliability
+
+- The conditional precision figure is built once in the analysis and stored,
+  rather than redrawn by the render function. jamovi calls that function on
+  every resize and every export, so with *Bootstrap confidence band* on, each
+  one recomputed the band: 2.6 s at the default 200 iterations on 50
+  respondents and 5 items, 25 s at the 2000-iteration maximum. Redrawing is
+  now 0.1 s. The interval width and the seed also stopped invalidating the
+  cached curve while the band is off, which is the only thing they reach.
+
+## Saved file size
+
+- Figures held in results state are stored built rather than as `ggplot`
+  objects. A `ggplot` is far larger than the figure it describes: in
+  ggplot2 4.0.3 an empty one is 102 KB compressed, and the three person-fit
+  maps came to 287, 287 and 752 KB. jmvcore warns above 500 KB for a single
+  element, and all of it is written into the saved `.omv`. Built, the same
+  figures are 12 to 16 KB. Measured on 500 respondents and 20 items, the
+  person-fit cache drops from 1022 KB to 62 KB, the person-change cache from
+  1181 KB to 39 KB, and the reliability curve from 374 KB to 32 KB.
+- `requiresData` removed from 26 of the module's 27 figures. It makes jamovi
+  read the whole dataset before rendering, on every redraw and export, and
+  only the tree-based DIF figure reads it.
+
+## Labels
+
+- Five checkboxes added in 3.2.0 were retitled to name what they turn on
+  rather than the act of turning it on, matching the rest of the module:
+  *Marginal reliability as a reference line*, *Respondent distribution behind
+  the curve*, *Region reaching the reliability benchmark*, *Value labels as
+  category labels*, *Retest SD estimated from these data*.
+
 # easyRasch2jmv 3.2.0
 
 Built against easyRasch2 1.3.1. Adds a longitudinal analysis, folds the new

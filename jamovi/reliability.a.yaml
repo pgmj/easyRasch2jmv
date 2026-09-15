@@ -71,14 +71,14 @@ options:
     - name: draws
       title: Plausible-value draws (RMU)
       type: Integer
-      default: 1000
+      default: 500
       min: 100
       max: 10000
 
     - name: rmuIter
       title: RMU iterations
       type: Integer
-      default: 50
+      default: 20
       min: 5
       max: 500
 
@@ -138,17 +138,17 @@ options:
       default: sem
 
     - name: curveReference
-      title: Draw the flat marginal summary as a reference line
+      title: Marginal reliability as a reference line
       type: Bool
       default: true
 
     - name: showDensity
-      title: Show the respondent distribution behind the curve
+      title: Respondent distribution behind the curve
       type: Bool
       default: true
 
     - name: useBenchmark
-      title: Shade the region reaching a reliability benchmark
+      title: Region reaching the reliability benchmark
       type: Bool
       default: false
 

@@ -60,7 +60,6 @@ items:
       width: 650
       height: 500
       renderFun: .curvePlot
-      requiresData: true
       visible: (showCurve)
       refs: [easyRasch2jmv, easyRasch2, green1984, mcneishdumas2025, milanzi2015]
       clearWith:

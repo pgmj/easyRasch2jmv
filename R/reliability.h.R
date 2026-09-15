@@ -291,7 +291,6 @@ reliabilityResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 width=650,
                 height=500,
                 renderFun=".curvePlot",
-                requiresData=TRUE,
                 visible="(showCurve)",
                 refs=list(
                     "easyRasch2jmv",

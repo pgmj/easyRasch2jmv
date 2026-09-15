@@ -207,7 +207,6 @@ personfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=450,
                 renderFun=".infitMap",
                 visible="(statInfit)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "statInfit",
@@ -225,7 +224,6 @@ personfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=450,
                 renderFun=".outfitMap",
                 visible="(statOutfit)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "statInfit",
@@ -243,7 +241,6 @@ personfitResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=450,
                 renderFun=".lzMap",
                 visible="(statLz)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "statInfit",

@@ -39,7 +39,6 @@ items:
       height: 450
       renderFun: .infitMap
       visible: (statInfit)
-      requiresData: true
       clearWith: *computeOpts
 
     - name: outfitPlot
@@ -49,7 +48,6 @@ items:
       height: 450
       renderFun: .outfitMap
       visible: (statOutfit)
-      requiresData: true
       clearWith: *computeOpts
 
     - name: lzPlot
@@ -59,7 +57,6 @@ items:
       height: 450
       renderFun: .lzMap
       visible: (statLz)
-      requiresData: true
       clearWith: *computeOpts
 
     # Hidden state carrier: caches the resampling results (fit dataframe +

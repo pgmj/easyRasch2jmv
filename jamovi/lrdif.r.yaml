@@ -33,7 +33,6 @@ items:
       height: 600
       renderFun: .lrtPlot
       visible: (showFigure)
-      requiresData: true
       clearWith:
           - vars
           - difVar
@@ -47,7 +46,6 @@ items:
       height: 600
       renderFun: .tileplot
       visible: (showTileplot)
-      requiresData: true
       clearWith:
           - vars
           - difVar

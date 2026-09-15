@@ -5,11 +5,37 @@ personchangeClass <- R6::R6Class(
   private = list(
 
     # ---------------------------------------------------------------------
-    # .init -- the summary rows are fully determined by the options, so
-    # they are built here and filled by .run().
+    # .init -- every row label here is fixed by the options rather than by
+    # the data, so the tables are structured and labelled before the
+    # enumeration starts. .run() fills values with setRow().
     # ---------------------------------------------------------------------
     .init = function() {
-      if (length(self$options$vars1) < 2 || length(self$options$vars2) < 2)
+      v1 <- self$options$vars1
+      v2 <- self$options$vars2
+
+      # The pairing table earns this most. It exists to be read before the
+      # figure it validates, so it is built as soon as there are variables
+      # to pair, ahead of and independently of the guards below. Its rows
+      # come from vars1 via the schema; only the response categories, which
+      # need the data, are left for .run().
+      if (length(v1) > 0L) {
+        pt <- self$results$pairingTable
+        for (i in seq_along(v1)) {
+          pt$setRow(rowNo = i, values = list(
+            pair  = i,
+            item1 = v1[i],
+            item2 = if (length(v2) == length(v1)) v2[i] else "",
+            cats  = ""
+          ))
+        }
+        pt$setNote("pairing", paste0(
+          "Items are matched by their position in the two variable boxes, ",
+          "not by name. Check this table before reading the results: a ",
+          "mispaired analysis produces a plausible-looking figure."
+        ))
+      }
+
+      if (length(v1) < 2 || length(v2) < 2)
         return()
 
       st <- self$results$summaryTable
@@ -25,6 +51,23 @@ personchangeClass <- R6::R6Class(
         st$addRow(rowKey = key, values = list(
           statistic = rows[[key]], value = NA_real_, notes = ""
         ))
+      }
+
+      # Always the same four quantities, in the same order.
+      if (isTRUE(self$options$estimateRetestSd)) {
+        rt <- self$results$retestTable
+        labels <- list(
+          varchange = "Variance of the change",
+          varerror  = "Variance from measurement error",
+          variance  = "Occasion variance",
+          sd        = "Retest SD per occasion"
+        )
+        for (key in names(labels)) {
+          rt$addRow(rowKey = key, values = list(
+            quantity = labels[[key]], value = NA_real_,
+            lower = NA_real_, upper = NA_real_
+          ))
+        }
       }
     },
 
@@ -88,6 +131,8 @@ personchangeClass <- R6::R6Class(
       df2 <- as_plain(df2)
 
       # --- Pairing table (above the figure, deliberately) -------------------
+      # Rows, the pairing itself and the note are all set in .init(). Only
+      # the response categories need the data, so only they are set here.
       pt <- self$results$pairingTable
       cat_mismatch <- character(0)
       for (i in seq_len(k)) {
@@ -101,15 +146,10 @@ personchangeClass <- R6::R6Class(
           cat_mismatch <- c(cat_mismatch, paste0(v1[i], " / ", v2[i]))
           paste0("0–", m1, " vs 0–", m2)
         }
-        pt$addRow(rowKey = i, values = list(
+        pt$setRow(rowNo = i, values = list(
           pair = i, item1 = v1[i], item2 = v2[i], cats = cats
         ))
       }
-      pt$setNote("pairing", paste0(
-        "Items are matched by their position in the two variable boxes, ",
-        "not by name. Check this table before reading the results: a ",
-        "mispaired analysis produces a plausible-looking figure."
-      ))
       if (length(cat_mismatch) > 0L) {
         pt$setNote("cats", paste0(
           "The highest observed response differs between occasions for ",
@@ -180,6 +220,7 @@ personchangeClass <- R6::R6Class(
         # nevertheless reruns .run for. The figure is cached alongside the
         # result because RMpersonChange() offers no output mode returning
         # both, so a cold run costs two enumerations and a warm one none.
+        cond <- isTRUE(self$options$conditionalCrit)
         sig <- list(
           anchor    = self$options$anchor,
           method    = self$options$method,
@@ -187,15 +228,16 @@ personchangeClass <- R6::R6Class(
           retest_sd = retest_sd,
           alpha     = self$options$alpha,
           direction = self$options$direction,
-          cond      = isTRUE(self$options$conditionalCrit),
+          cond      = cond,
           theta     = theta_range,
           ids       = ids
         )
         cached <- self$results$changeCache$state
         if (!is.null(cached) && identical(cached$sig, sig) &&
             identical(cached$d1, d1) && identical(cached$d2, d2)) {
-          res  <- cached$res
-          plot <- cached$plot
+          res    <- cached$res
+          grob   <- cached$grob
+          pooled <- cached$pooled
         } else {
           call_args <- list(
             data_t1          = d1,
@@ -217,12 +259,24 @@ personchangeClass <- R6::R6Class(
             do.call(easyRasch2::RMpersonChange,
                     c(call_args, list(output = "dataframe")))
           ))
-          plot <- suppressWarnings(suppressMessages(
+          # Stored built rather than as a ggplot: the object was 417 KB
+          # compressed against 16 KB for the same figure built, and all of
+          # it went into the saved .omv. See er2_plot_grob().
+          grob <- er2_plot_grob(suppressWarnings(suppressMessages(
             do.call(easyRasch2::RMpersonChange,
                     c(call_args, list(output = "ggplot")))
-          ))
+          )))
+          # The reference line on the conditional figure is a third
+          # enumeration, so it belongs on the cold path with the other two.
+          # It depends on nothing outside `sig`, and `cond` is in `sig`, so
+          # ticking the conditional figure on misses the cache and computes
+          # it then rather than on every rerun afterwards.
+          pooled <- if (cond)
+            private$.pooledCrit(d1, d2, ids, theta_range, retest_sd)
+          else NA_real_
           self$results$changeCache$setState(list(
-            res = res, plot = plot, sig = sig, d1 = d1, d2 = d2
+            res = res, grob = grob, pooled = pooled,
+            sig = sig, d1 = d1, d2 = d2
           ))
         }
         if (nrow(res) != n_used)
@@ -251,7 +305,6 @@ personchangeClass <- R6::R6Class(
         st$setRow(rowKey = "decrease", values = list(
           value = n_dec, notes = pct(n_dec)))
 
-        cond <- isTRUE(self$options$conditionalCrit)
         crit_row <- function(v, label) {
           finite_v <- v[is.finite(v)]
           if (length(finite_v) == 0L)
@@ -408,7 +461,7 @@ personchangeClass <- R6::R6Class(
                           "crit_lower", "crit_upper")],
             key = paste(private$.answeredKey(d1), private$.answeredKey(d2),
                         sep = "|"),
-            pooled = private$.pooledCrit(d1, d2, ids, theta_range, retest_sd)
+            pooled = pooled
           ))
         }
 
@@ -486,22 +539,50 @@ personchangeClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     .fillRetest = function(d1, d2, theta_range) {
       rt <- self$results$retestTable
-      res <- try(suppressWarnings(suppressMessages(
-        easyRasch2::RMretestSD(
-          d1, d2,
-          anchor      = self$options$anchor,
-          method      = self$options$method,
-          estimator   = "CML",
-          sim_iter    = self$options$retestIter,
-          parallel    = FALSE,
-          boot        = isTRUE(self$options$retestBoot),
-          boot_iter   = self$options$retestBootIter,
-          conf_int    = self$options$confInt / 100,
-          seed        = as.integer(self$options$seed),
-          theta_range = theta_range,
-          output      = "dataframe"
-        )
-      )), silent = TRUE)
+
+      # Its own cache, on its own signature. RMretestSD() runs retestIter
+      # simulations and an optional bootstrap on top, and none of that
+      # depends on the enumeration's options or on the table and output
+      # toggles that jamovi reruns .run() for.
+      sig <- list(
+        anchor    = self$options$anchor,
+        method    = self$options$method,
+        sim_iter  = self$options$retestIter,
+        boot      = isTRUE(self$options$retestBoot),
+        boot_iter = if (isTRUE(self$options$retestBoot))
+                      self$options$retestBootIter else NA_integer_,
+        conf_int  = self$options$confInt,
+        seed      = self$options$seed,
+        theta     = theta_range
+      )
+      cached <- self$results$retestCache$state
+      res <- if (!is.null(cached) && identical(cached$sig, sig) &&
+                 identical(cached$d1, d1) && identical(cached$d2, d2)) {
+        cached$res
+      } else {
+        out <- try(suppressWarnings(suppressMessages(
+          easyRasch2::RMretestSD(
+            d1, d2,
+            anchor      = self$options$anchor,
+            method      = self$options$method,
+            estimator   = "CML",
+            sim_iter    = self$options$retestIter,
+            parallel    = FALSE,
+            boot        = isTRUE(self$options$retestBoot),
+            boot_iter   = self$options$retestBootIter,
+            conf_int    = self$options$confInt / 100,
+            seed        = as.integer(self$options$seed),
+            theta_range = theta_range,
+            output      = "dataframe"
+          )
+        )), silent = TRUE)
+        # A failure is cached too. It is deterministic given the signature,
+        # and rerunning a doomed simulation on every option change is the
+        # same waste as rerunning a successful one.
+        self$results$retestCache$setState(
+          list(res = out, sig = sig, d1 = d1, d2 = d2))
+        out
+      }
       if (inherits(res, "try-error")) {
         rt$setNote("failed", paste0(
           "The retest SD could not be estimated: ",
@@ -510,19 +591,18 @@ personchangeClass <- R6::R6Class(
         return()
       }
 
-      rows <- list(
-        list("Variance of the change", res$var_change[1L], NA, NA),
-        list("Variance from measurement error", res$var_error[1L], NA, NA),
-        list("Occasion variance", res$variance[1L], NA, NA),
-        list("Retest SD per occasion", res$sd[1L],
-             res$lower[1L], res$upper[1L])
+      # Rows and labels come from .init(); only the values are set here.
+      vals <- list(
+        varchange = list(res$var_change[1L], NA, NA),
+        varerror  = list(res$var_error[1L], NA, NA),
+        variance  = list(res$variance[1L], NA, NA),
+        sd        = list(res$sd[1L], res$lower[1L], res$upper[1L])
       )
-      for (i in seq_along(rows)) {
-        rt$addRow(rowKey = i, values = list(
-          quantity = rows[[i]][[1L]],
-          value    = rows[[i]][[2L]],
-          lower    = rows[[i]][[3L]],
-          upper    = rows[[i]][[4L]]
+      for (key in names(vals)) {
+        rt$setRow(rowKey = key, values = list(
+          value = vals[[key]][[1L]],
+          lower = vals[[key]][[2L]],
+          upper = vals[[key]][[3L]]
         ))
       }
 
@@ -554,15 +634,13 @@ personchangeClass <- R6::R6Class(
     # ---------------------------------------------------------------------
     # Occasion 1 against occasion 2, with the no-change band, drawn by
     # easyRasch2::RMpersonChange(). Read from the cache rather than
-    # recomputed: the enumeration behind it is the expensive part.
+    # recomputed: the enumeration behind it is the expensive part. Stored
+    # built, see er2_plot_grob().
     # ---------------------------------------------------------------------
     .changePlot = function(image, ggtheme, theme, ...) {
       cached <- self$results$changeCache$state
-      if (is.null(cached) || is.null(cached$plot)) return(FALSE)
-
-      p <- er2_bump_text(cached$plot)
-      print(p)
-      TRUE
+      if (is.null(cached)) return(FALSE)
+      er2_draw_grob(cached$grob)
     },
 
     # ---------------------------------------------------------------------

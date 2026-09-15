@@ -133,3 +133,56 @@ er2_wrap_labels <- function(x, width = 10L) {
     paste(strwrap(s, width = width), collapse = "\n")
   }, character(1L))
 }
+
+#' Build a figure into a grob for storage in results state
+#'
+#' A `ggplot` object is far larger than the figure it describes. In ggplot2
+#' 4.0.3 an empty one serialises to 102 KB compressed, and the module's real
+#' figures run from 287 KB to 752 KB each, because the object carries the
+#' whole ggproto scaffolding rather than the drawn result. jmvcore warns
+#' above 500 KB of compressed element state, and everything stored goes into
+#' the saved `.omv`.
+#'
+#' Building the plot first collapses that: the same figures come out at 12 to
+#' 16 KB, a factor of about 25, and draw identically. Most analyses in the
+#' module already store the data and draw in the render function, which is
+#' cheaper still; this is for the three that cannot, because their figure
+#' comes back from one expensive package call that also produces the numbers.
+#'
+#' The theme bump has to be applied before building, since a built grob can
+#' no longer take a theme. That is fine: `er2_bump_text()` uses fixed sizes
+#' and does not depend on the render context.
+#'
+#' @param p A `ggplot` or `patchwork` object.
+#' @param size Text size passed to [er2_bump_text()].
+#' @return A `gtable` / grob, drawn with [er2_draw_grob()].
+#' @noRd
+er2_plot_grob <- function(p, size = 15) {
+  if (is.null(p)) return(NULL)
+  p <- er2_bump_text(p, size = size)
+  # Building a plot measures text, which needs a graphics device. .run()
+  # has none, and without this ggplot2 opens the default one: on macOS an
+  # empty Quartz window in front of the user, and a stray device left open
+  # in the engine. A file-less pdf device stands in and is closed again.
+  # Only when nothing is open, so a render function's own device is never
+  # touched.
+  if (is.null(grDevices::dev.list())) {
+    grDevices::pdf(NULL)
+    on.exit(grDevices::dev.off(), add = TRUE)
+  }
+  if (inherits(p, "patchwork")) patchwork::patchworkGrob(p)
+  else ggplot2::ggplotGrob(p)
+}
+
+#' Draw a grob stored by er2_plot_grob()
+#'
+#' @param gt A grob, or NULL.
+#' @return TRUE when something was drawn, FALSE otherwise, matching what a
+#'   jamovi render function is expected to return.
+#' @noRd
+er2_draw_grob <- function(gt) {
+  if (is.null(gt)) return(FALSE)
+  grid::grid.newpage()
+  grid::grid.draw(gt)
+  TRUE
+}

@@ -144,7 +144,6 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=500,
                 renderFun=".matrixPlot",
                 visible="(computeCutoff)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "computeCutoff",
@@ -178,7 +177,6 @@ locdepq3Results <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=600,
                 renderFun=".q3Plot",
                 visible="(computeCutoff)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "computeCutoff",

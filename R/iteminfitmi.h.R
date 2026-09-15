@@ -241,7 +241,6 @@ iteminfitmiResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 height=500,
                 renderFun=".infitPlot",
                 visible="(computeCutoff)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "auxVars",

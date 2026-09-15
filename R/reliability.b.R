@@ -297,15 +297,31 @@ reliabilityClass <- R6::R6Class(
             reference = isTRUE(self$options$curveReference),
             density   = isTRUE(self$options$showDensity),
             n_nodes   = self$options$nNodes,
-            theta     = theta_range
+            theta     = theta_range,
+            # The figure is cached alongside the summary, so the options
+            # that move only the bootstrap band belong in this signature
+            # too. They cannot touch curve_df, which is always computed
+            # with boot = FALSE, so a band change recomputes a 0.05 s
+            # data frame it did not have to. That is the cheaper mistake.
+            # All three count only while the band is drawn. With it off,
+            # neither the interval width nor the seed can move the figure
+            # or the summary, so editing them must not cost a refit.
+            boot      = isTRUE(self$options$curveBoot),
+            boot_iter = if (isTRUE(self$options$curveBoot))
+                          self$options$curveBootIter else NA_integer_,
+            conf_int  = if (isTRUE(self$options$curveBoot))
+                          conf_int else NA_real_,
+            seed      = if (isTRUE(self$options$curveBoot))
+                          seed else NA_integer_
           )
           curve_cached <- self$results$curveCache$state
           if (!is.null(curve_cached) && !identical(curve_cached$df, df))
             curve_cached <- NULL
           if (!is.null(curve_cached) &&
               identical(curve_cached$curve_sig, curve_sig)) {
-            curve_df <- curve_cached$curve_df
-            loc      <- curve_cached$loc
+            curve_df   <- curve_cached$curve_df
+            loc        <- curve_cached$loc
+            curve_plot <- curve_cached$curve_plot
           } else {
             curve_df <- suppressWarnings(suppressMessages(
               easyRasch2::RMreliabilityCurve(
@@ -330,9 +346,38 @@ reliabilityClass <- R6::R6Class(
                 theta_range = theta_range, output = "dataframe"
               )
             ))
+            # The figure is built here and stored, not redrawn in the render
+            # function. jamovi calls that function on every resize and every
+            # export, so redrawing there made each one pay for the bootstrap
+            # band again: 2.6 s at the default 200 iterations on 50
+            # respondents and 5 items, 25 s at the 2000-iteration maximum.
+            # RMreliabilityCurve() has no output mode returning both the
+            # summary and the figure, so a cold run costs two curves and a
+            # warm one none, which is how Person Change caches its own
+            # figure. Stored built: 359 KB as a ggplot, 16 KB as a grob,
+            # and it was being written into two elements. See
+            # er2_plot_grob().
+            curve_plot <- er2_plot_grob(suppressWarnings(suppressMessages(
+              easyRasch2::RMreliabilityCurve(
+                df,
+                statistic    = self$options$curveStatistic,
+                benchmark    = benchmark,
+                reference    = if (isTRUE(self$options$curveReference))
+                                 "marginal" else "none",
+                boot         = isTRUE(self$options$curveBoot),
+                boot_iter    = self$options$curveBootIter,
+                conf_int     = conf_int,
+                parallel     = FALSE,
+                seed         = as.integer(seed),
+                show_density = isTRUE(self$options$showDensity),
+                n_nodes      = self$options$nNodes,
+                output       = "ggplot"
+              )
+            )))
           }
           self$results$curveCache$setState(list(
-            df = df, curve_sig = curve_sig, curve_df = curve_df, loc = loc))
+            df = df, curve_sig = curve_sig, curve_df = curve_df, loc = loc,
+            curve_plot = curve_plot))
 
           get <- function(nm) attr(curve_df, nm, exact = TRUE)
           ct <- self$results$curveTable
@@ -452,7 +497,7 @@ reliabilityClass <- R6::R6Class(
             ))
           }
 
-          self$results$curvePlot$setState(list(df = df))
+          self$results$curvePlot$setState(list(plot = curve_plot))
         }
         # curveCache is left untouched when the curve is off. showCurve is
         # absent from its clearWith, so the state survives and turning the
@@ -468,35 +513,16 @@ reliabilityClass <- R6::R6Class(
     # easyRasch2::RMreliabilityCurve(). The counterpart to the single
     # coefficients above: the marginal reliability in the table is the
     # latent-density-weighted mean of this curve's reliability axis.
-    # Redrawn here rather than stored, so that only the figure pays for
-    # the bootstrap band.
+    # Built in .run() and read from the state here, because jamovi calls
+    # this function on every resize and export and the bootstrap band is
+    # not something to pay for twice. The theme bump moved into .run() with
+    # it: a built grob can no longer take a theme.
     # ---------------------------------------------------------------------
     .curvePlot = function(image, ggtheme, theme, ...) {
       if (is.null(image$state)) return(FALSE)
       if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      p <- suppressWarnings(suppressMessages(
-        easyRasch2::RMreliabilityCurve(
-          image$state$df,
-          statistic    = self$options$curveStatistic,
-          benchmark    = if (isTRUE(self$options$useBenchmark))
-                           self$options$benchmark else NULL,
-          reference    = if (isTRUE(self$options$curveReference))
-                           "marginal" else "none",
-          boot         = isTRUE(self$options$curveBoot),
-          boot_iter    = self$options$curveBootIter,
-          conf_int     = self$options$confInt / 100,
-          parallel     = FALSE,
-          seed         = as.integer(self$options$seed),
-          show_density = isTRUE(self$options$showDensity),
-          n_nodes      = self$options$nNodes,
-          output       = "ggplot"
-        )
-      ))
-      p <- er2_bump_text(p)
-
-      print(p)
-      TRUE
+      er2_draw_grob(image$state$plot)
     }
   )
 )

@@ -176,7 +176,6 @@ cfacutoffResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=700,
                 height=350,
                 renderFun=".cfaPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "estimator",
@@ -190,7 +189,6 @@ cfacutoffResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=600,
                 height=500,
                 renderFun=".cfaLoadingsPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "estimator",

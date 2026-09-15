@@ -269,6 +269,7 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
         critPlot = function() private$.items[["critPlot"]],
         changeTable = function() private$.items[["changeTable"]],
         retestTable = function() private$.items[["retestTable"]],
+        retestCache = function() private$.items[["retestCache"]],
         changeCache = function() private$.items[["changeCache"]],
         changeNote = function() private$.items[["changeNote"]],
         outputThetaT1 = function() private$.items[["outputThetaT1"]],
@@ -289,7 +290,7 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 options=options,
                 name="pairingTable",
                 title="Item Pairing",
-                rows=0,
+                rows="(vars1)",
                 refs=list(
                     "easyRasch2jmv",
                     "easyRasch2"),
@@ -320,7 +321,6 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 width=600,
                 height=550,
                 renderFun=".changePlot",
-                requiresData=TRUE,
                 refs=list(
                     "easyRasch2jmv",
                     "easyRasch2",
@@ -386,7 +386,6 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 width=650,
                 height=500,
                 renderFun=".critPlot",
-                requiresData=TRUE,
                 visible="(conditionalCrit)",
                 clearWith=list(
                     "vars1",
@@ -537,6 +536,23 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                         `type`="number", 
                         `format`="zto", 
                         `superTitle`="Interval"))))
+            self$add(jmvcore::Html$new(
+                options=options,
+                name="retestCache",
+                title="",
+                visible=FALSE,
+                clearWith=list(
+                    "vars1",
+                    "vars2",
+                    "anchor",
+                    "method",
+                    "retestIter",
+                    "retestBoot",
+                    "retestBootIter",
+                    "confInt",
+                    "seed",
+                    "thetaMin",
+                    "thetaMax")))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="changeCache",
@@ -768,6 +784,7 @@ personchangeBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #'   \code{results$critPlot} \tab \tab \tab \tab \tab an image \cr
 #'   \code{results$changeTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$retestTable} \tab \tab \tab \tab \tab a table \cr
+#'   \code{results$retestCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$changeCache} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$changeNote} \tab \tab \tab \tab \tab a html \cr
 #'   \code{results$outputThetaT1} \tab \tab \tab \tab \tab an output \cr

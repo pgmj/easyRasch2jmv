@@ -130,7 +130,6 @@ ciccResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=700,
                 height=700,
                 renderFun=".ciccPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "difVar",

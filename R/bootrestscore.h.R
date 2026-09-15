@@ -175,7 +175,6 @@ bootrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 height=600,
                 renderFun=".bootstrapPlot",
                 visible="(showPlot)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "iterations",

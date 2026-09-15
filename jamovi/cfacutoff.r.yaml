@@ -79,7 +79,6 @@ items:
       width: 700
       height: 350
       renderFun: .cfaPlot
-      requiresData: true
       clearWith:
           - vars
           - estimator
@@ -93,7 +92,6 @@ items:
       width: 600
       height: 500
       renderFun: .cfaLoadingsPlot
-      requiresData: true
       clearWith:
           - vars
           - estimator

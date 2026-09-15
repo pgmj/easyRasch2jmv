@@ -177,7 +177,6 @@ martinlofResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=550,
                 height=450,
                 renderFun=".nullPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "subscale1",
                     "subscale2",
@@ -191,7 +190,6 @@ martinlofResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=600,
                 height=550,
                 renderFun=".residualPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "subscale1",
                     "subscale2",

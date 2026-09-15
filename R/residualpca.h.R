@@ -159,7 +159,6 @@ residualpcaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 width=550,
                 height=500,
                 renderFun=".pcaPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "coordFlip")))}))

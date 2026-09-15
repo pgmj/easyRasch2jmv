@@ -235,7 +235,6 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=500,
                 renderFun=".pgDIFplot",
                 visible="(computeCutoff)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "difVar",
@@ -251,7 +250,6 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=600,
                 renderFun=".tileplot",
                 visible="(showTileplot)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "difVar",

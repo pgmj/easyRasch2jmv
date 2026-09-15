@@ -182,7 +182,6 @@ items:
       height: 600
       renderFun: .ldPlot
       visible: (computeCutoff)
-      requiresData: true
       clearWith:
           - vars
           - computeCutoff

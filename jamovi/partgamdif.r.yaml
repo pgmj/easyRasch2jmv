@@ -85,7 +85,6 @@ items:
       height: 500
       renderFun: .pgDIFplot
       visible: (computeCutoff)
-      requiresData: true
       clearWith:
         - vars
         - difVar
@@ -101,7 +100,6 @@ items:
       height: 600
       renderFun: .tileplot
       visible: (showTileplot)
-      requiresData: true
       clearWith:
         - vars
         - difVar

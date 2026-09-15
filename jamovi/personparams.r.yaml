@@ -38,7 +38,6 @@ items:
       width: 550
       height: 450
       renderFun: .thetaPlot
-      requiresData: true
       clearWith:
           - vars
           - method
@@ -151,7 +150,6 @@ items:
       height: 600
       renderFun: .scorePlot
       visible: (showScoreTable && showFigure)
-      requiresData: true
       clearWith:
           - vars
           - method

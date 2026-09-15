@@ -111,7 +111,7 @@ personfitClass <- R6::R6Class(
         cached <- self$results$simCache$state
         if (!is.null(cached) && !is.null(cached$fit) &&
             identical(cached$sig, sim_sig) && identical(cached$df, df_used)) {
-          res <- list(fit = cached$fit, plots = cached$plots)
+          res <- list(fit = cached$fit, grobs = cached$grobs)
         } else {
           # All computation is delegated to the easyRasch2 package, so
           # results are numerically identical to RMpersonFit() with the
@@ -130,8 +130,14 @@ personfitClass <- R6::R6Class(
               output       = "list"
             )
           ))
+          # The three maps are stored built. As ggplot objects they came to
+          # 287, 287 and 752 KB compressed, over jmvcore's 500 KB warning
+          # for one element and all of it written into the saved .omv; built,
+          # they are 14, 14 and 12 KB.
+          res$grobs <- lapply(res$plots, er2_plot_grob)
+          res$plots <- NULL
           self$results$simCache$setState(list(
-            fit = res$fit, plots = res$plots, sig = sim_sig, df = df_used
+            fit = res$fit, grobs = res$grobs, sig = sim_sig, df = df_used
           ))
         }
         fit <- res$fit
@@ -238,14 +244,13 @@ personfitClass <- R6::R6Class(
 
     # ---------------------------------------------------------------------
     # Person-fit maps -- drawn by easyRasch2::RMpersonFit(output = "list")
-    # in .run and stored in the simCache element (single storage), then
-    # restyled to the module's base text size.
+    # in .run, restyled there and stored built in the simCache element
+    # (single storage). See er2_plot_grob() for why they are stored built.
     # ---------------------------------------------------------------------
     .renderMap = function(stat) {
       state <- self$results$simCache$state
-      if (is.null(state) || is.null(state$plots[[stat]])) return(FALSE)
-      print(er2_bump_text(state$plots[[stat]]))
-      TRUE
+      if (is.null(state)) return(FALSE)
+      er2_draw_grob(state$grobs[[stat]])
     },
     .infitMap  = function(image, ggtheme, theme, ...) private$.renderMap("infit"),
     .outfitMap = function(image, ggtheme, theme, ...) private$.renderMap("outfit"),

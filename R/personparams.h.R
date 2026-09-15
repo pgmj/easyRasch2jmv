@@ -177,7 +177,6 @@ personparamsResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 width=550,
                 height=450,
                 renderFun=".thetaPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "method",
@@ -279,7 +278,6 @@ personparamsResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 height=600,
                 renderFun=".scorePlot",
                 visible="(showScoreTable && showFigure)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "method",

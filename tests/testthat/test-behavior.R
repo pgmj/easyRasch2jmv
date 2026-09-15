@@ -401,7 +401,7 @@ test_that("person fit matches easyRasch2, aligns output rows, and flags correctl
   expect_equal(tab$value[tab$statistic == "Flagged (any statistic)"],
                sum(pkg$flagged, na.rm = TRUE))
   # figures read from the simCache element
-  expect_false(is.null(an$results$simCache$state$plots$infit))
+  expect_false(is.null(an$results$simCache$state$grobs$infit))
 })
 
 test_that("Martin-Loef test matches easyRasch2 and documents its interpretation", {
@@ -753,12 +753,20 @@ test_that("hidden cache elements declare a clearWith that outlives display toggl
     options = er2$personchangeOptions$new(vars1 = change_t1(),
                                           vars2 = change_t2()),
     data = cd)$results
-  expect_false(identical(cw(chg$changeCache), "*"))
-  # The toggles the cache exists to absorb must not appear in the list.
-  expect_false(any(c("showTable", "flaggedOnly", "estimateRetestSd") %in%
-                     cw(chg$changeCache)))
+  for (el in list(chg$changeCache, chg$retestCache)) {
+    expect_false(identical(cw(el), "*"))
+    # The toggles the caches exist to absorb must not appear in the lists.
+    expect_false(any(c("showTable", "flaggedOnly", "estimateRetestSd") %in%
+                       cw(el)))
+  }
   expect_true(all(c("vars1", "vars2", "anchor", "method", "alpha") %in%
                     cw(chg$changeCache)))
+  # The retest simulation has its own dependencies and does not share the
+  # enumeration's: alpha and direction cannot move it.
+  expect_true(all(c("retestIter", "retestBoot", "retestBootIter", "confInt") %in%
+                    cw(chg$retestCache)))
+  expect_false(any(c("alpha", "direction", "conditionalCrit") %in%
+                     cw(chg$retestCache)))
 })
 
 test_that("reliability caches its estimates separately from the curve", {
@@ -807,4 +815,65 @@ test_that("reliability caches its estimates separately from the curve", {
   # An option the estimates do depend on forces the real computation.
   r3 <- run_seeded(rel_t, curve_t, showCurve = TRUE, estim = "EAP")
   expect_false(isTRUE(all.equal(r3$relTable$asDF$estimate[1], 0.4321)))
+})
+
+test_that("the reliability curve figure is built once, not on every redraw", {
+  # jamovi calls the render function on every resize and export. Redrawing
+  # there made each one recompute the bootstrap band: 2.6 s at the default
+  # 200 iterations on the bundled data, 25 s at the 2000 maximum. The
+  # figure is now built in .run() and the render function only prints it.
+  d <- poly_data()
+  r <- suppressWarnings(er2$reliability(
+    data = d, vars = names(d), showCurve = TRUE,
+    curveBoot = TRUE, curveBootIter = 50, seed = 42))
+  # Stored built rather than as a ggplot: see er2_plot_grob().
+  expect_s3_class(r$curvePlot$state$plot, "gtable")
+})
+
+test_that("band options count only while the band is drawn", {
+  # conf_int and seed reach nothing but the bootstrap, so with the band off
+  # they must not invalidate the curve.
+  d <- poly_data()
+  run <- function(curve_state, ...) {
+    opts <- er2$reliabilityOptions$new(vars = names(d), showCurve = TRUE,
+                                       seed = 42, ...)
+    an <- er2$reliabilityClass$new(options = opts, data = d)
+    if (!is.null(curve_state)) an$results$curveCache$setState(curve_state)
+    an$run()
+    an$results
+  }
+  mean_theta <- function(r) {
+    ct <- r$curveTable$asDF
+    ct$value[ct$metric == "Mean theta"]
+  }
+
+  off <- run(NULL)$curveCache$state
+  off$loc$theta[] <- 2.5
+  expect_equal(mean_theta(run(off, confInt = 90)), 2.5)
+
+  on <- run(NULL, curveBoot = TRUE, curveBootIter = 50)$curveCache$state
+  on$loc$theta[] <- 2.5
+  expect_false(isTRUE(all.equal(
+    mean_theta(run(on, curveBoot = TRUE, curveBootIter = 50, confInt = 90)),
+    2.5)))
+})
+
+test_that("building figures in .run() opens no graphics device", {
+  # ggplotGrob() measures text, which needs a device. .run() has none, and
+  # ggplot2 will open the platform default rather than fail: in jamovi on
+  # macOS that put an empty Quartz window in front of the user and left a
+  # stray device in the engine. The helper supplies a file-less pdf device
+  # instead, and only when nothing is open, so a render function's own
+  # device is never disturbed.
+  d <- poly_data()
+  before <- grDevices::dev.list()
+
+  suppressWarnings(er2$reliability(data = d, vars = names(d),
+                                   showCurve = TRUE, seed = 42))
+  expect_identical(grDevices::dev.list(), before)
+
+  cd <- change_data()
+  suppressWarnings(er2$personchange(data = cd, vars1 = change_t1(),
+                                    vars2 = change_t2()))
+  expect_identical(grDevices::dev.list(), before)
 })

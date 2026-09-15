@@ -1,8 +1,8 @@
 Package: easyRasch2jmv
 Type: Package
 Title: easyRasch2 for Jamovi
-Version: 3.2.0
-Date: 2026-09-14
+Version: 3.2.1
+Date: 2026-09-15
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description:  Provides Rasch analysis functions for jamovi. All analyses delegate
@@ -24,6 +24,8 @@ Imports:
     mirt,
     psychotools (>= 0.7-3),
     graphics,
+    grDevices,
+    grid,
     stats,
     ggplot2,
     ggdist,

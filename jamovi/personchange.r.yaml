@@ -12,7 +12,13 @@ items:
     - name: pairingTable
       title: Item Pairing
       type: Table
-      rows: 0
+      # Declared from vars1 rather than rows: 0, so the rows exist in the
+      # skeleton as soon as variables are dropped in. .init() fills the
+      # pairing itself and .run() adds only the response categories. A
+      # rows: 0 table is empty until .run() finishes and goes blank again on
+      # every option change, which is the wrong behaviour for a check that
+      # the user is meant to read before trusting the figure below it.
+      rows: (vars1)
       refs: [easyRasch2jmv, easyRasch2]
       clearWith:
           - vars1
@@ -37,7 +43,6 @@ items:
       width: 600
       height: 550
       renderFun: .changePlot
-      requiresData: true
       refs: [easyRasch2jmv, easyRasch2, jacobsontruax1991, caronni2026, zumbo2026, warm1989, zeileis2026]
       clearWith:
           - vars1
@@ -93,7 +98,6 @@ items:
       width: 650
       height: 500
       renderFun: .critPlot
-      requiresData: true
       visible: (conditionalCrit)
       clearWith:
           - vars1
@@ -225,6 +229,29 @@ items:
             type: number
             format: zto
             superTitle: Interval
+
+    # Hidden cache for RMretestSD(). Its own element rather than a second
+    # signature inside changeCache, because it depends on a different set of
+    # options: the iteration counts and the bootstrap move it and nothing
+    # else, while the enumeration's own options do not touch it. clearWith
+    # mirrors retestTable's list, and leaves out estimateRetestSd, which is
+    # the toggle the cache exists to absorb.
+    - name: retestCache
+      title: ''
+      type: Html
+      visible: false
+      clearWith:
+          - vars1
+          - vars2
+          - anchor
+          - method
+          - retestIter
+          - retestBoot
+          - retestBootIter
+          - confInt
+          - seed
+          - thetaMin
+          - thetaMax
 
     # Hidden cache. The exact enumeration is the expensive part and jamovi
     # reruns .run on every option change, including the output-variable

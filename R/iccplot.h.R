@@ -85,7 +85,6 @@ iccplotResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 width=700,
                 height=600,
                 renderFun=".iccPlot",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "thetaMin",

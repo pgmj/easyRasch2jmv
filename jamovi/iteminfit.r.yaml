@@ -76,7 +76,6 @@ items:
       height: 600
       renderFun: .infitPlot
       visible: (computeCutoff)
-      requiresData: true
       clearWith:
         - vars
         - computeCutoff

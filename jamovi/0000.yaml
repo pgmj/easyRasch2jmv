@@ -1,12 +1,12 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 3.2.0
+version: 3.2.1
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-09-14'
+date: '2026-09-15'
 type: R
 description: >
   Provides Rasch analysis functions for jamovi. All analyses delegate their
@@ -15,7 +15,7 @@ description: >
   iarm for the conditional item-fit and partial-gamma statistics; eRm for
   Andersen's LR test; lavaan for the CFA checks), so results are numerically
   identical to easyRasch2 with the same seeds and iterations. Built against
-  easyRasch2 1.3.0.
+  easyRasch2 1.3.1.
 analyses:
   - title: Conditional Item Infit
     name: iteminfit

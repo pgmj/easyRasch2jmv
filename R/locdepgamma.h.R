@@ -373,7 +373,6 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                 height=600,
                 renderFun=".ldPlot",
                 visible="(computeCutoff)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "computeCutoff",

@@ -164,7 +164,6 @@ lrdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=600,
                 renderFun=".lrtPlot",
                 visible="(showFigure)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "difVar",
@@ -178,7 +177,6 @@ lrdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                 height=600,
                 renderFun=".tileplot",
                 visible="(showTileplot)",
-                requiresData=TRUE,
                 clearWith=list(
                     "vars",
                     "difVar",

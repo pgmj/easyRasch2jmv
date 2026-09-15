@@ -67,7 +67,6 @@ items:
       height: 600
       renderFun: .bootstrapPlot
       visible: (showPlot)
-      requiresData: true
       clearWith:
           - vars
           - iterations

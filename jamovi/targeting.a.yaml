@@ -105,7 +105,7 @@ options:
       default: categories
 
     - name: categoryLabels
-      title: Label categories with their value labels
+      title: Value labels as category labels
       type: Bool
       default: true
 
