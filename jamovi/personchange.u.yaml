@@ -10,13 +10,13 @@ children:
     stretchFactor: 1
     children:
       - type: TargetLayoutBox
-        label: Time 1 items
+        label: Time 1 Items
         children:
           - type: VariablesListBox
             name: vars1
             isTarget: true
       - type: TargetLayoutBox
-        label: Time 2 items
+        label: Time 2 Items
         children:
           - type: VariablesListBox
             name: vars2
@@ -108,7 +108,7 @@ children:
                     format: number
 
   - type: CollapseBox
-    label: Estimation range
+    label: Estimation Range
     collapsed: true
     children:
       - type: LayoutBox

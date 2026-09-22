@@ -2,3 +2,9 @@
 ^\.Rproj\.user$
 ^\.positai$
 ^\.claude$
+^dev$
+^CHANGELOG-.*\.md$
+^Rplots\.pdf$
+^.*\.jmo$
+^\.Rhistory$
+^\.DS_Store$

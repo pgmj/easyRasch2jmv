@@ -65,6 +65,7 @@ items:
       title: Change Summary
       type: Table
       rows: 0
+      refs: [easyRasch2jmv, easyRasch2, maassen2004]
       clearWith:
           - vars1
           - vars2

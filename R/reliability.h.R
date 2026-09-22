@@ -8,8 +8,8 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
         initialize = function(
             vars = NULL,
             estim = "WLE",
-            draws = 1000,
-            rmuIter = 50,
+            draws = 500,
+            rmuIter = 20,
             confInt = 95,
             thetaMin = -10,
             thetaMax = 10,
@@ -53,13 +53,13 @@ reliabilityOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
             private$..draws <- jmvcore::OptionInteger$new(
                 "draws",
                 draws,
-                default=1000,
+                default=500,
                 min=100,
                 max=10000)
             private$..rmuIter <- jmvcore::OptionInteger$new(
                 "rmuIter",
                 rmuIter,
-                default=50,
+                default=20,
                 min=5,
                 max=500)
             private$..confInt <- jmvcore::OptionNumber$new(
@@ -465,8 +465,8 @@ reliability <- function(
     data,
     vars,
     estim = "WLE",
-    draws = 1000,
-    rmuIter = 50,
+    draws = 500,
+    rmuIter = 20,
     confInt = 95,
     thetaMin = -10,
     thetaMax = 10,

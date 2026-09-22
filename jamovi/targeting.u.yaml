@@ -49,7 +49,7 @@ children:
         format: number
 
   - type: CollapseBox
-    label: Bottom panel
+    label: Bottom Panel
     collapsed: true
     children:
       - type: LayoutBox

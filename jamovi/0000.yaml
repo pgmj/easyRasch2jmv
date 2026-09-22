@@ -1,12 +1,12 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 3.2.1
+version: 3.2.2
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-09-15'
+date: '2026-09-22'
 type: R
 description: >
   Provides Rasch analysis functions for jamovi. All analyses delegate their

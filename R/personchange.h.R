@@ -350,6 +350,10 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                 name="summaryTable",
                 title="Change Summary",
                 rows=0,
+                refs=list(
+                    "easyRasch2jmv",
+                    "easyRasch2",
+                    "maassen2004"),
                 clearWith=list(
                     "vars1",
                     "vars2",

@@ -354,9 +354,8 @@ reliabilityClass <- R6::R6Class(
             # RMreliabilityCurve() has no output mode returning both the
             # summary and the figure, so a cold run costs two curves and a
             # warm one none, which is how Person Change caches its own
-            # figure. Stored built: 359 KB as a ggplot, 16 KB as a grob,
-            # and it was being written into two elements. See
-            # er2_plot_grob().
+            # figure. Stored built: 359 KB as a ggplot, 16 KB as a grob.
+            # See er2_plot_grob().
             curve_plot <- er2_plot_grob(suppressWarnings(suppressMessages(
               easyRasch2::RMreliabilityCurve(
                 df,
@@ -496,8 +495,6 @@ reliabilityClass <- R6::R6Class(
               "estimable information and are omitted from the curve."
             ))
           }
-
-          self$results$curvePlot$setState(list(plot = curve_plot))
         }
         # curveCache is left untouched when the curve is off. showCurve is
         # absent from its clearWith, so the state survives and turning the
@@ -513,16 +510,21 @@ reliabilityClass <- R6::R6Class(
     # easyRasch2::RMreliabilityCurve(). The counterpart to the single
     # coefficients above: the marginal reliability in the table is the
     # latent-density-weighted mean of this curve's reliability axis.
-    # Built in .run() and read from the state here, because jamovi calls
+    # Built in .run() and read from curveCache here, because jamovi calls
     # this function on every resize and export and the bootstrap band is
     # not something to pay for twice. The theme bump moved into .run() with
-    # it: a built grob can no longer take a theme.
+    # it: a built grob can no longer take a theme. Reading the cache rather
+    # than a copy on this element matches .renderMap() in Person Fit and
+    # .changePlot() in Person Change, and keeps one grob in state instead
+    # of two. Every option that moves the figure is in curvePlot's
+    # clearWith, so the redraw still happens without state of its own.
     # ---------------------------------------------------------------------
     .curvePlot = function(image, ggtheme, theme, ...) {
-      if (is.null(image$state)) return(FALSE)
+      cached <- self$results$curveCache$state
+      if (is.null(cached) || is.null(cached$curve_plot)) return(FALSE)
       if (!requireNamespace("ggplot2", quietly = TRUE)) return(FALSE)
 
-      er2_draw_grob(image$state$plot)
+      er2_draw_grob(cached$curve_plot)
     }
   )
 )

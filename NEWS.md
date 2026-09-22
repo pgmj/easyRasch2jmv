@@ -1,6 +1,48 @@
+# easyRasch2jmv 3.2.2
+
+**The RMU reliability coefficient changes with default settings.** The two
+options behind it were lowered in 3.2.1 without a note, and this release
+documents the change.
+
+## Reliability
+
+- Plausible-value draws default to 500 (was 1000) and RMU iterations to 20
+  (was 50). RMU is a plausible-value estimate from an MML model, so it moves
+  slightly from run to run, and halving the draws widens that Monte Carlo
+  variation in exchange for a faster analysis. Alpha, PSI and Marginal are
+  unaffected. Raise both in *Options* to reproduce the 3.2.0 values, and note
+  that `easyRasch2::RMreliability()` still defaults to 1000 and 50.
+- `R/reliability.h.R` carried the old 1000 and 50, so anyone calling
+  `easyRasch2jmv::reliability()` from R got different RMU values than the
+  same analysis run inside jamovi. The header now matches the option
+  definitions.
+- The conditional precision figure is held in one place. The built grob went
+  into both `curveCache` and the figure element's own state, and the render
+  function now reads the cache, as the person-fit maps and the person change
+  figure already do. Nothing visible changes.
+
+## Person Change
+
+- Maassen (2004) is now cited on the change summary table, which is where the
+  null in force is stated. It is the reference for which standard error
+  belongs in a reliable change index, the choice the *Null* option makes, and
+  it was defined in the reference list without ever being reached.
+
+## Labels
+
+- Four group labels are title-cased, matching the rest of the module:
+  *Time 1 Items*, *Time 2 Items*, *Estimation Range*, *Bottom Panel*.
+
+## Build
+
+- `dev/` and the three `CHANGELOG-*.md` files are kept out of the source
+  tarball by `.Rbuildignore`. They stay in the repository.
+
 # easyRasch2jmv 3.2.1
 
-Responses to the 3.2.0 audit. No results change.
+Responses to the 3.2.0 audit. No results change, apart from the RMU
+reliability coefficient. Its two defaults were lowered here without a note,
+which 3.2.2 documents.
 
 ## Person Change
 
