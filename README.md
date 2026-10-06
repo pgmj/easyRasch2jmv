@@ -13,8 +13,9 @@ iterations.
 
 A distinguishing feature, inherited from easyRasch2, is the use of
 parametric-bootstrap critical values in place of rule-of-thumb cutoffs. In
-the Conditional Item Infit and the two local dependence analyses, items and
-item pairs are flagged on a multiplicity-corrected bootstrap *p*-value
+Conditional Item Infit, Item-Restscore Correlations, Partial Gamma DIF and the
+two local dependence analyses, items and item pairs are flagged on a
+multiplicity-corrected bootstrap *p*-value
 (Westfall-Young family-wise, or FDR) once simulation-based cutoffs are
 enabled, which controls the error rate across the whole set of tests rather
 than leaving it to an interval width (Johansson, 2025, 2026).
@@ -37,15 +38,27 @@ than leaving it to an interval width (Johansson, 2025, 2026).
   auxiliary variables in the imputation model), pooled by
   `easyRasch2::RMitemInfitMI()`.
 - **Bootstrap Item-Restscore** — non-parametric bootstrap of
-  `iarm::item_restscore()` for use with large samples where the
-  asymptotic test over-rejects. The bootstrap runs via
+  `iarm::item_restscore()` at a chosen sample size, via
   `easyRasch2::RMitemRestscoreBoot()` (numerically identical draws and
-  classifications with the same seed).
+  classifications with the same seed). Each draw uses the asymptotic
+  test, so the percentages are flag rates at that sample size rather than
+  probabilities of misfit. For testing item fit, use the simulation-based
+  cutoffs in Item-Restscore Correlations.
 - **Item-Restscore Correlations** — observed vs model-expected
   item-restscore correlations via Goodman-Kruskal's gamma (Kreiner, 2011).
   Supports dichotomous and polytomous (Partial Credit Model) data.
   Delegates to `easyRasch2::RMitemRestscore()` (CML item locations via
-  `psychotools`, WLE person-mean reference).
+  `psychotools`, WLE person-mean reference). With simulation-based
+  cutoffs enabled, items flag on the multiplicity-corrected bootstrap
+  *p*-value (`easyRasch2::RMitemRestscoreCutoff()`), with the expected
+  range of the observed-minus-expected difference and a figure of the
+  simulated distributions. Without them, the asymptotic *p*-values are
+  shown with a note that they are miscalibrated under the Rasch model.
+- **Item Characteristic Curves (CICC)** — expected item score curves
+  with observed class-interval averages overlaid (Kreiner-style
+  graphical item fit), via `easyRasch2::RMitemICCPlot()`; optional DIF
+  variable with per-group observed averages and partial-gamma
+  annotations.
 
 ### Local dependence
 
@@ -96,9 +109,11 @@ than leaving it to an interval width (Johansson, 2025, 2026).
   figure of group-by-item locations, and a response-distribution
   tileplot.
 - **Partial Gamma DIF** — partial-gamma coefficients for categorical
-  DIF variables, with optional simulation-based expected ranges and a
-  response-distribution tileplot; via `easyRasch2::RMdifGamma()` /
-  `RMdifGammaCutoff()` / `RMplotTile()`.
+  DIF variables, with a response-distribution tileplot; via
+  `easyRasch2::RMdifGamma()` / `RMdifGammaCutoff()` / `RMplotTile()`.
+  With simulation-based cutoffs enabled, items flag on the
+  multiplicity-corrected bootstrap *p*-value by default. The simulated
+  datasets keep each respondent's group and total score.
 - **Tree-Based DIF** — model-based recursive partitioning for DIF via
   `easyRasch2::RMdifTree()` (psychotree Rasch/PCM trees; Strobl et al.,
   2015), splitting the sample wherever item parameters are unstable
@@ -106,6 +121,9 @@ than leaving it to an interval width (Johansson, 2025, 2026).
   Each split's items get an A/B/C effect size (Mantel-Haenszel ETS Delta
   for dichotomous data, partial gamma for polytomous; Henninger et al.,
   2023, 2025), with optional purification and pruning.
+- **Item Characteristic Curves (CICC)** — with a DIF variable, plots each
+  group's observed averages against the model curve, with partial gamma
+  annotations. See *Item fit* above.
 
 ### Reliability and targeting
 
@@ -161,18 +179,13 @@ than leaving it to an interval width (Johansson, 2025, 2026).
 - **Item Probability Curves** — model-implied category probability
   curves (polytomous, faceted per item) or joint item characteristic
   curves (dichotomous), computed by `easyRasch2::RMitemCatProb()`.
-- **Item Characteristic Curves (CICC)** — expected item score curves
-  with observed class-interval averages overlaid (Kreiner-style
-  graphical item fit), via `easyRasch2::RMitemICCPlot()`; optional DIF
-  variable with per-group observed averages and partial-gamma
-  annotations.
 
 ## Requirements
 
-All R-package dependencies are bundled as Imports and are installed
-alongside the jamovi module: `easyRasch2`, `eRm`, `iarm`, `lavaan`,
-`mirt`, `psychotools`, `mice`, `ggplot2`, `ggdist`, `patchwork`,
-`scales`.
+All R-package dependencies are bundled with the module, so nothing needs
+to be installed separately: `easyRasch2`, `eRm`, `iarm`, `lavaan`, `mirt`,
+`psychotools`, `mice`, `psychotree`, `partykit`, `difR`, `ggplot2`,
+`ggdist`, `ggtext`, `ggrepel`, `patchwork` and `scales`.
 
 ## Installation
 
@@ -202,7 +215,7 @@ If you use easyRasch2jmv in published work, please cite it and jamovi itself. Al
 **easyRasch2jmv** (this jamovi module)
 
 Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
-(Version 3.2.0) [Computer software].
+(Version 3.3.0) [Computer software].
 <https://github.com/pgmj/easyRasch2jmv>
 
 ```bibtex
@@ -210,7 +223,7 @@ Johansson, M. (2026). easyRasch2jmv: A jamovi module based on easyRasch2
   title  = {{easyRasch2jmv}: A {jamovi} module based on {easyRasch2}},
   author = {Magnus Johansson},
   year   = {2026},
-  note   = {jamovi module version 3.2.0},
+  note   = {jamovi module version 3.3.0},
   url    = {https://github.com/pgmj/easyRasch2jmv},
 }
 ```
@@ -232,7 +245,7 @@ The jamovi project. (2026). jamovi (Version 2.7) [Computer software]. <https://w
 **easyRasch2** (the underlying R package)
 
 Johansson, M. (2026). easyRasch2: Psychometric Analysis with Rasch Measurement
-Theory (Version 1.2.0) [R].
+Theory (Version 1.4.0) [R].
 <https://doi.org/10.32614/CRAN.package.easyRasch2>
 
 ```bibtex
@@ -240,7 +253,7 @@ Theory (Version 1.2.0) [R].
   title  = {{easyRasch2}: Psychometric Analysis with {Rasch} Measurement Theory},
   author = {Magnus Johansson},
   year   = {2026},
-  note   = {R package version 1.2.0},
+  note   = {R package version 1.4.0},
   doi    = {10.32614/CRAN.package.easyRasch2},
   url    = {https://doi.org/10.32614/CRAN.package.easyRasch2},
 }

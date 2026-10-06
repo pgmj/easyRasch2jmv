@@ -5,13 +5,13 @@ Version: 3.3.0
 Date: 2026-10-06
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
-Description:  Provides Rasch analysis functions for jamovi. All analyses delegate
+Description: Provides Rasch analysis functions for jamovi. All analyses delegate
   their computations to the easyRasch2 R package (conditional maximum
   likelihood estimation via psychotools with Warm's weighted likelihood
-  person estimates; iarm for the asymptotic item-restscore and
-  partial-gamma tests; eRm for Andersen's LR test; lavaan for the CFA checks),
-  so results are numerically identical to easyRasch2 with the same
-  seeds and iterations.
+  person estimates; iarm for conditional infit and the asymptotic
+  item-restscore and partial-gamma tests; eRm for Andersen's LR test;
+  lavaan for the CFA checks), so results are numerically identical to
+  easyRasch2 with the same seeds and iterations.
 License: GPL (>= 3)
 Encoding: UTF-8
 Imports:
