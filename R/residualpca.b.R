@@ -145,6 +145,12 @@ residualpcaClass <- R6::R6Class(
           }
         }
 
+        # Visibility follows what was computed, not the options: if the
+        # simulation failed, the simulation columns would otherwise show
+        # empty (see set_columns_visible()).
+        set_columns_visible(self$results$pcaTable, c("cutoff", "flagged"),
+                            !is.null(cutoff_res))
+
         # Save (or clear, on failure) the simulation cache.
         if (!is.null(cutoff_res)) {
           self$results$simCache$setState(list(

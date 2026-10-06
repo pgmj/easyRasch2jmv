@@ -116,6 +116,42 @@ er2_bump_text <- function(p, size = 15) {
   p + th
 }
 
+#' Enlarge points, error bars and in-panel text on a package-drawn plot
+#'
+#' easyRasch2 sets these as fixed layer parameters, which a theme cannot
+#' reach. This multiplies them on every panel, recursing into patchwork.
+#' Layers are updated in place, so call it once on a freshly drawn plot,
+#' never on one that is kept and redrawn.
+#'
+#' @param p A `ggplot` or `patchwork` object.
+#' @param point,line,text Multipliers for `geom_point()` size, error-bar
+#'   linewidth and `annotate("text")` size.
+#' @return The plot, with its layers resized.
+#' @noRd
+er2_scale_layers <- function(p, point = 1, line = 1, text = 1) {
+  if (inherits(p, "patchwork")) {
+    p$patches$plots <- lapply(p$patches$plots, er2_scale_layers,
+                              point = point, line = line, text = text)
+  }
+  p$layers <- lapply(p$layers, function(l) {
+    geom <- class(l$geom)[1L]
+    ap <- l$aes_params
+    if (geom == "GeomPoint" && !is.null(ap$size)) {
+      ap$size <- ap$size * point
+    } else if (geom %in% c("GeomErrorbar", "GeomLinerange") &&
+               !is.null(ap$linewidth)) {
+      ap$linewidth <- ap$linewidth * line
+    } else if (geom == "GeomText" && !is.null(ap$size)) {
+      ap$size <- ap$size * text
+    } else {
+      return(l)
+    }
+    l$aes_params <- ap
+    l
+  })
+  p
+}
+
 #' Wrap long axis / facet labels onto multiple lines
 #'
 #' Base R only -- no stringr dependency. Width chosen so labels like

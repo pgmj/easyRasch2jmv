@@ -8,9 +8,15 @@ items:
       title: Item-Restscore Correlations
       type: Table
       rows: (vars)
-      refs: [easyRasch2jmv, easyRasch2, kreiner2011, mueller2022, zeileis2026, warm1989]
+      refs: [easyRasch2jmv, easyRasch2, kreiner2011, mueller2022, zeileis2026, warm1989, ferreira2024, westfallyoung1993]
       clearWith:
           - vars
+          - computeCutoff
+          - hdciWidth
+          - iterations
+          - seed
+          - pValues
+          - correction
           - sortByDiff
       columns:
           - name: item
@@ -32,6 +38,29 @@ items:
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
+            visible: (computeCutoff == FALSE)
+          - name: diffLow
+            title: Lower
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: diffHigh
+            title: Upper
+            type: number
+            format: zto
+            visible: (computeCutoff)
+            superTitle: Expected range
+          - name: pValue
+            title: p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
+          - name: pAdjBoot
+            title: Adj. p-value
+            type: number
+            format: zto,pvalue
+            visible: (computeCutoff && pValues)
           - name: fit
             title: Flagged
             type: text
@@ -45,5 +74,25 @@ items:
       type: Html
       clearWith:
           - vars
+          - computeCutoff
+          - hdciWidth
+          - iterations
+          - seed
+          - pValues
+          - correction
+
+    - name: restscorePlot
+      title: Simulated Item-Restscore Difference Distribution
+      type: Image
+      width: 500
+      height: 600
+      renderFun: .restscorePlot
+      visible: (computeCutoff)
+      clearWith:
+          - vars
+          - computeCutoff
+          - hdciWidth
+          - iterations
+          - seed
 
 ...

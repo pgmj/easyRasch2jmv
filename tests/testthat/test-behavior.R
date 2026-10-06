@@ -157,6 +157,10 @@ test_that("iteminfit bootstrap p-values match easyRasch2 and flag on adjusted p"
   expect_true(any(grepl("Benjamini-Yekutieli", notes)))
   # below the calibrated floor => the liberal-correction tier of the caveat
   expect_match(r$cutoffNote$content, "below the calibrated floor of 400")
+  # the iteration advice is given once, not by two helpers
+  expect_identical(
+    lengths(regmatches(r$cutoffNote$content,
+                       gregexpr("1000 to 2000", r$cutoffNote$content))), 1L)
   # and the withdrawn small-sample advice is gone
   expect_false(grepl("detection power", r$cutoffNote$content))
 
@@ -206,6 +210,76 @@ test_that("iteminfit reuses the cutoff simulation when only p-value settings cha
   expect_equal(r$infitTable$asDF$infitLow[1], true_low)
 })
 
+test_that("itemrestscore footnotes follow the p-value path", {
+  # The calibration caveat belongs to the asymptotic p-values only; with
+  # simulation-based cutoffs it is replaced by the bootstrap p-value note.
+  d <- poly_data()
+  asy <- suppressWarnings(er2$itemrestscore(data = d, vars = names(d)))
+  expect_true(all(c("sig", "calibration") %in%
+                    names(asy$restscoreTable$notes)))
+  expect_true(all(is.na(asy$restscoreTable$asDF$pAdjBoot)))
+
+  boot <- suppressWarnings(er2$itemrestscore(
+    data = d, vars = names(d), computeCutoff = TRUE, iterations = 60))
+  notes <- names(boot$restscoreTable$notes)
+  expect_true("pvalues" %in% notes)
+  expect_false(any(c("sig", "calibration") %in% notes))
+  expect_true(all(is.na(boot$restscoreTable$asDF$pAdjusted)))
+
+  band <- suppressWarnings(er2$itemrestscore(
+    data = d, vars = names(d), computeCutoff = TRUE, iterations = 60,
+    pValues = FALSE))
+  expect_true(all(is.na(band$restscoreTable$asDF$pAdjBoot)))
+  expect_false(all(is.na(band$restscoreTable$asDF$diffLow)))
+})
+
+test_that("itemrestscore matches the package with the same seed", {
+  d <- poly_data()
+  r <- suppressWarnings(er2$itemrestscore(
+    data = d, vars = names(d), computeCutoff = TRUE, iterations = 60,
+    seed = 42))
+  co <- suppressMessages(easyRasch2::RMitemRestscoreCutoff(
+    d, iterations = 60, parallel = FALSE, seed = 42, hdci_width = 0.95))
+  pk <- suppressMessages(easyRasch2::RMitemRestscore(
+    d, cutoff = co, output = "dataframe"))
+  expect_equal(r$restscoreTable$asDF$pAdjBoot, pk$padj_restscore)
+  expect_equal(r$restscoreTable$asDF$diffLow, pk$Diff_low)
+})
+
+test_that("itemrestscore reuses the cutoff simulation when only p-value settings change", {
+  # Same state-cache pattern as iteminfit, with a tampered interval bound
+  # as the reuse probe.
+  d <- poly_data()
+
+  run_seeded <- function(state, ...) {
+    opts <- er2$itemrestscoreOptions$new(vars = names(d),
+                                         computeCutoff = TRUE,
+                                         iterations = 60, seed = 42,
+                                         hdciWidth = 95, ...)
+    an <- er2$itemrestscoreClass$new(options = opts, data = d)
+    if (!is.null(state)) an$results$restscorePlot$setState(state)
+    an$run()
+    an$results
+  }
+
+  state <- run_seeded(NULL)$restscorePlot$state
+  expect_false(is.null(state$sig))
+  true_low <- state$cutoff_res$item_cutoffs$diff_low[1]
+
+  tampered <- state
+  tampered$cutoff_res$item_cutoffs$diff_low[1] <- -0.123456
+
+  # matching signature -> cache reused (tampered bound surfaces)
+  r <- run_seeded(tampered, correction = "fdr_bh")
+  expect_equal(r$restscoreTable$asDF$diffLow[1], -0.123456)
+
+  # stale signature -> simulation reruns (true bound restored)
+  stale <- tampered
+  stale$sig$seed <- 99L
+  r <- run_seeded(stale)
+  expect_equal(r$restscoreTable$asDF$diffLow[1], true_low)
+})
+
 test_that("partgamdif reuses the cutoff simulation when only display options change", {
   # Same state-cache pattern as iteminfit: the pgdifPlot state carries the
   # full cutoff object; .run re-validates via sig + prepared data + DIF
@@ -240,6 +314,59 @@ test_that("partgamdif reuses the cutoff simulation when only display options cha
   stale$sig$seed <- 99L
   r <- run_seeded(stale)
   expect_equal(r$pgdifTable$asDF$gammaLow[1], true_low)
+})
+
+test_that("partgamdif bootstrap p-values match easyRasch2 and flag on adjusted p", {
+  # 3.3.0: pValues + correction are passed through to easyRasch2::RMdifGamma()
+  # with an explicit p_value, since the package default resolves to TRUE
+  # whenever a cutoff object is supplied (easyRasch2 1.3.1.9001).
+  d <- dif_data()
+  items <- d[, dif_items()]
+  cutoff <- suppressWarnings(suppressMessages(
+    easyRasch2::RMdifGammaCutoff(items, dif_var = d$dif, iterations = 60,
+                                 parallel = FALSE, seed = 42,
+                                 hdci_width = 0.95)))
+  for (corr in c("fwer", "fdr_bh")) {
+    pkg <- suppressWarnings(suppressMessages(
+      easyRasch2::RMdifGamma(items, dif_var = d$dif, cutoff = cutoff,
+                             p_value = TRUE, correction = corr,
+                             output = "dataframe")))
+    r <- suppressWarnings(
+      er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                     computeCutoff = TRUE, iterations = 60, seed = 42,
+                     hdciWidth = 95, pValues = TRUE, correction = corr))
+    tab <- r$pgdifTable$asDF
+    expect_equal(tab$gamma, pkg$gamma)
+    expect_equal(tab$pValue, pkg$p_gamma)
+    expect_equal(tab$pAdjBoot, pkg$padj_gamma)
+    flags <- ifelse(is.na(as.character(tab$flagged)), "", as.character(tab$flagged))
+    expect_identical(flags, ifelse(pkg$flagged, "TRUE", ""))
+  }
+  expect_identical(r$pgdifTable$getColumn("pAdjBoot")$title,
+                   "Adj. p-value (BH)")
+  notes <- vapply(r$pgdifTable$notes, function(x) x$note, character(1))
+  expect_true(any(grepl("adjusted p-value < .05", notes, fixed = TRUE)))
+  expect_false(any(grepl("randomly", notes)))
+
+  # pValues = FALSE keeps the asymptotic BH columns and the interval rule
+  r_band <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                   computeCutoff = TRUE, iterations = 60, seed = 42,
+                   hdciWidth = 95, pValues = FALSE))
+  pkg_band <- suppressWarnings(suppressMessages(
+    easyRasch2::RMdifGamma(items, dif_var = d$dif, cutoff = cutoff,
+                           p_value = FALSE, output = "dataframe")))
+  tab_band <- r_band$pgdifTable$asDF
+  expect_equal(tab_band$padjBH, pkg_band$padj_bh)
+  expect_true(all(is.na(tab_band$pValue)))
+  expect_match(r_band$cutoffNote$content, "familywise error rate")
+
+  # stale pValues = TRUE without computeCutoff runs and stays inert
+  r_off <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                   pValues = TRUE))
+  expect_true(all(is.na(r_off$pgdifTable$asDF$pValue)))
+  expect_false(all(is.na(r_off$pgdifTable$asDF$padjBH)))
 })
 
 test_that("locdepq3 bootstrap p-values match easyRasch2 and flag on adjusted p", {
@@ -763,10 +890,15 @@ test_that("hidden cache elements declare a clearWith that outlives display toggl
                     cw(chg$changeCache)))
   # The retest simulation has its own dependencies and does not share the
   # enumeration's: alpha and direction cannot move it.
-  expect_true(all(c("retestIter", "retestBoot", "retestBootIter", "confInt") %in%
-                    cw(chg$retestCache)))
+  expect_true(all(c("retestIter", "retestBoot") %in% cw(chg$retestCache)))
   expect_false(any(c("alpha", "direction", "conditionalCrit") %in%
                      cw(chg$retestCache)))
+  # The bootstrap's own options matter only with the bootstrap on, so they
+  # are gated in the signature instead. Listed here, they would clear the
+  # cache while the bootstrap is off. The table still blinks on them.
+  expect_false(any(c("retestBootIter", "confInt") %in% cw(chg$retestCache)))
+  expect_true(all(c("retestBootIter", "confInt") %in%
+                    cw(chg$retestTable)))
 })
 
 test_that("reliability caches its estimates separately from the curve", {
@@ -826,8 +958,11 @@ test_that("the reliability curve figure is built once, not on every redraw", {
   r <- suppressWarnings(er2$reliability(
     data = d, vars = names(d), showCurve = TRUE,
     curveBoot = TRUE, curveBootIter = 50, seed = 42))
-  # Stored built rather than as a ggplot: see er2_plot_grob().
-  expect_s3_class(r$curvePlot$state$plot, "gtable")
+  # Stored built rather than as a ggplot: see er2_plot_grob(). Since 3.2.2
+  # the grob lives only in curveCache, which the render function reads, so
+  # the image element carries no second copy.
+  expect_s3_class(r$curveCache$state$curve_plot, "gtable")
+  expect_null(r$curvePlot$state)
 })
 
 test_that("band options count only while the band is drawn", {
@@ -876,4 +1011,109 @@ test_that("building figures in .run() opens no graphics device", {
   suppressWarnings(er2$personchange(data = cd, vars1 = change_t1(),
                                     vars2 = change_t2()))
   expect_identical(grDevices::dev.list(), before)
+})
+
+test_that("asymptotic p-value columns are hidden when bootstrap p-values replace them", {
+  # jmvcore only evaluates a `visible:` expression that starts with an option
+  # name after the parenthesis; "(!computeCutoff)" was returned as a string
+  # and so was always visible, leaving empty columns. 3.3.0 rewrites the
+  # negations as "(computeCutoff == FALSE ...)".
+  d <- dif_data()
+  vis <- function(res, tab, col) res[[tab]]$getColumn(col)$visible
+
+  boot <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                   computeCutoff = TRUE, iterations = 60, seed = 42))
+  expect_false(vis(boot, "pgdifTable", "padjBH"))
+  expect_false(vis(boot, "pgdifTable", "sig"))
+  expect_true(vis(boot, "pgdifTable", "pAdjBoot"))
+  band <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                   computeCutoff = TRUE, iterations = 60, seed = 42,
+                   pValues = FALSE))
+  expect_true(vis(band, "pgdifTable", "padjBH"))
+  expect_false(vis(band, "pgdifTable", "pAdjBoot"))
+
+  p <- poly_data()
+  rs <- suppressWarnings(
+    er2$itemrestscore(data = p, vars = names(p), computeCutoff = TRUE,
+                      iterations = 60, seed = 42))
+  expect_false(vis(rs, "restscoreTable", "pAdjusted"))
+  rs0 <- suppressWarnings(er2$itemrestscore(data = p, vars = names(p)))
+  expect_true(vis(rs0, "restscoreTable", "pAdjusted"))
+
+  ld <- suppressWarnings(
+    er2$locdepgamma(data = p, vars = names(p), computeCutoff = TRUE,
+                    iterations = 60, seed = 42))
+  for (tab in c("dir1Table", "dir2Table")) {
+    expect_false(vis(ld, tab, "padjBH"))
+    expect_false(vis(ld, tab, "sig"))
+  }
+})
+
+test_that("a failed simulation shows the asymptotic output, not empty simulation columns", {
+  # When computeCutoff is on but the simulation fails, the analyses fall back
+  # to the asymptotic results. Visibility then follows what was computed
+  # (set_columns_visible()), not the options.
+  fail <- function(...) stop("forced failure")
+  testthat::local_mocked_bindings(
+    RMdifGammaCutoff = fail,
+    RMitemRestscoreCutoff = fail,
+    RMitemInfitCutoff = fail,
+    RMlocdepGammaCutoff = fail,
+    RMlocdepQ3Cutoff = fail,
+    RMdimResidualPCACutoff = fail,
+    .package = "easyRasch2"
+  )
+  vis <- function(res, tab, col) res[[tab]]$getColumn(col)$visible
+
+  d <- dif_data()
+  dif <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                   computeCutoff = TRUE, iterations = 60, seed = 42))
+  expect_true(vis(dif, "pgdifTable", "padjBH"))
+  expect_true(vis(dif, "pgdifTable", "sig"))
+  for (cl in c("gammaLow", "gammaHigh", "flagged", "pValue", "pAdjBoot")) {
+    expect_false(vis(dif, "pgdifTable", cl), info = cl)
+  }
+  expect_false(dif$pgdifPlot$visible)
+  expect_false(all(is.na(dif$pgdifTable$asDF$padjBH)))
+  expect_match(dif$cutoffNote$content, "unavailable")
+
+  p <- poly_data()
+  rs <- suppressWarnings(
+    er2$itemrestscore(data = p, vars = names(p), computeCutoff = TRUE,
+                      iterations = 60, seed = 42))
+  expect_true(vis(rs, "restscoreTable", "pAdjusted"))
+  expect_false(vis(rs, "restscoreTable", "diffLow"))
+  expect_false(vis(rs, "restscoreTable", "pAdjBoot"))
+  expect_false(rs$restscorePlot$visible)
+
+  inf <- suppressWarnings(
+    er2$iteminfit(data = p, vars = names(p), computeCutoff = TRUE,
+                  iterations = 60, seed = 42))
+  for (cl in c("infitLow", "infitHigh", "misfit", "pValue", "pAdjusted")) {
+    expect_false(vis(inf, "infitTable", cl), info = cl)
+  }
+  expect_false(inf$infitPlot$visible)
+
+  ld <- suppressWarnings(
+    er2$locdepgamma(data = p, vars = names(p), computeCutoff = TRUE,
+                    iterations = 60, seed = 42))
+  expect_true(vis(ld, "dir1Table", "padjBH"))
+  expect_false(vis(ld, "dir1Table", "gammaLow"))
+  expect_false(ld$ldPlot$visible)
+
+  q3 <- suppressWarnings(
+    er2$locdepq3(data = p, vars = names(p), computeCutoff = TRUE,
+                 iterations = 60, seed = 42))
+  expect_false(q3$pairTable$visible)
+  expect_false(q3$cutoffTable$visible)
+  expect_false(q3$q3Plot$visible)
+
+  pca <- suppressWarnings(
+    er2$residualpca(data = p, vars = names(p), computeCutoff = TRUE,
+                    iterations = 60, seed = 42))
+  expect_false(vis(pca, "pcaTable", "cutoff"))
+  expect_false(vis(pca, "pcaTable", "flagged"))
 })

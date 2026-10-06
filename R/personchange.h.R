@@ -552,8 +552,6 @@ personchangeResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Clas
                     "method",
                     "retestIter",
                     "retestBoot",
-                    "retestBootIter",
-                    "confInt",
                     "seed",
                     "thetaMin",
                     "thetaMax")))

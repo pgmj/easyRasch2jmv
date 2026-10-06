@@ -1,3 +1,90 @@
+# easyRasch2jmv 3.3.0
+
+Built against easyRasch2 v1.4.0.
+
+## Item-Restscore Correlations
+
+- New *Simulation-based cutoffs* option, as in Conditional Item Infit. It
+  simulates datasets under the fitted model, refitting it in each, and flags
+  items on bootstrap p-values with Westfall-Young or FDR correction
+  (`easyRasch2::RMitemRestscoreCutoff()`). The table gains an expected range
+  for the difference, p-value and adjusted p-value columns, and a figure of
+  the simulated distributions.
+- Without that option, a table footnote says that the asymptotic p-values are
+  miscalibrated under the Rasch model: too many overfit flags in small
+  samples and too few underfit flags at any sample size. The values are
+  unchanged.
+
+## Partial Gamma DIF
+
+- *Simulation-based cutoffs* now flag items on bootstrap p-values with
+  Westfall-Young or FDR correction, as in the other simulation analyses. The
+  table gains p-value and adjusted p-value columns, and *Bootstrap p-values*
+  can be switched off to flag against the expected range instead. Defaults
+  move to 400 iterations and a 95% HDCI.
+- Simulated datasets now keep every respondent's group and total score. They
+  used to assign groups at random, which made the expected range too narrow
+  when the groups differ in trait level. **Expected ranges change (wider when
+  the groups differ).**
+
+## Partial Gamma DIF and Partial Gamma Local Dependence
+
+- The "Adj. p-value (BH)" column was a Bonferroni correction, as returned by
+  `iarm`. It is now a Benjamini-Hochberg adjustment. **Adjusted p-values
+  change (smaller), and more items or pairs can get stars.**
+- Partial Gamma Local Dependence no longer shows the asymptotic p-value and
+  significance columns empty when bootstrap p-values are switched on.
+
+## Conditional Item Infit and Item-Restscore Correlations
+
+- When items are flagged in both directions, a table footnote says that
+  misfit in one direction can produce flags in the other, and suggests
+  removing the clearest misfit and testing again. Results are unchanged.
+
+## Bootstrap Item-Restscore
+
+- A table footnote and the analysis description no longer present the
+  analysis as a fix for large samples. Each iteration uses the miscalibrated
+  asymptotic test, so the percentages are flag rates at the bootstrap sample
+  size, not probabilities of misfit, and Item-Restscore Correlations with
+  simulation-based cutoffs is the test of item fit. Results are unchanged.
+
+## Q3 Residual Correlation Matrix
+
+- With missing responses, simulated datasets now keep each respondent's
+  pattern of missing items. Before, they were complete, which made the
+  expected range too narrow and the p-values too small. **Cutoffs and
+  p-values change (wider) for data with missing responses** and are
+  identical for complete data.
+
+## Person Change
+
+- *Interval width* now sits under *Bootstrap interval for the retest SD*,
+  and is greyed out when the bootstrap is off. Changing it no longer reruns
+  the retest SD simulation when there is no interval to size. Results are
+  unchanged.
+
+## Targeting
+
+- The bottom panel's dropdown is relabelled *Panel content*. Saved analyses
+  load as before.
+
+## Conditional Item Characteristic Curves
+
+- Observed means and their error bars are drawn larger, and all text is
+  slightly larger. Results do not change.
+
+## All analyses with simulation-based cutoffs
+
+- If the simulation fails (for example with very sparse data), the table now
+  shows the asymptotic results it falls back to, and hides the empty
+  simulation columns and plots. Results are unchanged.
+
+## Speed
+
+- Reliability and Dynamic CFA Fit-Index Cutoffs are faster, with identical
+  results.
+
 # easyRasch2jmv 3.2.2
 
 **The RMU reliability coefficient changes with default settings.** The two

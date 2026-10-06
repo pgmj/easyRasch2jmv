@@ -19,3 +19,28 @@ children:
     children:
       - type: CheckBox
         name: sortByDiff
+
+  - type: LayoutBox
+    margin: large
+    children:
+      - type: CheckBox
+        name: computeCutoff
+        children:
+          - type: LayoutBox
+            margin: large
+            children:
+              - type: TextBox
+                name: hdciWidth
+                format: number
+                suffix: "%"
+              - type: TextBox
+                name: iterations
+                format: number
+              - type: TextBox
+                name: seed
+                format: number
+              - type: CheckBox
+                name: pValues
+                children:
+                  - type: ComboBox
+                    name: correction

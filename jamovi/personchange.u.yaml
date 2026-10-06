@@ -99,10 +99,10 @@ children:
                           - type: TextBox
                             name: retestBootIter
                             format: number
-                  - type: TextBox
-                    name: confInt
-                    format: number
-                    suffix: "%"
+                          - type: TextBox
+                            name: confInt
+                            format: number
+                            suffix: "%"
                   - type: TextBox
                     name: seed
                     format: number

@@ -14,9 +14,12 @@ description:
         Partial Credit model is refitted by conditional maximum likelihood
         (psychotools::pcmodel), and items are classified as overfit,
         underfit, or no misfit based on the BH-adjusted p-value (< .05) from
-        iarm::item_restscore() and the sign of (observed - expected). Useful
-        with large samples where the asymptotic test can flag items that are
-        not practically misfitting. The bootstrap is numerically identical
+        iarm::item_restscore() and the sign of (observed - expected). Each
+        iteration uses that asymptotic test, so the results inherit its
+        miscalibration at the bootstrap sample size, and the percentages are
+        flag rates at that size rather than probabilities of misfit. For a
+        test of item fit, use Item-Restscore Correlations with
+        simulation-based cutoffs. The bootstrap is numerically identical
         to easyRasch2::RMitemRestscoreBoot() with the same seed and
         iterations. Single-core sequential processing is used.
 

@@ -166,6 +166,18 @@ locdepgammaClass <- R6::R6Class(
           isTRUE(self$options$pValues) &&
           !is.null(cutoff_res)
 
+        # Visibility follows what was computed, not the options: if the
+        # simulation failed, the simulation columns would otherwise show
+        # empty (see set_columns_visible()).
+        sim_ok <- !is.null(cutoff_res)
+        for (tbl in list(self$results$dir1Table, self$results$dir2Table)) {
+          set_columns_visible(tbl, c("gammaPair", "gammaLow", "gammaHigh",
+                                     "flagged"), sim_ok)
+          set_columns_visible(tbl, c("pValue", "pAdjusted"), use_pvalues)
+          set_columns_visible(tbl, c("padjBH", "sig"), !use_pvalues)
+        }
+        set_elements_visible(list(self$results$ldPlot), sim_ok)
+
         result_list <- suppressWarnings(suppressMessages(
           easyRasch2::RMlocdepGamma(
             df,

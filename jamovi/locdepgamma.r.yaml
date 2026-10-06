@@ -58,11 +58,11 @@ items:
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
-            visible: (!(computeCutoff && pValues))
+            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: sig
             title: p-value sign.
             type: text
-            visible: (!(computeCutoff && pValues))
+            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: gammaLow
             title: Lower
             type: number
@@ -143,11 +143,11 @@ items:
             title: Adj. p-value (BH)
             type: number
             format: zto,pvalue
-            visible: (!(computeCutoff && pValues))
+            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: sig
             title: p-value sign.
             type: text
-            visible: (!(computeCutoff && pValues))
+            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: gammaLow
             title: Lower
             type: number

@@ -363,11 +363,24 @@ padjusted_title <- function(correction) {
 #' @param actual Number of successful simulation iterations.
 #' @param floor Calibrated iteration floor, or `NULL` for the generic
 #'   wording.
+#' @param count_stated Logical. `TRUE` when the sentence before already
+#'   gives the number of iterations, so the caveat does not repeat it. The
+#'   calling note then also omits `iteration_note()`, whose advice the
+#'   caveat covers.
 #' @return Character scalar (possibly "") with a leading space.
 #' @noRd
-pvalue_iteration_caveat <- function(actual, floor = NULL) {
+pvalue_iteration_caveat <- function(actual, floor = NULL,
+                                    count_stated = FALSE) {
   if (actual >= 1000L) return("")
   if (is.null(floor)) {
+    if (count_stated) {
+      return(paste0(
+        " With fewer than 1000 iterations the multiple-comparison ",
+        "correction of the bootstrap p-values is liberal and small p-values ",
+        "are imprecise, so at least 1000 are recommended when reporting ",
+        "p-values."
+      ))
+    }
     return(paste0(
       " The bootstrap p-values are based on only ", actual, " simulation ",
       "iterations; with few iterations the multiple-comparison correction ",
@@ -376,6 +389,15 @@ pvalue_iteration_caveat <- function(actual, floor = NULL) {
     ))
   }
   if (actual < floor) {
+    if (count_stated) {
+      return(paste0(
+        " This is below the calibrated floor of ", floor, " for the ",
+        "bootstrap p-values, where the multiple-comparison correction is ",
+        "mildly liberal and the familywise error rate is above the nominal ",
+        "level. Use at least ", floor, ", and 1000 to 2000 for a final ",
+        "analysis (Johansson, 2026)."
+      ))
+    }
     paste0(
       " The bootstrap p-values are based on only ", actual, " simulation ",
       "iterations, below the calibrated floor of ", floor, ". Below that the ",
@@ -384,12 +406,17 @@ pvalue_iteration_caveat <- function(actual, floor = NULL) {
     )
   } else {
     paste0(
-      " The bootstrap p-values are based on ", actual, " simulation ",
-      "iterations. Error rates are calibrated at this many, but decisions ",
-      "are still somewhat seed-dependent: two analysts using different ",
-      "seeds disagree about at least one item roughly 10% of the time at ",
-      "400 iterations against 4% at 2000, so 1000 to 2000 is advisable for ",
-      "a final analysis (Johansson, 2026)."
+      if (count_stated) {
+        " The bootstrap p-values have calibrated error rates at this many "
+      } else {
+        paste0(" The bootstrap p-values are based on ", actual, " simulation ",
+               "iterations. Error rates are calibrated at this many, ")
+      },
+      if (count_stated) "iterations, " else "",
+      "but decisions are still somewhat seed-dependent: two analysts using ",
+      "different seeds disagree about at least one item roughly 10% of the ",
+      "time at 400 iterations against 4% at 2000, so 1000 to 2000 is ",
+      "advisable for a final analysis (Johansson, 2026)."
     )
   }
 }
@@ -495,6 +522,32 @@ interval_flagging_note <- function(width, n_comparisons, unit = "items") {
   )
 }
 
+#' Footnote for items flagged in both directions, or NULL
+#'
+#' Item infit and item-restscore judge each item against a model fitted to all
+#' items, so misfit in one direction can produce flags in the other. In
+#' simulation, two overfitting items among seven led to about 6% of the fitting
+#' items being flagged as underfit (easyRasch2 `dev/restscore_power_conditional.qmd`).
+#' Shown only when the Flagged column holds both labels, so the table stays
+#' uncluttered otherwise. Returns `NULL` rather than "" so that
+#' `Table$setNote(key, NULL)` removes a note left over from an earlier run.
+#'
+#' @param flags Character vector of the Flagged column (`"overfit"`,
+#'   `"underfit"` or `""`), or `NULL` when nothing is flagged on.
+#' @return Character scalar, or `NULL`.
+#' @noRd
+bidirectional_flag_note <- function(flags) {
+  if (is.null(flags) ||
+      !all(c("overfit", "underfit") %in% as.character(flags))) {
+    return(NULL)
+  }
+  paste0(
+    "Items are flagged in both directions. Misfit in one direction can ",
+    "produce flags in the other, so consider removing the clearest misfit ",
+    "and testing again before interpreting the rest."
+  )
+}
+
 #' Response-category labels shared by every selected item, or NULL
 #'
 #' The `"categories"` panel of `easyRasch2::RMtargeting()` takes one label per
@@ -539,4 +592,34 @@ shared_category_labels <- function(data, vars, n_categories) {
 
   if (is.null(labs) || length(labs) != n_categories) return(NULL)
   labs
+}
+
+#' Show simulation-based output only when the simulation delivered it
+#'
+#' Result visibility is declared in the `.r.yaml` files from the options,
+#' e.g. `visible: (computeCutoff)`. When simulation-based cutoffs are
+#' requested but the simulation fails (an error, or fewer than 20
+#' successful iterations), the analysis falls back to its asymptotic output.
+#' Visibility read from the options would then show the simulation columns
+#' and plots empty, and hide asymptotic columns that were filled. These two
+#' helpers set visibility from what was computed instead, and are called
+#' once the fallback is known. An unknown column name is an error, so a
+#' renamed column fails in the tests rather than silently.
+#'
+#' @param table A jmvcore Table.
+#' @param cols Character vector of column names.
+#' @param elements List of jmvcore results elements (tables, images).
+#' @param visible Logical scalar.
+#' @return Invisibly `NULL`, called for its side effect.
+#' @noRd
+set_columns_visible <- function(table, cols, visible) {
+  for (cl in cols) table$getColumn(cl)$setVisible(isTRUE(visible))
+  invisible(NULL)
+}
+
+#' @rdname set_columns_visible
+#' @noRd
+set_elements_visible <- function(elements, visible) {
+  for (el in elements) el$setVisible(isTRUE(visible))
+  invisible(NULL)
 }

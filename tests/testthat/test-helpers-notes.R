@@ -133,3 +133,29 @@ test_that("analyses that cite the 2026 preprint list it as a reference", {
     expect_true("johansson2026_cutoffs" %in% used, info = a)
   }
 })
+
+test_that("bidirectional_flag_note appears only with flags in both directions", {
+  both <- er2$bidirectional_flag_note(c("overfit", "", "underfit"))
+  expect_match(both, "both directions")
+  expect_match(both, "removing the clearest misfit")
+  # NULL, not "", so setNote() removes a note left over from an earlier run
+  expect_null(er2$bidirectional_flag_note(c("overfit", "", "")))
+  expect_null(er2$bidirectional_flag_note(c("underfit", "underfit")))
+  expect_null(er2$bidirectional_flag_note(c("", "")))
+  expect_null(er2$bidirectional_flag_note(NULL))
+})
+
+test_that("pvalue_iteration_caveat with count_stated does not repeat the count", {
+  low <- er2$pvalue_iteration_caveat(200L, floor = 400L, count_stated = TRUE)
+  expect_match(low, "below the calibrated floor of 400")
+  expect_match(low, "1000 to 2000")
+  expect_false(grepl("based on", low))
+  mid <- er2$pvalue_iteration_caveat(400L, floor = 400L, count_stated = TRUE)
+  expect_match(mid, "seed-dependent")
+  expect_false(grepl("based on", mid))
+  gen <- er2$pvalue_iteration_caveat(400L, count_stated = TRUE)
+  expect_match(gen, "at least 1000")
+  expect_false(grepl("based on", gen))
+  expect_identical(
+    er2$pvalue_iteration_caveat(1000L, floor = 400L, count_stated = TRUE), "")
+})

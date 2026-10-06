@@ -1,15 +1,15 @@
 Package: easyRasch2jmv
 Type: Package
 Title: easyRasch2 for Jamovi
-Version: 3.2.2
-Date: 2026-09-22
+Version: 3.3.0
+Date: 2026-10-06
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description:  Provides Rasch analysis functions for jamovi. All analyses delegate
   their computations to the easyRasch2 R package (conditional maximum
   likelihood estimation via psychotools with Warm's weighted likelihood
-  person estimates; iarm for the conditional item-fit and partial-gamma
-  statistics; eRm for Andersen's LR test; lavaan for the CFA checks),
+  person estimates; iarm for the asymptotic item-restscore and
+  partial-gamma tests; eRm for Andersen's LR test; lavaan for the CFA checks),
   so results are numerically identical to easyRasch2 with the same
   seeds and iterations.
 License: GPL (>= 3)
@@ -17,7 +17,7 @@ Encoding: UTF-8
 Imports:
     jmvcore (>= 0.8.5),
     R6,
-    easyRasch2 (>= 1.3.1),
+    easyRasch2 (>= 1.4.0),
     eRm,
     iarm,
     lavaan,
@@ -37,7 +37,7 @@ Imports:
     psychotree,
     partykit,
     difR
-Remotes: pgmj/easyRasch2@238b13082bfb2413b181097d1754592dbfa0e0c2
+Remotes: pgmj/easyRasch2@b45f3a39d9be7a3a6a2bfe9e62708353c6bf9440
 Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

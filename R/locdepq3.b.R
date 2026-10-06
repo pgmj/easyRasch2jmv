@@ -199,6 +199,17 @@ locdepq3Class <- R6::R6Class(
             isTRUE(self$options$pValues) &&
             !is.null(cutoff_res)
 
+          # Visibility follows what was computed, not the options: if the
+          # simulation failed, the simulation tables and plots would
+          # otherwise show empty (see set_columns_visible()).
+          sim_ok <- !is.null(cutoff_res)
+          set_elements_visible(list(
+            self$results$matrixPlot, self$results$cutoffTable,
+            self$results$q3Plot, self$results$pairTable
+          ), sim_ok)
+          set_columns_visible(self$results$pairTable,
+                              c("pValue", "pAdjusted"), use_pvalues)
+
           if (!is.null(cutoff_res)) {
             res <- suppressWarnings(suppressMessages(easyRasch2::RMlocdepQ3(
               df, cutoff = cutoff_res, output = "dataframe",

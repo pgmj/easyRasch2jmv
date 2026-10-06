@@ -95,7 +95,7 @@ options:
       max: 99.9
 
     - name: panel
-      title: Bottom panel
+      title: Panel content
       type: List
       options:
           - name: categories

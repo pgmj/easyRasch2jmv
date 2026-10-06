@@ -236,6 +236,14 @@ iteminfitmiClass <- R6::R6Class(
           }
         }
 
+        # Visibility follows what was computed, not the options: if the
+        # simulation failed, the simulation columns would otherwise show
+        # empty (see set_columns_visible()).
+        sim_ok <- !is.null(cutoff_res)
+        set_columns_visible(self$results$infitTable,
+                            c("infitLow", "infitHigh", "misfit"), sim_ok)
+        set_elements_visible(list(self$results$infitPlot), sim_ok)
+
         # Per-imputation CML fits + Rubin pooling. Failed imputations are
         # tolerated upstream (one warning per failure, at least 2 successes
         # required); the per-imputation warnings are counted here so the

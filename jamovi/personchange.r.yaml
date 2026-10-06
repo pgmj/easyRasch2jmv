@@ -235,8 +235,9 @@ items:
     # signature inside changeCache, because it depends on a different set of
     # options: the iteration counts and the bootstrap move it and nothing
     # else, while the enumeration's own options do not touch it. clearWith
-    # mirrors retestTable's list, and leaves out estimateRetestSd, which is
-    # the toggle the cache exists to absorb.
+    # mirrors retestTable's list, but leaves out estimateRetestSd, which is
+    # the toggle the cache exists to absorb, and retestBootIter and confInt,
+    # which matter only with the bootstrap on and are gated in the signature.
     - name: retestCache
       title: ''
       type: Html
@@ -248,8 +249,6 @@ items:
           - method
           - retestIter
           - retestBoot
-          - retestBootIter
-          - confInt
           - seed
           - thetaMin
           - thetaMax

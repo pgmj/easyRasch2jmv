@@ -156,7 +156,10 @@ ciccClass <- R6::R6Class(
           output          = "patchwork"
         )
       ))
-      p <- er2_bump_text(p)
+      # Observed means and their error bars are the point of the figure, so
+      # they are drawn larger than the package default, as is all text.
+      p <- er2_scale_layers(p, point = 1.55, line = 1.6, text = 1.3)
+      p <- er2_bump_text(p, size = 17)
 
       print(p)
       TRUE

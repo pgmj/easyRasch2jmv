@@ -551,7 +551,8 @@ personchangeClass <- R6::R6Class(
         boot      = isTRUE(self$options$retestBoot),
         boot_iter = if (isTRUE(self$options$retestBoot))
                       self$options$retestBootIter else NA_integer_,
-        conf_int  = self$options$confInt,
+        conf_int  = if (isTRUE(self$options$retestBoot))
+                      self$options$confInt else NA_real_,
         seed      = self$options$seed,
         theta     = theta_range
       )

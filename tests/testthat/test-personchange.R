@@ -270,6 +270,40 @@ test_that("the retest SD simulation is cached on its own signature", {
   expect_false(isTRUE(all.equal(sd_of(run(tampered, iter = 80)), 1.234)))
 })
 
+test_that("the interval width reruns the retest SD only with the bootstrap on", {
+  # RMretestSD() reads conf_int only inside the bootstrap, so with the
+  # bootstrap off the width cannot move any number and must not cost a
+  # simulation. The clearWith half of this is asserted in test-behavior.R,
+  # since setState() writes past it.
+  d <- change_data()
+  run <- function(state, boot, width) {
+    opts <- er2$personchangeOptions$new(
+      vars1 = change_t1(), vars2 = change_t2(),
+      estimateRetestSd = TRUE, retestIter = 60, retestBootIter = 60,
+      retestBoot = boot, confInt = width)
+    an <- er2$personchangeClass$new(options = opts, data = d)
+    if (!is.null(state)) an$results$retestCache$setState(state)
+    suppressWarnings(an$run())
+    an$results
+  }
+  sd_of <- function(r) {
+    rt <- r$retestTable$asDF
+    rt$value[rt$quantity == "Retest SD per occasion"]
+  }
+
+  off <- run(NULL, boot = FALSE, width = 95)$retestCache$state
+  tampered <- off
+  tampered$res$sd[1L] <- 1.234
+  expect_equal(sd_of(run(tampered, boot = FALSE, width = 80)), 1.234)
+
+  # With the bootstrap on, the width sizes the interval and is a miss.
+  on <- run(NULL, boot = TRUE, width = 95)$retestCache$state
+  tampered <- on
+  tampered$res$sd[1L] <- 1.234
+  expect_false(isTRUE(all.equal(
+    sd_of(run(tampered, boot = TRUE, width = 80)), 1.234)))
+})
+
 test_that("both tables are structured and labelled before .run()", {
   # The pairing table exists to be read before the figure it validates, so
   # it must not wait on the enumeration. rows: (vars1) plus a prefill in

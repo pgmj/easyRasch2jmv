@@ -212,7 +212,7 @@ targetingClass <- R6::R6Class(
         } else {
           paste0(
             " The bottom panel is the dot-and-whisker plot of item ",
-            "thresholds. Switch <i>Bottom panel</i> to see where each ",
+            "thresholds. Switch <i>Panel content</i> to see where each ",
             "response category is the most likely answer."
           )
         }

@@ -9,9 +9,11 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             vars = NULL,
             difVar = NULL,
             computeCutoff = FALSE,
-            hdciWidth = 99,
-            iterations = 250,
+            hdciWidth = 95,
+            iterations = 400,
             seed = 42,
+            pValues = TRUE,
+            correction = "fwer",
             sortByGamma = FALSE,
             showSE = FALSE,
             showTileplot = FALSE,
@@ -48,19 +50,31 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             private$..hdciWidth <- jmvcore::OptionNumber$new(
                 "hdciWidth",
                 hdciWidth,
-                default=99,
+                default=95,
                 min=50,
-                max=100)
+                max=99.9)
             private$..iterations <- jmvcore::OptionInteger$new(
                 "iterations",
                 iterations,
-                default=250,
+                default=400,
                 min=50,
                 max=5000)
             private$..seed <- jmvcore::OptionInteger$new(
                 "seed",
                 seed,
                 default=42)
+            private$..pValues <- jmvcore::OptionBool$new(
+                "pValues",
+                pValues,
+                default=TRUE)
+            private$..correction <- jmvcore::OptionList$new(
+                "correction",
+                correction,
+                options=list(
+                    "fwer",
+                    "fdr_bh",
+                    "fdr_by"),
+                default="fwer")
             private$..sortByGamma <- jmvcore::OptionBool$new(
                 "sortByGamma",
                 sortByGamma,
@@ -89,6 +103,8 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
             self$.addOption(private$..hdciWidth)
             self$.addOption(private$..iterations)
             self$.addOption(private$..seed)
+            self$.addOption(private$..pValues)
+            self$.addOption(private$..correction)
             self$.addOption(private$..sortByGamma)
             self$.addOption(private$..showSE)
             self$.addOption(private$..showTileplot)
@@ -102,6 +118,8 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         hdciWidth = function() private$..hdciWidth$value,
         iterations = function() private$..iterations$value,
         seed = function() private$..seed$value,
+        pValues = function() private$..pValues$value,
+        correction = function() private$..correction$value,
         sortByGamma = function() private$..sortByGamma$value,
         showSE = function() private$..showSE$value,
         showTileplot = function() private$..showTileplot$value,
@@ -114,6 +132,8 @@ partgamdifOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
         ..hdciWidth = NA,
         ..iterations = NA,
         ..seed = NA,
+        ..pValues = NA,
+        ..correction = NA,
         ..sortByGamma = NA,
         ..showSE = NA,
         ..showTileplot = NA,
@@ -148,7 +168,10 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "henninger2024",
                     "mueller2022",
                     "zeileis2026",
-                    "kay2025"),
+                    "kay2025",
+                    "johansson2026_cutoffs",
+                    "ferreira2024",
+                    "westfallyoung1993"),
                 clearWith=list(
                     "vars",
                     "difVar",
@@ -156,6 +179,8 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "hdciWidth",
                     "iterations",
                     "seed",
+                    "pValues",
+                    "correction",
                     "sortByGamma"),
                 columns=list(
                     list(
@@ -191,11 +216,13 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `name`="padjBH", 
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
-                        `type`="text"),
+                        `type`="text", 
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="gammaLow", 
                         `title`="Lower", 
@@ -210,6 +237,18 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `format`="zto", 
                         `visible`="(computeCutoff)", 
                         `superTitle`="Expected range"),
+                    list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjBoot", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
@@ -226,6 +265,8 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     "hdciWidth",
                     "iterations",
                     "seed",
+                    "pValues",
+                    "correction",
                     "showSE")))
             self$add(jmvcore::Image$new(
                 options=options,
@@ -283,13 +324,14 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' Computes partial gamma coefficients for Differential Item
 #' Functioning (DIF) via the easyRasch2 R package
 #' (iarm::partgam_DIF()): the association between each item and the
-#' DIF variable, controlling for the rest score. Optionally
-#' determines simulation-based expected ranges via parametric
-#' bootstrap (data are simulated from the fitted model and the DIF
-#' variable is randomly reassigned with preserved group proportions,
-#' so the simulated data contain no true DIF). Results are identical
-#' to easyRasch2::RMdifGamma() and RMdifGammaCutoff() with the same
-#' seed and iterations. A response-distribution tileplot
+#' DIF variable, controlling for the total score. Optionally
+#' determines simulation-based expected ranges and bootstrap p-values
+#' with a multiple-comparison correction. Each simulated dataset keeps
+#' every respondent's group and total score and redraws their
+#' response pattern from the fitted Rasch model given that score, so
+#' it contains no DIF. Results are identical to
+#' easyRasch2::RMdifGamma() and RMdifGammaCutoff() with the same seed
+#' and iterations. A response-distribution tileplot
 #' (easyRasch2::RMplotTile()) is available for inspecting per-group
 #' category counts. Single-core sequential processing is used.
 #' 
@@ -303,6 +345,8 @@ partgamdifBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' @param hdciWidth .
 #' @param iterations .
 #' @param seed .
+#' @param pValues .
+#' @param correction .
 #' @param sortByGamma .
 #' @param showSE .
 #' @param showTileplot .
@@ -328,9 +372,11 @@ partgamdif <- function(
     vars,
     difVar,
     computeCutoff = FALSE,
-    hdciWidth = 99,
-    iterations = 250,
+    hdciWidth = 95,
+    iterations = 400,
     seed = 42,
+    pValues = TRUE,
+    correction = "fwer",
     sortByGamma = FALSE,
     showSE = FALSE,
     showTileplot = FALSE,
@@ -357,6 +403,8 @@ partgamdif <- function(
         hdciWidth = hdciWidth,
         iterations = iterations,
         seed = seed,
+        pValues = pValues,
+        correction = correction,
         sortByGamma = sortByGamma,
         showSE = showSE,
         showTileplot = showTileplot,

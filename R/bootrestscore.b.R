@@ -219,6 +219,21 @@ bootrestscoreClass <- R6::R6Class(
           "Flagged = the item was classified as overfit (or underfit) in ",
           "more than ", cutoff, "% of the bootstrap iterations."
         ))
+        # Each iteration runs the asymptotic iarm test, whose calibration
+        # under the Rasch model is shown in easyRasch2's
+        # dev/restscore_asymptotic_null.qmd. Mirrors the "calibration" note
+        # of the item-restscore analysis and the RMitemRestscoreBoot() help.
+        table$setNote("calibration", paste0(
+          "Each iteration uses the asymptotic item-restscore test, which is ",
+          "miscalibrated under the Rasch model: too many overfit flags in ",
+          "small or mistargeted samples of dichotomous items, too few flags ",
+          "in large polytomous samples, and too few underfit flags at any ",
+          "sample size. The percentages are how often that test flags an ",
+          "item in samples of this size, not probabilities of misfit, and a ",
+          "low underfit percentage is weak evidence of fit. For a test of ",
+          "item fit, use Item-Restscore Correlations with Simulation-based ",
+          "cutoffs."
+        ))
         table$setNote("loc", paste0(
           "Rel. location = item location relative to the mean person ",
           "location (weighted likelihood estimates, WLE; full sample)."

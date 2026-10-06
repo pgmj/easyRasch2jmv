@@ -129,6 +129,16 @@ iteminfitClass <- R6::R6Class(
           isTRUE(self$options$pValues) &&
           !is.null(cutoff_res)
 
+        # Visibility follows what was computed, not the options: if the
+        # simulation failed, the simulation columns would otherwise show
+        # empty (see set_columns_visible()).
+        sim_ok <- !is.null(cutoff_res)
+        set_columns_visible(self$results$infitTable,
+                            c("infitLow", "infitHigh", "misfit"), sim_ok)
+        set_columns_visible(self$results$infitTable,
+                            c("pValue", "pAdjusted"), use_pvalues)
+        set_elements_visible(list(self$results$infitPlot), sim_ok)
+
         # Observed conditional infit (+ expected range and flags when the
         # cutoff simulation succeeded, + bootstrap p-values when requested).
         # The package's below-1000-iterations warning is suppressed with the
@@ -231,6 +241,10 @@ iteminfitClass <- R6::R6Class(
             )
           )
         }
+        table$setNote(
+          "bidirectional",
+          bidirectional_flag_note(if (!is.null(cutoff_res)) results$Flagged)
+        )
 
         # 7. Set cutoff note (HTML element below the table). Always set
         # non-empty content on the success path so a stale "requires at
@@ -246,13 +260,18 @@ iteminfitClass <- R6::R6Class(
             cutoff_res$actual_iterations, " simulation iterations (",
             method_label, ") drawn from the same n = ", n_complete,
             " complete cases.",
-            iteration_note(self$options$iterations, 400L, corrected = TRUE),
+            # With p-values the caveat carries the iteration advice, so the
+            # general recommendation would repeat it.
+            if (!use_pvalues) {
+              iteration_note(self$options$iterations, 400L, corrected = TRUE)
+            },
             iteration_attrition_note(
               cutoff_res$actual_iterations,
               self$options$iterations
             ),
             if (use_pvalues) {
-              pvalue_iteration_caveat(cutoff_res$actual_iterations, floor = 400L)
+              pvalue_iteration_caveat(cutoff_res$actual_iterations,
+                                      floor = 400L, count_stated = TRUE)
             } else {
               # Flagging falls back to the expected range, whose width sets
               # a familywise error rate the user has not chosen explicitly.

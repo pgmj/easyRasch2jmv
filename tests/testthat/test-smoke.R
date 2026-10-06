@@ -17,6 +17,15 @@ test_that("itemrestscore runs on polytomous and dichotomous data", {
     er2$itemrestscore(data = dich_data(), vars = names(dich_data()))))
 })
 
+test_that("itemrestscore runs with simulation-based cutoffs", {
+  d <- poly_data()
+  expect_no_error(suppressWarnings(
+    r <- er2$itemrestscore(data = d, vars = names(d),
+                           computeCutoff = TRUE, iterations = 60)))
+  expect_gt(r$restscoreTable$rowCount, 0)
+  expect_false(all(is.na(r$restscoreTable$asDF$pAdjBoot)))
+})
+
 test_that("bootstrap item-restscore runs", {
   d <- dich_data()
   expect_no_error(suppressWarnings(

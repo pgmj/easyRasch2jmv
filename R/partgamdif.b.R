@@ -3,12 +3,21 @@ partgamdifClass <- R6::R6Class(
   "partgamdifClass",
   inherit = partgamdifBase,
   private = list(
+    .init = function() {
+      # The bootstrap adjusted-p column names its correction method, as in
+      # the infit and item-restscore analyses. The asymptotic column keeps
+      # its fixed BH title.
+      self$results$pgdifTable$getColumn("pAdjBoot")$setTitle(
+        padjusted_title(self$options$correction)
+      )
+    },
+
     .run = function() {
-      # 1. Return early / explain if requirements not met. With 2 items
-      # the rest score reduces to the other item of the pair and
-      # partgam_DIF returns mirror-duplicate rows (gamma_1 = -gamma_2,
-      # identical SE and p), i.e. a single coarsely-conditioned test
-      # shown twice -- so at least 3 items are required.
+      # 1. Return early / explain if requirements not met. Partial gamma
+      # conditions on the total score, and with 2 items the total score
+      # fixes one item's response given the other, so partgam_DIF returns
+      # mirror-duplicate rows (gamma_1 = -gamma_2, identical SE and p),
+      # i.e. a single test shown twice -- so at least 3 items are required.
       if (is.null(self$options$vars) || length(self$options$vars) == 0)
         return()
       if (is.null(self$options$difVar))
@@ -16,9 +25,9 @@ partgamdifClass <- R6::R6Class(
       if (length(self$options$vars) < 3) {
         self$results$cutoffNote$setContent(paste0(
           "<p>This analysis requires at least <b>3 items</b>. With only 2 ",
-          "items the rest score (total score minus the item) reduces to ",
-          "the other item, and the two rows of the table become mirror ",
-          "duplicates of a single test. Select at least 3 items.</p>"
+          "items the total score fixes the response to one item given the ",
+          "other, so the two rows of the table become mirror images of a ",
+          "single test. Select at least 3 items.</p>"
         ))
         return()
       }
@@ -80,12 +89,12 @@ partgamdifClass <- R6::R6Class(
 
       tryCatch({
         # All computation is delegated to the easyRasch2 package
-        # (iarm::partgam_DIF() for the observed statistics; parametric
-        # bootstrap with a randomly reassigned DIF variable for the
-        # expected ranges). Results are numerically identical to
-        # RMdifGamma() / RMdifGammaCutoff() with the same seed and
-        # iterations. Package warnings are suppressed -- the module
-        # surfaces its own footnotes.
+        # (iarm::partgam_DIF() for the observed statistics; a conditional
+        # parametric bootstrap that keeps each respondent's group and total
+        # score for the expected ranges and p-values). Results are
+        # numerically identical to RMdifGamma() / RMdifGammaCutoff() with
+        # the same seed and iterations. Package warnings are suppressed --
+        # the module surfaces its own footnotes.
 
         # Optionally compute cutoffs first (they feed RMdifGamma). If the
         # simulation cannot deliver reliable cutoffs, degrade gracefully:
@@ -144,12 +153,36 @@ partgamdifClass <- R6::R6Class(
           }
         }
 
+        # `p_value` is passed explicitly rather than left to the package
+        # default, which is NULL from easyRasch2 1.3.1.9001 and resolves on
+        # the presence of a cutoff object. The pValues option can hold a
+        # stale TRUE while greyed out (jamovi disables but does not reset
+        # nested options), hence the explicit computeCutoff gate, as in the
+        # other simulation analyses. The two branches return different
+        # columns: with p-values the asymptotic `padj_bh` and `Significance`
+        # are dropped in favour of `p_gamma` and `padj_gamma`.
+        use_pvalues <- isTRUE(self$options$computeCutoff) &&
+          isTRUE(self$options$pValues) &&
+          !is.null(cutoff_res)
+
+        # Visibility follows what was computed, not the options: if the
+        # simulation failed, the simulation columns would otherwise show
+        # empty (see set_columns_visible()).
+        sim_ok <- !is.null(cutoff_res)
+        tbl <- self$results$pgdifTable
+        set_columns_visible(tbl, c("gammaLow", "gammaHigh", "flagged"), sim_ok)
+        set_columns_visible(tbl, c("pValue", "pAdjBoot"), use_pvalues)
+        set_columns_visible(tbl, c("padjBH", "sig"), !use_pvalues)
+        set_elements_visible(list(self$results$pgdifPlot), sim_ok)
+
         pgam_df <- suppressWarnings(suppressMessages(
           easyRasch2::RMdifGamma(
             df,
-            dif_var = dif_vec,
-            cutoff  = cutoff_res,
-            output  = "dataframe"
+            dif_var    = dif_vec,
+            cutoff     = cutoff_res,
+            p_value    = use_pvalues,
+            correction = self$options$correction,
+            output     = "dataframe"
           )
         ))
 
@@ -169,10 +202,15 @@ partgamdifClass <- R6::R6Class(
             gamma  = pgam_df$gamma[i],
             se     = pgam_df$se[i],
             lower  = pgam_df$lower[i],
-            upper  = pgam_df$upper[i],
-            padjBH = pgam_df$padj_bh[i],
-            sig    = pgam_df$Significance[i]
+            upper  = pgam_df$upper[i]
           )
+          if (use_pvalues) {
+            vals$pValue   <- pgam_df$p_gamma[i]
+            vals$pAdjBoot <- pgam_df$padj_gamma[i]
+          } else {
+            vals$padjBH <- pgam_df$padj_bh[i]
+            vals$sig    <- pgam_df$Significance[i]
+          }
           if (!is.null(cutoff_res)) {
             vals$gammaLow  <- pgam_df$gamma_low[i]
             vals$gammaHigh <- pgam_df$gamma_high[i]
@@ -182,19 +220,39 @@ partgamdifClass <- R6::R6Class(
         }
 
         # Table footnotes
-        table$setNote("sig", paste0(
-          "P-values adjusted with the Benjamini-Hochberg (BH) ",
-          "false-discovery-rate method. ",
-          "*** p < .001, ** p < .01, * p < .05, . p < .10 (adjusted)."
-        ))
-        if (!is.null(cutoff_res)) {
-          table$setNote("flag", paste0(
-            "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI of ",
-            "partial gamma values simulated under no DIF (data simulated ",
-            "from the fitted model; the DIF variable is randomly ",
-            "reassigned, preserving group proportions). Flagged = TRUE ",
-            "when the observed gamma falls outside the expected range."
+        if (!use_pvalues) {
+          table$setNote("sig", paste0(
+            "Asymptotic p-values adjusted across items with the ",
+            "Benjamini-Hochberg (BH) false-discovery-rate method. ",
+            "*** p < .001, ** p < .01, * p < .05, . p < .10 (adjusted)."
           ))
+        }
+        if (!is.null(cutoff_res)) {
+          range_txt <- paste0(
+            "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI of ",
+            "partial gamma values simulated under no DIF (each simulated ",
+            "dataset keeps every respondent's group and total score and ",
+            "redraws the responses from the fitted model given that score)."
+          )
+          if (use_pvalues) {
+            table$setNote("flag", paste0(
+              range_txt, " Flagged = TRUE when the adjusted p-value < .05; ",
+              "the expected range is shown as description."
+            ))
+            table$setNote("pvalues", paste0(
+              "p-value: two-sided probability of a partial gamma at least ",
+              "as far from its simulated mean as observed if there is no ",
+              "DIF, computed from the ", cutoff_res$actual_iterations,
+              " simulated datasets (Monte-Carlo). Adj. p-value: corrected ",
+              "for multiple comparisons across the ", nrow(pgam_df),
+              " items using ", correction_label(self$options$correction), "."
+            ))
+          } else {
+            table$setNote("flag", paste0(
+              range_txt, " Flagged = TRUE when the observed gamma falls ",
+              "outside the expected range."
+            ))
+          }
         }
 
         # HTML note: n reporting (always), CI level when shown, cutoff
@@ -210,14 +268,29 @@ partgamdifClass <- R6::R6Class(
                  "(gamma ± 1.96 × SE).")
         } else ""
         cutoff_clause <- if (!is.null(cutoff_res)) {
-          paste0(" Cutoff values based on ", cutoff_res$actual_iterations,
+          paste0(" Expected ranges", if (use_pvalues) " and p-values",
+                 " based on ", cutoff_res$actual_iterations,
                  " simulation iterations (", cutoff_res$hdci_width * 100,
                  "% HDCI). Results are identical to ",
                  "easyRasch2::RMdifGamma() and RMdifGammaCutoff() with ",
                  "the same seed.",
-                 iteration_note(self$options$iterations, 250L),
+                 # With p-values the caveat carries the iteration advice,
+                 # so the general recommendation would repeat it.
+                 if (!use_pvalues) {
+                   iteration_note(self$options$iterations, 400L)
+                 },
                  iteration_attrition_note(cutoff_res$actual_iterations,
-                                          self$options$iterations))
+                                          self$options$iterations),
+                 if (use_pvalues) {
+                   pvalue_iteration_caveat(cutoff_res$actual_iterations,
+                                           count_stated = TRUE)
+                 } else {
+                   # Flagging falls back to the expected range, whose
+                   # width sets a familywise error rate the user has not
+                   # chosen.
+                   interval_flagging_note(cutoff_res$hdci_width,
+                                          nrow(pgam_df))
+                 })
         } else if (!is.null(sim_fail_msg)) {
           paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
                  sim_fail_msg)

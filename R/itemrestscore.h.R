@@ -7,6 +7,12 @@ itemrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
     public = list(
         initialize = function(
             vars = NULL,
+            computeCutoff = FALSE,
+            hdciWidth = 95,
+            iterations = 400,
+            seed = 42,
+            pValues = TRUE,
+            correction = "fwer",
             sortByDiff = FALSE, ...) {
 
             super$initialize(
@@ -24,19 +30,69 @@ itemrestscoreOptions <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 permitted=list(
                     "numeric"),
                 rejectInf=TRUE)
+            private$..computeCutoff <- jmvcore::OptionBool$new(
+                "computeCutoff",
+                computeCutoff,
+                default=FALSE)
+            private$..hdciWidth <- jmvcore::OptionNumber$new(
+                "hdciWidth",
+                hdciWidth,
+                default=95,
+                min=50,
+                max=99.9)
+            private$..iterations <- jmvcore::OptionInteger$new(
+                "iterations",
+                iterations,
+                default=400,
+                min=50,
+                max=5000)
+            private$..seed <- jmvcore::OptionInteger$new(
+                "seed",
+                seed,
+                default=42)
+            private$..pValues <- jmvcore::OptionBool$new(
+                "pValues",
+                pValues,
+                default=TRUE)
+            private$..correction <- jmvcore::OptionList$new(
+                "correction",
+                correction,
+                options=list(
+                    "fwer",
+                    "fdr_bh",
+                    "fdr_by"),
+                default="fwer")
             private$..sortByDiff <- jmvcore::OptionBool$new(
                 "sortByDiff",
                 sortByDiff,
                 default=FALSE)
 
             self$.addOption(private$..vars)
+            self$.addOption(private$..computeCutoff)
+            self$.addOption(private$..hdciWidth)
+            self$.addOption(private$..iterations)
+            self$.addOption(private$..seed)
+            self$.addOption(private$..pValues)
+            self$.addOption(private$..correction)
             self$.addOption(private$..sortByDiff)
         }),
     active = list(
         vars = function() private$..vars$value,
+        computeCutoff = function() private$..computeCutoff$value,
+        hdciWidth = function() private$..hdciWidth$value,
+        iterations = function() private$..iterations$value,
+        seed = function() private$..seed$value,
+        pValues = function() private$..pValues$value,
+        correction = function() private$..correction$value,
         sortByDiff = function() private$..sortByDiff$value),
     private = list(
         ..vars = NA,
+        ..computeCutoff = NA,
+        ..hdciWidth = NA,
+        ..iterations = NA,
+        ..seed = NA,
+        ..pValues = NA,
+        ..correction = NA,
         ..sortByDiff = NA)
 )
 
@@ -45,7 +101,8 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
     inherit = jmvcore::Group,
     active = list(
         restscoreTable = function() private$.items[["restscoreTable"]],
-        restscoreNote = function() private$.items[["restscoreNote"]]),
+        restscoreNote = function() private$.items[["restscoreNote"]],
+        restscorePlot = function() private$.items[["restscorePlot"]]),
     private = list(),
     public=list(
         initialize=function(options) {
@@ -64,9 +121,17 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                     "kreiner2011",
                     "mueller2022",
                     "zeileis2026",
-                    "warm1989"),
+                    "warm1989",
+                    "ferreira2024",
+                    "westfallyoung1993"),
                 clearWith=list(
                     "vars",
+                    "computeCutoff",
+                    "hdciWidth",
+                    "iterations",
+                    "seed",
+                    "pValues",
+                    "correction",
                     "sortByDiff"),
                 columns=list(
                     list(
@@ -92,7 +157,34 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                         `name`="pAdjusted", 
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
-                        `format`="zto,pvalue"),
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff == FALSE)"),
+                    list(
+                        `name`="diffLow", 
+                        `title`="Lower", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="diffHigh", 
+                        `title`="Upper", 
+                        `type`="number", 
+                        `format`="zto", 
+                        `visible`="(computeCutoff)", 
+                        `superTitle`="Expected range"),
+                    list(
+                        `name`="pValue", 
+                        `title`="p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
+                    list(
+                        `name`="pAdjBoot", 
+                        `title`="Adj. p-value", 
+                        `type`="number", 
+                        `format`="zto,pvalue", 
+                        `visible`="(computeCutoff && pValues)"),
                     list(
                         `name`="fit", 
                         `title`="Flagged", 
@@ -107,7 +199,27 @@ itemrestscoreResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Cla
                 name="restscoreNote",
                 title="",
                 clearWith=list(
-                    "vars")))}))
+                    "vars",
+                    "computeCutoff",
+                    "hdciWidth",
+                    "iterations",
+                    "seed",
+                    "pValues",
+                    "correction")))
+            self$add(jmvcore::Image$new(
+                options=options,
+                name="restscorePlot",
+                title="Simulated Item-Restscore Difference Distribution",
+                width=500,
+                height=600,
+                renderFun=".restscorePlot",
+                visible="(computeCutoff)",
+                clearWith=list(
+                    "vars",
+                    "computeCutoff",
+                    "hdciWidth",
+                    "iterations",
+                    "seed")))}))
 
 itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
     "itemrestscoreBase",
@@ -139,16 +251,26 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 #' locations). Reports observed vs. expected restscore correlations, the
 #' signed difference (observed minus expected; positive =
 #' over-discrimination / often LD, negative = under-discrimination /
-#' often noise), BH-adjusted p-values, and item locations. Results match
+#' often noise), BH-adjusted p-values, and item locations. The
+#' asymptotic p-values are miscalibrated under the Rasch model;
+#' simulation-based cutoffs replace them with parametric bootstrap
+#' p-values from easyRasch2::RMitemRestscoreCutoff(). Results match
 #' easyRasch2::RMitemRestscore().
 #' 
 #' @param data .
 #' @param vars .
+#' @param computeCutoff .
+#' @param hdciWidth .
+#' @param iterations .
+#' @param seed .
+#' @param pValues .
+#' @param correction .
 #' @param sortByDiff .
 #' @return A results object containing:
 #' \tabular{llllll}{
 #'   \code{results$restscoreTable} \tab \tab \tab \tab \tab a table \cr
 #'   \code{results$restscoreNote} \tab \tab \tab \tab \tab a html \cr
+#'   \code{results$restscorePlot} \tab \tab \tab \tab \tab an image \cr
 #' }
 #'
 #' Tables can be converted to data frames with \code{asDF} or \code{\link{as.data.frame}}. For example:
@@ -161,6 +283,12 @@ itemrestscoreBase <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
 itemrestscore <- function(
     data,
     vars,
+    computeCutoff = FALSE,
+    hdciWidth = 95,
+    iterations = 400,
+    seed = 42,
+    pValues = TRUE,
+    correction = "fwer",
     sortByDiff = FALSE) {
 
     if ( ! requireNamespace("jmvcore", quietly=TRUE))
@@ -175,6 +303,12 @@ itemrestscore <- function(
 
     options <- itemrestscoreOptions$new(
         vars = vars,
+        computeCutoff = computeCutoff,
+        hdciWidth = hdciWidth,
+        iterations = iterations,
+        seed = seed,
+        pValues = pValues,
+        correction = correction,
         sortByDiff = sortByDiff)
 
     analysis <- itemrestscoreClass$new(

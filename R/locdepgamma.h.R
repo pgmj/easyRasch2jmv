@@ -229,12 +229,12 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
                         `format`="zto,pvalue", 
-                        `visible`="(!(computeCutoff && pValues))"),
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
                         `type`="text", 
-                        `visible`="(!(computeCutoff && pValues))"),
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="gammaLow", 
                         `title`="Lower", 
@@ -328,12 +328,12 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `title`="Adj. p-value (BH)", 
                         `type`="number", 
                         `format`="zto,pvalue", 
-                        `visible`="(!(computeCutoff && pValues))"),
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="sig", 
                         `title`="p-value sign.", 
                         `type`="text", 
-                        `visible`="(!(computeCutoff && pValues))"),
+                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
                         `name`="gammaLow", 
                         `title`="Lower", 
