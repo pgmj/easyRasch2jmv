@@ -623,3 +623,34 @@ set_elements_visible <- function(elements, visible) {
   for (el in elements) el$setVisible(isTRUE(visible))
   invisible(NULL)
 }
+
+#' Tell the user that a requested simulation did not run
+#'
+#' When simulation-based cutoffs are requested but the simulation fails,
+#' the analysis falls back to output that looks complete (see
+#' set_columns_visible()). A notice at the top of the analysis states that
+#' the request was not met, so the fallback table is not mistaken for the
+#' simulation-based one. It is inserted afresh on every run, since the
+#' results tree is rebuilt from the `.r.yaml` and a later successful run
+#' simply has no notice. Follows jmv's `conttables` weights notice.
+#'
+#' @param analysis The analysis object (`self`).
+#' @param msg The failure reason (an error message or the iteration-floor
+#'   explanation).
+#' @param shown What the analysis shows instead, completing "so the table
+#'   shows ...".
+#' @return Invisibly `NULL`, called for its side effect.
+#' @noRd
+sim_failure_notice <- function(analysis, msg, shown) {
+  notice <- jmvcore::Notice$new(
+    analysis$options,
+    name    = ".simFailed",
+    type    = jmvcore::NoticeType$STRONG_WARNING,
+    content = paste0(
+      "Simulation-based cutoffs could not be computed, so the table shows ",
+      shown, ". ", msg
+    )
+  )
+  analysis$results$insert(1, notice)
+  invisible(NULL)
+}

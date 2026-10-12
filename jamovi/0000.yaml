@@ -1,21 +1,21 @@
 ---
 name: easyRasch2jmv
 title: easyRasch2 for Jamovi
-version: 3.3.0
+version: 3.3.1
 jms: '1.0'
 authors:
   - Magnus Johansson
 maintainer: Magnus Johansson <pgmj@pm.me>
-date: '2026-10-06'
+date: '2026-10-12'
 type: R
 description: >
   Provides Rasch analysis functions for jamovi. All analyses delegate their
   computations to the easyRasch2 R package (conditional maximum likelihood
   estimation via psychotools with Warm's weighted likelihood person estimates;
-  iarm for conditional infit and the asymptotic item-restscore and
-  partial-gamma tests; eRm for Andersen's LR test; lavaan for the CFA checks),
-  so results are numerically identical to easyRasch2 with the same seeds and
-  iterations. Built against easyRasch2 1.4.0.
+  iarm for conditional infit and the asymptotic item-restscore and partial-gamma
+  tests; eRm for Andersen's LR test; lavaan for the CFA checks), so results are
+  numerically identical to easyRasch2 with the same seeds and iterations. Built
+  against easyRasch2 1.4.0.
 analyses:
   - title: Conditional Item Infit
     name: iteminfit

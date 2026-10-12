@@ -94,56 +94,30 @@ residualpcaClass <- R6::R6Class(
         # (default 42) so results are reproducible by default. If the
         # simulation cannot deliver a reliable cutoff, degrade
         # gracefully: eigenvalues are shown without the cutoff/flag and
-        # the note explains why.
-        cutoff_res   <- NULL
-        sim_fail_msg <- NULL
-
-        # The simulation is the expensive part, and jamovi reruns .run on
-        # every option change -- including changes (nComponents, coordFlip)
-        # that do not affect the simulation. The hidden simCache element
-        # carries the cutoff object; jamovi clears its state exactly when
-        # a simulation-relevant option changes (its clearWith list), and
-        # the signature check makes reuse self-validating rather than
-        # relying on clearWith alone.
+        # a notice (sim_failure_notice()) says why.
+        #
+        # Cached in the hidden simCache element (see run_cutoff_simulation()),
+        # so nComponents and coordFlip do not rerun the simulation.
         sim_sig <- list(
           iterations = self$options$iterations,
           seed       = as.integer(self$options$seed)
         )
-        cached <- self$results$simCache$state
-        if (compute_cutoff &&
-            !is.null(cached) && !is.null(cached$cutoff_res) &&
-            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
-          cutoff_res <- cached$cutoff_res
-        } else if (compute_cutoff) {
-          cutoff_res <- tryCatch(
-            suppressWarnings(suppressMessages(
-              easyRasch2::RMdimResidualPCACutoff(
-                df,
-                iterations = self$options$iterations,
-                parallel   = FALSE,
-                seed       = as.integer(self$options$seed)
-              )
-            )),
-            error = function(e) {
-              sim_fail_msg <<- e$message
-              NULL
-            }
-          )
-          # Guard against a degenerate cutoff: with very few successful
-          # iterations the 99th percentile collapses onto a handful of
-          # values.
-          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-            sim_fail_msg <- paste0(
-              "Only ", cutoff_res$actual_iterations, " of ",
-              self$options$iterations, " simulation iterations succeeded ",
-              "-- too few to estimate a reliable cutoff. Check your data: ",
-              "items must have sufficient response variation, and the ",
-              "sample must be large enough for stable Rasch model ",
-              "estimation."
-            )
-            cutoff_res <- NULL
-          }
-        }
+        sim <- run_cutoff_simulation(
+          compute   = compute_cutoff,
+          cached    = self$results$simCache$state,
+          sig       = sim_sig,
+          keys      = list(df = df),
+          simulate  = function() easyRasch2::RMdimResidualPCACutoff(
+            df,
+            iterations = self$options$iterations,
+            parallel   = FALSE,
+            seed       = as.integer(self$options$seed)
+          ),
+          requested = self$options$iterations,
+          hint      = sim_rule_hint("both")
+        )
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # Visibility follows what was computed, not the options: if the
         # simulation failed, the simulation columns would otherwise show
@@ -185,7 +159,8 @@ residualpcaClass <- R6::R6Class(
           )
           if (!is.null(cutoff_value)) {
             vals$cutoff  <- cutoff_value
-            vals$flagged <- if (isTRUE(result_df$Flagged[i])) "TRUE" else ""
+            vals$flagged <- if (isTRUE(result_df$Flagged[i]))
+              "above cutoff" else ""
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -236,13 +211,12 @@ residualpcaClass <- R6::R6Class(
             iteration_attrition_note(cutoff_res$actual_iterations,
                                      self$options$iterations), "</p>"
           )
-        } else if (!is.null(sim_fail_msg)) {
-          paste0(
-            "<p><b>Simulation-based cutoff unavailable:</b> ",
-            sim_fail_msg, "</p>"
-          )
         } else {
           ""
+        }
+        if (!is.null(sim_fail_msg)) {
+          sim_failure_notice(self, sim_fail_msg,
+                             "the eigenvalues without a cutoff")
         }
 
         self$results$pcaNote$setContent(paste0(var_text, cutoff_text))

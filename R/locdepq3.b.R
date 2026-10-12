@@ -125,67 +125,39 @@ locdepq3Class <- R6::R6Class(
           # so results are reproducible by default, consistent with the other
           # simulation-based analyses in this module. If the simulation cannot
           # deliver reliable cutoffs (e.g. too few successful iterations),
-          # degrade gracefully: the Q3 matrix is still shown and the note
-          # below explains why the cutoff, pair table, and figures are
-          # unavailable. Package warnings (e.g. sparse categories) are
+          # degrade gracefully: the Q3 matrix is still shown and a notice
+          # (sim_failure_notice()) says why the cutoff, pair table, and
+          # figures are missing. Package warnings (e.g. sparse categories) are
           # suppressed -- the module surfaces its own sparse-category
           # footnote above.
-          cutoff_res   <- NULL
-          sim_fail_msg <- NULL
-
-          # The simulation is the expensive part, and jamovi reruns .run on
-          # every option change -- including changes (pValues, correction,
-          # nPairs) that do not affect the simulation. The heatmap state
-          # carries the cutoff object and jamovi clears it exactly when a
-          # simulation-relevant option changes (its clearWith list; the
-          # per-pair plot is unsuitable as the cache because its state is
-          # also cleared by nPairs). The signature check makes reuse
-          # self-validating rather than relying on clearWith alone -- in
-          # particular, hdciWidth changes the cutoff object but is not in
-          # the heatmap's clearWith, and the signature catches it.
+          #
+          # Cached in the heatmap state (see run_cutoff_simulation()), so
+          # pValues, correction and nPairs do not rerun the simulation. The
+          # per-pair plot is unsuitable as the cache because nPairs also clears
+          # its state. hdciWidth changes the cutoff object but is not in the
+          # heatmap's clearWith, and the signature catches it.
           sim_sig <- list(
             iterations = iterations,
             seed       = as.integer(seed_val),
             hdci_width = self$options$hdciWidth / 100
           )
-          cached <- self$results$matrixPlot$state
-          if (compute_cutoff &&
-              !is.null(cached) && !is.null(cached$cutoff_res) &&
-              identical(cached$sig, sim_sig) && identical(cached$df, df)) {
-            cutoff_res <- cached$cutoff_res
-          } else if (compute_cutoff) {
-            cutoff_res <- tryCatch(
-              suppressWarnings(suppressMessages(
-                easyRasch2::RMlocdepQ3Cutoff(
-                  df,
-                  iterations = iterations,
-                  parallel   = FALSE,
-                  seed       = as.integer(seed_val),
-                  hdci_width = self$options$hdciWidth / 100
-                )
-              )),
-              error = function(e) {
-                sim_fail_msg <<- e$message
-                NULL
-              }
-            )
-            # Guard against degenerate cutoffs: with very few successful
-            # iterations the global percentiles and the per-pair HDCIs
-            # collapse and flagging becomes meaningless.
-            if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-              sim_fail_msg <- paste0(
-                "Only ", cutoff_res$actual_iterations, " of ", iterations,
-                " simulation iterations succeeded -- too few to estimate ",
-                "reliable cutoffs. Check your data: items must have ",
-                "sufficient response variation (at least 8 positive ",
-                "responses per item for dichotomous data; all response ",
-                "categories represented for polytomous data), and the ",
-                "sample must be large enough for stable Rasch model ",
-                "estimation."
-              )
-              cutoff_res <- NULL
-            }
-          }
+          sim <- run_cutoff_simulation(
+            compute   = compute_cutoff,
+            cached    = self$results$matrixPlot$state,
+            sig       = sim_sig,
+            keys      = list(df = df),
+            simulate  = function() easyRasch2::RMlocdepQ3Cutoff(
+              df,
+              iterations = iterations,
+              parallel   = FALSE,
+              seed       = as.integer(seed_val),
+              hdci_width = self$options$hdciWidth / 100
+            ),
+            requested = iterations,
+            hint      = sim_rule_hint("positive")
+          )
+          cutoff_res   <- sim$cutoff_res
+          sim_fail_msg <- sim$fail_msg
 
           # --- Step 2: Observed Q3 matrix (and pair table with cutoff) -----
           # Bootstrap p-values need the full cutoff object (it carries the
@@ -361,10 +333,10 @@ locdepq3Class <- R6::R6Class(
             paste0(" (", n_total - n_used, " row(s) without any responses ",
                    "on the selected items excluded)")
           } else ""
-          fail_clause <- if (!is.null(sim_fail_msg)) {
-            paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
-                   sim_fail_msg)
-          } else ""
+          if (!is.null(sim_fail_msg)) {
+            sim_failure_notice(self, sim_fail_msg,
+                               "the Q3 matrix without a dynamic cutoff")
+          }
           pvalue_clause <- if (use_pvalues) {
             pvalue_iteration_caveat(cutoff_res$actual_iterations)
           } else ""
@@ -376,7 +348,7 @@ locdepq3Class <- R6::R6Class(
             "maximum likelihood (CML) item estimation with weighted ",
             "likelihood (WLE) person estimates, on n = ", n_used,
             " respondents", drop_clause, missing_clause, ". Mean Q3 = ",
-            round(mean_resid, 3), ".", pvalue_clause, fail_clause, "</p>"
+            round(mean_resid, 3), ".", pvalue_clause, "</p>"
           ))
 
           # --- Step 4: Populate the Q3 table (structure set up in .init()) --

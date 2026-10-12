@@ -204,7 +204,8 @@ lrdifClass <- R6::R6Class(
           vals$loc_overall <- table_df$All[i]
           vals$maxDiff     <- table_df$MaxDiff[i]
           if (cutoff_val > 0) {
-            vals$flagged <- if (isTRUE(table_df$Flagged[i])) "TRUE" else ""
+            vals$flagged <- if (isTRUE(table_df$Flagged[i]))
+              "beyond cutoff" else ""
           }
           for (g in groups) {
             vals[[private$.seColName(g)]] <- table_df[[paste0("SE_", g)]][i]
@@ -220,7 +221,8 @@ lrdifClass <- R6::R6Class(
         ))
         if (cutoff_val > 0) {
           table$setNote("flag", paste0(
-            "Flagged = TRUE when MaxDiff exceeds ", cutoff_val, " logits."
+            "Flagged 'beyond cutoff' when MaxDiff exceeds ", cutoff_val,
+            " logits."
           ))
         }
 

@@ -65,60 +65,36 @@ iteminfitClass <- R6::R6Class(
         # numerically identical to RMitemInfit() / RMitemInfitCutoff() with
         # the same seed and iterations. If the simulation cannot deliver
         # reliable cutoffs (e.g. too few successful iterations), degrade
-        # gracefully: the observed infit table is still shown and the note
-        # below explains why the expected range and figure are unavailable.
+        # gracefully: the observed infit table is still shown and a notice
+        # (sim_failure_notice()) says why the expected range and figure are
+        # missing.
         # Package warnings (e.g. sparse categories) are suppressed -- the
         # module surfaces its own sparse-category footnote above.
-        cutoff_res   <- NULL
-        sim_fail_msg <- NULL
-
-        # The simulation is the expensive part, and jamovi reruns .run on
-        # every option change -- including changes (pValues, correction,
-        # sortByInfit) that do not affect the simulation. The plot state
-        # already carries the cutoff object and jamovi clears it exactly
-        # when a simulation-relevant option changes (its clearWith list),
-        # so a surviving state is a valid cache. The signature check makes
-        # reuse self-validating rather than relying on clearWith alone.
+        #
+        # Cached in the plot state (see run_cutoff_simulation()), so changing
+        # pValues, correction or sortByInfit does not rerun the simulation.
         sim_sig <- list(
           iterations = self$options$iterations,
           seed       = as.integer(self$options$seed),
           hdci_width = self$options$hdciWidth / 100
         )
-        cached <- self$results$infitPlot$state
-        if (isTRUE(self$options$computeCutoff) &&
-            !is.null(cached) && !is.null(cached$cutoff_res) &&
-            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
-          cutoff_res <- cached$cutoff_res
-        } else if (isTRUE(self$options$computeCutoff)) {
-          cutoff_res <- tryCatch(
-            suppressWarnings(suppressMessages(
-              easyRasch2::RMitemInfitCutoff(
-                df,
-                iterations = self$options$iterations,
-                parallel   = FALSE,
-                seed       = as.integer(self$options$seed),
-                hdci_width = self$options$hdciWidth / 100
-              )
-            )),
-            error = function(e) {
-              sim_fail_msg <<- e$message
-              NULL
-            }
-          )
-          # Guard against degenerate cutoffs: with very few successful
-          # iterations the HDCI collapses (lower = upper) and every item
-          # is spuriously flagged.
-          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-            sim_fail_msg <- paste0(
-              "Only ", cutoff_res$actual_iterations, " of ",
-              self$options$iterations, " simulation iterations succeeded ",
-              "-- too few to estimate reliable cutoff intervals. This ",
-              "typically happens when items have very low or very high ",
-              "endorsement rates relative to the sample size."
-            )
-            cutoff_res <- NULL
-          }
-        }
+        sim <- run_cutoff_simulation(
+          compute   = self$options$computeCutoff,
+          cached    = self$results$infitPlot$state,
+          sig       = sim_sig,
+          keys      = list(df = df),
+          simulate  = function() easyRasch2::RMitemInfitCutoff(
+            df,
+            iterations = self$options$iterations,
+            parallel   = FALSE,
+            seed       = as.integer(self$options$seed),
+            hdci_width = self$options$hdciWidth / 100
+          ),
+          requested = self$options$iterations,
+          hint      = sim_rule_hint("positive")
+        )
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # Bootstrap p-values need the full cutoff object (it carries the
         # simulated distributions), so they are only computed when the
@@ -280,18 +256,23 @@ iteminfitClass <- R6::R6Class(
             "</p>"
           )
           self$results$cutoffNote$setContent(note_html)
-        } else if (!is.null(sim_fail_msg)) {
-          self$results$cutoffNote$setContent(paste0(
-            "<p><b>Simulation-based cutoffs unavailable:</b> ",
-            sim_fail_msg, "</p>"
-          ))
         } else {
+          # A failed simulation is reported by the notice, so the advice to
+          # enable the simulation is only for users who have not asked.
           self$results$cutoffNote$setContent(paste0(
             "<p>Conditional infit MSQ for n = ", n_complete,
-            " complete cases. Enable <i>Simulation-based cutoffs</i> to ",
-            "flag each item against a per-item expected range simulated ",
-            "under the fitted model.</p>"
+            " complete cases.",
+            if (!isTRUE(self$options$computeCutoff)) {
+              paste0(" Enable <i>Simulation-based cutoffs</i> to flag each ",
+                     "item against a per-item expected range simulated ",
+                     "under the fitted model.")
+            },
+            "</p>"
           ))
+          if (!is.null(sim_fail_msg)) {
+            sim_failure_notice(self, sim_fail_msg,
+                               "the observed infit without expected ranges")
+          }
         }
 
         # 8. Save state for plot. The figure is drawn by

@@ -340,7 +340,7 @@ test_that("partgamdif bootstrap p-values match easyRasch2 and flag on adjusted p
     expect_equal(tab$pValue, pkg$p_gamma)
     expect_equal(tab$pAdjBoot, pkg$padj_gamma)
     flags <- ifelse(is.na(as.character(tab$flagged)), "", as.character(tab$flagged))
-    expect_identical(flags, ifelse(pkg$flagged, "TRUE", ""))
+    expect_identical(flags, ifelse(pkg$flagged, "beyond cutoff", ""))
   }
   expect_identical(r$pgdifTable$getColumn("pAdjBoot")$title,
                    "Adj. p-value (BH)")
@@ -614,7 +614,7 @@ test_that("locdepgamma keeps its asymptotic columns on the interval branch", {
                               output = "dataframe")$direction1))
   expect_equal(t1$padjBH, pk$padj_bh)
   expect_identical(
-    !is.na(t1$flagged) & t1$flagged == "TRUE",
+    !is.na(t1$flagged) & t1$flagged == "beyond cutoff",
     !is.na(pk$gamma_low) &
       (pk$gamma_pair < pk$gamma_low | pk$gamma_pair > pk$gamma_high)
   )
@@ -660,7 +660,7 @@ test_that("locdepgamma bootstrap p-values match easyRasch2 and flag on adjusted 
   expect_equal(t1$pValue, pk$p_gamma)
   expect_equal(t1$pAdjusted, pk$padj_gamma)
   expect_equal(t1$gammaPair, pk$gamma_pair)
-  expect_identical(!is.na(t1$flagged) & t1$flagged == "TRUE", pk$flagged)
+  expect_identical(!is.na(t1$flagged) & t1$flagged == "beyond cutoff", pk$flagged)
 
   # the significance filter follows the adjusted p in force
   rs <- suppressWarnings(suppressMessages(
@@ -1025,7 +1025,6 @@ test_that("asymptotic p-value columns are hidden when bootstrap p-values replace
     er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
                    computeCutoff = TRUE, iterations = 60, seed = 42))
   expect_false(vis(boot, "pgdifTable", "padjBH"))
-  expect_false(vis(boot, "pgdifTable", "sig"))
   expect_true(vis(boot, "pgdifTable", "pAdjBoot"))
   band <- suppressWarnings(
     er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
@@ -1047,7 +1046,6 @@ test_that("asymptotic p-value columns are hidden when bootstrap p-values replace
                     iterations = 60, seed = 42))
   for (tab in c("dir1Table", "dir2Table")) {
     expect_false(vis(ld, tab, "padjBH"))
-    expect_false(vis(ld, tab, "sig"))
   }
 })
 
@@ -1072,13 +1070,13 @@ test_that("a failed simulation shows the asymptotic output, not empty simulation
     er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
                    computeCutoff = TRUE, iterations = 60, seed = 42))
   expect_true(vis(dif, "pgdifTable", "padjBH"))
-  expect_true(vis(dif, "pgdifTable", "sig"))
-  for (cl in c("gammaLow", "gammaHigh", "flagged", "pValue", "pAdjBoot")) {
+  expect_true(vis(dif, "pgdifTable", "flagged"))
+  for (cl in c("gammaLow", "gammaHigh", "pValue", "pAdjBoot")) {
     expect_false(vis(dif, "pgdifTable", cl), info = cl)
   }
   expect_false(dif$pgdifPlot$visible)
   expect_false(all(is.na(dif$pgdifTable$asDF$padjBH)))
-  expect_match(dif$cutoffNote$content, "unavailable")
+  expect_no_match(dif$cutoffNote$content, "forced failure")
 
   p <- poly_data()
   rs <- suppressWarnings(
@@ -1116,4 +1114,112 @@ test_that("a failed simulation shows the asymptotic output, not empty simulation
                     iterations = 60, seed = 42))
   expect_false(vis(pca, "pcaTable", "cutoff"))
   expect_false(vis(pca, "pcaTable", "flagged"))
+})
+
+test_that("a failed simulation is reported in a notice at the top of the analysis", {
+  # 3.3.1: the fallback table looks complete, so the failure goes in a
+  # jmvcore Notice rather than a sentence in the Html note.
+  fail <- function(...) stop("forced failure")
+  testthat::local_mocked_bindings(
+    RMdifGammaCutoff = fail,
+    RMitemRestscoreCutoff = fail,
+    RMitemInfitCutoff = fail,
+    RMlocdepGammaCutoff = fail,
+    RMlocdepQ3Cutoff = fail,
+    RMdimResidualPCACutoff = fail,
+    RMdimCFACutoff = fail,
+    .package = "easyRasch2"
+  )
+  notice_of <- function(res) {
+    el <- res$get(".simFailed")
+    expect_s3_class(el, "Notice")
+    el$content
+  }
+
+  d <- dif_data()
+  p <- poly_data()
+  runs <- list(
+    partgamdif = er2$partgamdif(data = d, vars = dif_items(), difVar = "dif",
+                                computeCutoff = TRUE, iterations = 60),
+    itemrestscore = er2$itemrestscore(data = p, vars = names(p),
+                                      computeCutoff = TRUE, iterations = 60),
+    iteminfit = er2$iteminfit(data = p, vars = names(p),
+                              computeCutoff = TRUE, iterations = 60),
+    locdepgamma = er2$locdepgamma(data = p, vars = names(p),
+                                  computeCutoff = TRUE, iterations = 60),
+    locdepq3 = er2$locdepq3(data = p, vars = names(p),
+                            computeCutoff = TRUE, iterations = 60),
+    residualpca = er2$residualpca(data = p, vars = names(p),
+                                  computeCutoff = TRUE, iterations = 60),
+    cfacutoff = er2$cfacutoff(data = p, vars = names(p), iterations = 60)
+  )
+  runs <- suppressWarnings(runs)
+  for (nm in names(runs)) {
+    expect_match(notice_of(runs[[nm]]), "forced failure", info = nm)
+    expect_match(notice_of(runs[[nm]]),
+                 "^Simulation-based cutoffs could not be computed",
+                 info = nm)
+  }
+
+  # The failure sentence is no longer repeated in the Html notes, and the
+  # advice to enable the simulation is gone once it has been enabled.
+  expect_no_match(runs$itemrestscore$restscoreNote$content, "forced failure")
+  rs_notes <- vapply(runs$itemrestscore$restscoreTable$notes,
+                     function(x) x$note, character(1))
+  expect_false(any(grepl("Enable", rs_notes)))
+  expect_no_match(runs$iteminfit$cutoffNote$content, "Enable")
+  expect_match(runs$iteminfit$cutoffNote$content, "complete cases")
+  expect_match(runs$cfacutoff$cfaNote$content, "complete cases")
+
+  # No notice without a failure, and the enable advice stays when the
+  # simulation is off.
+  ok <- suppressWarnings(er2$itemrestscore(data = p, vars = names(p)))
+  expect_null(ok$get(".simFailed"))
+  ok_notes <- vapply(ok$restscoreTable$notes, function(x) x$note,
+                     character(1))
+  expect_true(any(grepl("Enable Simulation-based cutoffs", ok_notes)))
+})
+
+test_that("Flagged columns say beyond cutoff, also on the asymptotic path", {
+  # "TRUE" replaced by "beyond cutoff", and the partial gamma stars column
+  # replaced by Flagged on the asymptotic path (BH-adjusted p < .05).
+  d <- dif_data()
+  items <- d[dif_items()]
+  dif <- suppressWarnings(
+    er2$partgamdif(data = d, vars = dif_items(), difVar = "dif"))
+  pkg <- suppressWarnings(suppressMessages(
+    easyRasch2::RMdifGamma(items, dif_var = d$dif, output = "dataframe")))
+  tab <- dif$pgdifTable$asDF
+  expect_true(dif$pgdifTable$getColumn("flagged")$visible)
+  expect_false("sig" %in% names(tab))
+  flags <- ifelse(is.na(tab$flagged), "", tab$flagged)
+  expect_identical(flags, ifelse(!is.na(pkg$padj_bh) & pkg$padj_bh < 0.05,
+                                 "beyond cutoff", ""))
+  notes <- vapply(dif$pgdifTable$notes, function(x) x$note, character(1))
+  expect_true(any(grepl("Flagged 'beyond cutoff' when the adjusted p-value < .05",
+                        notes, fixed = TRUE)))
+
+  p <- poly_data()
+  ld <- suppressWarnings(er2$locdepgamma(data = p, vars = names(p)))
+  pk <- suppressWarnings(suppressMessages(
+    easyRasch2::RMlocdepGamma(p, output = "dataframe")$direction1))
+  t1 <- ld$dir1Table$asDF
+  expect_true(ld$dir1Table$getColumn("flagged")$visible)
+  expect_identical(ifelse(is.na(t1$flagged), "", t1$flagged),
+                   ifelse(!is.na(pk$padj_bh) & pk$padj_bh < 0.05,
+                          "beyond cutoff", ""))
+
+  for (res in list(
+    suppressWarnings(er2$residualpca(data = p, vars = names(p),
+                                     computeCutoff = TRUE, iterations = 60)),
+    suppressWarnings(er2$cfacutoff(data = p, vars = names(p),
+                                   iterations = 60))
+  )) {
+    tabs <- Filter(function(x) inherits(x, "Table"), res$items)
+    for (tb in tabs) {
+      if ("flagged" %in% names(tb$asDF)) {
+        expect_false(any(tb$asDF$flagged %in% c("TRUE", "FALSE")))
+      }
+    }
+  }
 })

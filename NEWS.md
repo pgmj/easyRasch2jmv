@@ -1,3 +1,31 @@
+# easyRasch2jmv (development version)
+
+## All simulation analyses
+
+- When *Simulation-based cutoffs* is ticked but the simulation fails, a
+  warning notice at the top of the analysis says so and names what the table
+  shows instead. The failure sentence is gone from the notes below the table.
+  Requires `jmvcore` 2.4.2 or later.
+- The message for too few successful iterations now reads the same in every
+  analysis and names the rule that discards simulated datasets in that
+  analysis.
+
+## Item-Restscore Correlations and Conditional Item Infit
+
+- The advice to enable *Simulation-based cutoffs* is no longer shown when
+  that option is already ticked.
+
+## Flagged columns
+
+- Flagged rows now say "beyond cutoff" instead of `TRUE` (Partial Gamma DIF,
+  Andersen LR-test DIF, Tree-Based DIF, Partial Gamma Local Dependence,
+  Dynamic CFA Fit-Index Cutoffs) or "above cutoff" (PCA of Standardized Rasch
+  Residuals).
+- Partial Gamma DIF and Partial Gamma Local Dependence drop the "p-value
+  sign." stars column. The Flagged column is shown on the asymptotic path too
+  and flags BH-adjusted p < .05, as in Item-Restscore Correlations. **No
+  values change.**
+
 # easyRasch2jmv 3.3.0
 
 Built against easyRasch2 v1.4.0.

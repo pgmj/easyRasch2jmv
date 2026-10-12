@@ -1,8 +1,8 @@
 Package: easyRasch2jmv
 Type: Package
 Title: easyRasch2 for Jamovi
-Version: 3.3.0
-Date: 2026-10-06
+Version: 3.3.1
+Date: 2026-10-12
 Author: Magnus Johansson
 Maintainer: Magnus Johansson <pgmj@pm.me>
 Description: Provides Rasch analysis functions for jamovi. All analyses delegate
@@ -15,7 +15,7 @@ Description: Provides Rasch analysis functions for jamovi. All analyses delegate
 License: GPL (>= 3)
 Encoding: UTF-8
 Imports:
-    jmvcore (>= 0.8.5),
+    jmvcore (>= 2.4.2),
     R6,
     easyRasch2 (>= 1.4.0),
     eRm,

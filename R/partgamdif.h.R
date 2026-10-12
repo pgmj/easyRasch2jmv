@@ -219,11 +219,6 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                         `format`="zto,pvalue", 
                         `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
-                        `name`="sig", 
-                        `title`="p-value sign.", 
-                        `type`="text", 
-                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
-                    list(
                         `name`="gammaLow", 
                         `title`="Lower", 
                         `type`="number", 
@@ -252,8 +247,7 @@ partgamdifResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class(
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
-                        `type`="text", 
-                        `visible`="(computeCutoff)"))))
+                        `type`="text"))))
             self$add(jmvcore::Html$new(
                 options=options,
                 name="cutoffNote",

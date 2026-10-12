@@ -28,7 +28,7 @@ locdepgammaClass <- R6::R6Class(
 
       blank <- list(item1 = "", item2 = "", gamma = NA_real_,
                     se = NA_real_, lower = NA_real_, upper = NA_real_,
-                    padjBH = NA_real_, sig = "")
+                    padjBH = NA_real_, flagged = "")
       for (tbl in list(self$results$dir1Table, self$results$dir2Table)) {
         for (i in seq_len(n_rows)) {
           tbl$addRow(rowKey = i, values = blank)
@@ -97,58 +97,36 @@ locdepgammaClass <- R6::R6Class(
         # 3. Optional simulation-based expected ranges (computed first --
         # they feed RMlocdepGamma()). If the simulation cannot deliver
         # reliable ranges, degrade gracefully: the tables are shown
-        # without the expected range / flags and the note explains why.
+        # without the expected range and a notice (sim_failure_notice())
+        # says why.
         compute_cutoff <- isTRUE(self$options$computeCutoff)
-        cutoff_res   <- NULL
-        sim_fail_msg <- NULL
-
-        # The simulation is the expensive part, and jamovi reruns .run on
-        # every option change -- including changes (filters, sorting,
-        # plotPairs, showSE) that do not affect the simulation. The hidden
-        # simCache element carries the cutoff object; jamovi clears its
-        # state exactly when a simulation-relevant option changes (its
-        # clearWith list), and the signature check makes reuse
-        # self-validating rather than relying on clearWith alone. (The
-        # plot state cannot serve as the cache here: its clearWith also
-        # includes plotPairs, which must keep forcing a re-render.)
+        # Cached in the hidden simCache element (see run_cutoff_simulation()),
+        # so filters, sorting, plotPairs and showSE do not rerun the
+        # simulation. The plot state cannot serve as the cache here: its
+        # clearWith also includes plotPairs, which must keep forcing a
+        # re-render.
         sim_sig <- list(
           iterations = self$options$iterations,
           seed       = as.integer(self$options$seed),
           hdci_width = self$options$hdciWidth / 100
         )
-        cached <- self$results$simCache$state
-        if (compute_cutoff &&
-            !is.null(cached) && !is.null(cached$cutoff_res) &&
-            identical(cached$sig, sim_sig) && identical(cached$df, df)) {
-          cutoff_res <- cached$cutoff_res
-        } else if (compute_cutoff) {
-          cutoff_res <- tryCatch(
-            suppressWarnings(suppressMessages(
-              easyRasch2::RMlocdepGammaCutoff(
-                df,
-                iterations = self$options$iterations,
-                parallel   = FALSE,
-                seed       = as.integer(self$options$seed),
-                hdci_width = self$options$hdciWidth / 100
-              )
-            )),
-            error = function(e) {
-              sim_fail_msg <<- e$message
-              NULL
-            }
-          )
-          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-            sim_fail_msg <- paste0(
-              "Only ", cutoff_res$actual_iterations, " of ",
-              self$options$iterations, " simulation iterations succeeded ",
-              "-- too few to estimate reliable expected ranges. Check ",
-              "your data: items must have sufficient response variation, ",
-              "and the sample must be large enough for stable Rasch ",
-              "model estimation."
-            )
-            cutoff_res <- NULL
-          }
-        }
+        sim <- run_cutoff_simulation(
+          compute   = compute_cutoff,
+          cached    = self$results$simCache$state,
+          sig       = sim_sig,
+          keys      = list(df = df),
+          simulate  = function() easyRasch2::RMlocdepGammaCutoff(
+            df,
+            iterations = self$options$iterations,
+            parallel   = FALSE,
+            seed       = as.integer(self$options$seed),
+            hdci_width = self$options$hdciWidth / 100
+          ),
+          requested = self$options$iterations,
+          hint      = sim_rule_hint("positive")
+        )
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # 4. Partial gamma LD via easyRasch2 (numerically identical to
         # RMlocdepGamma(); a wrapper around iarm::partgam_LD()). Missing
@@ -160,8 +138,8 @@ locdepgammaClass <- R6::R6Class(
         # TRUE while greyed out (jamovi disables but does not reset nested
         # options), hence the explicit computeCutoff gate, as in the Q3 and
         # conditional infit analyses. The two branches return different
-        # columns: with p-values the asymptotic `padj_bh` and `Significance`
-        # are dropped in favour of `p_gamma` and `padj_gamma`.
+        # columns: with p-values the asymptotic `padj_bh` is dropped in
+        # favour of `p_gamma` and `padj_gamma`.
         use_pvalues <- compute_cutoff &&
           isTRUE(self$options$pValues) &&
           !is.null(cutoff_res)
@@ -171,197 +149,20 @@ locdepgammaClass <- R6::R6Class(
         # empty (see set_columns_visible()).
         sim_ok <- !is.null(cutoff_res)
         for (tbl in list(self$results$dir1Table, self$results$dir2Table)) {
-          set_columns_visible(tbl, c("gammaPair", "gammaLow", "gammaHigh",
-                                     "flagged"), sim_ok)
+          set_columns_visible(tbl, c("gammaPair", "gammaLow", "gammaHigh"),
+                              sim_ok)
           set_columns_visible(tbl, c("pValue", "pAdjusted"), use_pvalues)
-          set_columns_visible(tbl, c("padjBH", "sig"), !use_pvalues)
+          set_columns_visible(tbl, "padjBH", !use_pvalues)
         }
         set_elements_visible(list(self$results$ldPlot), sim_ok)
 
-        result_list <- suppressWarnings(suppressMessages(
-          easyRasch2::RMlocdepGamma(
-            df,
-            cutoff = cutoff_res,
-            p_value = use_pvalues,
-            correction = self$options$correction,
-            output = "dataframe"
-          )
-        ))
-        result_list <- list(result_list$direction1, result_list$direction2)
-
-        # The bundled easyRasch2 release omits the se / lower / upper (95%
-        # Wald CI) columns from the dataframe output (added in a later
-        # version); when absent, source them from the same underlying
-        # iarm::partgam_LD() call and join by pair, so the values are
-        # identical by construction. iarm's console output is sunk; the
-        # finally handler guarantees the sink is removed exactly once.
-        if (!"se" %in% names(result_list[[1L]])) {
-          sink(nullfile())
-          pgam_raw <- tryCatch(
-            iarm::partgam_LD(as.data.frame(df)),
-            finally = sink()
-          )
-          for (idx in seq_along(result_list)) {
-            d   <- result_list[[idx]]
-            raw <- pgam_raw[[idx]]
-            key_d   <- paste(d$Item1, d$Item2, sep = "___")
-            key_raw <- paste(as.character(raw$Item1),
-                             as.character(raw$Item2), sep = "___")
-            m <- match(key_d, key_raw)
-            d$se    <- as.numeric(raw$se)[m]
-            d$lower <- as.numeric(raw$lower)[m]
-            d$upper <- as.numeric(raw$upper)[m]
-            result_list[[idx]] <- d
-          }
-        }
-
-        # Non-finite gammas (degenerate pairs) display as empty cells
-        for (idx in seq_along(result_list)) {
-          d <- result_list[[idx]]
-          d$gamma <- ifelse(is.finite(d$gamma), d$gamma, NA_real_)
-          result_list[[idx]] <- d
-        }
-
-        # 5. Filter / sort pipeline, applied per direction:
-        #    significance filter -> |gamma| threshold -> top-N by |gamma|
-        #    (which sorts) -> otherwise sort by |gamma| if requested.
-        # With filters active the two directions can retain different
-        # numbers of rows (each direction has its own gammas / p-values).
-        sig_only    <- isTRUE(self$options$sigOnly)
-        gamma_thr   <- self$options$gammaThreshold
-        n_pairs     <- self$options$nPairs
-        sort_gamma  <- isTRUE(self$options$sortByGamma)
+        result_list <- private$.pairResults(df, cutoff_res, use_pvalues)
         total_pairs <- nrow(result_list[[1]])
+        filtered    <- private$.filterPairs(result_list, use_pvalues)
+        private$.fillTables(filtered$pairs, cutoff_res, use_pvalues,
+                            total_pairs)
 
-        filter_applied <- FALSE
-        for (idx in seq_along(result_list)) {
-          d <- result_list[[idx]]
-          if (sig_only) {
-            padj <- if (use_pvalues) d$padj_gamma else d$padj_bh
-            d <- d[!is.na(padj) & padj < 0.05, , drop = FALSE]
-          }
-          if (gamma_thr > 0) {
-            d <- d[!is.na(d$gamma) & abs(d$gamma) >= gamma_thr, , drop = FALSE]
-          }
-          if (n_pairs > 0L && n_pairs < nrow(d)) {
-            filter_applied <- TRUE
-            ord <- order(abs(d$gamma), decreasing = TRUE)
-            d   <- d[ord[seq_len(n_pairs)], , drop = FALSE]
-          } else if (sort_gamma) {
-            d <- d[order(abs(d$gamma), decreasing = TRUE), , drop = FALSE]
-          }
-          rownames(d) <- NULL
-          result_list[[idx]] <- d
-        }
-
-        # 6. Populate tables. Rows were pre-created in .init() only in the
-        # unfiltered case (same condition as there); with filters active
-        # the row count is result-dependent and rows are added here.
-        rows_pre_created <- !sig_only && gamma_thr == 0
-        tables <- list(self$results$dir1Table, self$results$dir2Table)
-        for (idx in seq_along(tables)) {
-          d <- result_list[[idx]]
-          for (i in seq_len(nrow(d))) {
-            vals <- list(
-              item1  = d$Item1[i],
-              item2  = d$Item2[i],
-              gamma  = d$gamma[i],
-              se     = d$se[i],
-              lower  = d$lower[i],
-              upper  = d$upper[i],
-              # Absent on the bootstrap p-value path, where the package drops
-              # them. NA keeps the row shape stable for the hidden columns.
-              padjBH = if (use_pvalues) NA_real_ else d$padj_bh[i],
-              sig    = if (use_pvalues) "" else d$Significance[i]
-            )
-            if (!is.null(cutoff_res)) {
-              vals$gammaPair <- d$gamma_pair[i]
-              vals$gammaLow  <- d$gamma_low[i]
-              vals$gammaHigh <- d$gamma_high[i]
-              vals$flagged   <- ifelse(isTRUE(d$flagged[i]), "TRUE", "")
-            }
-            if (use_pvalues) {
-              vals$pValue     <- d$p_gamma[i]
-              vals$pAdjusted  <- d$padj_gamma[i]
-            }
-            if (rows_pre_created) {
-              tables[[idx]]$setRow(rowNo = i, values = vals)
-            } else {
-              tables[[idx]]$addRow(rowKey = i, values = vals)
-            }
-          }
-          # Explains the asymptotic column, which the bootstrap p-value
-          # branch hides, so the note goes with it.
-          tables[[idx]]$setNote(
-            "bh",
-            if (use_pvalues) {
-              NULL
-            } else {
-              paste0(
-                "BH = Benjamini-Hochberg false-discovery-rate correction ",
-                "for multiple testing."
-              )
-            }
-          )
-          tables[[idx]]$setNote(
-            "direction",
-            paste0(
-              "Partial gamma between Item 1 and Item 2, controlling for ",
-              "the rest score (total score minus Item 2). Each item pair ",
-              "appears in both tables with the two items swapped, so each ",
-              "table shows that pair's coefficient in one of the two ",
-              "rest-score directions."
-            )
-          )
-          if (!is.null(cutoff_res)) {
-            pair_clause <- paste0(
-              "Gamma pair (max) is the larger of the pair's two rest-score ",
-              "directions and is the statistic tested, so each pair is ",
-              "tested once and carries the same result in both tables. ",
-              "Partial gamma is this table's direction alone, which is why ",
-              "the two can differ. For a pair that is negative in both ",
-              "directions the larger value is the one closer to zero, since ",
-              "the test is one-sided and looks for excess positive ",
-              "association."
-            )
-            if (use_pvalues) {
-              tables[[idx]]$setNote("flag", paste0(
-                "Flagged = TRUE when the adjusted p-value is below .05, ",
-                "indicating stronger association than the model predicts ",
-                "(positive local dependence; the test is one-sided, so only ",
-                "pairs above the expected range are flagged). ",
-                pair_clause,
-                " The expected range remains as the effect-size reference."
-              ))
-              tables[[idx]]$setNote("pvalues", paste0(
-                "p-value: probability of a partial gamma at least as large ",
-                "as observed under local independence, computed from the ",
-                cutoff_res$actual_iterations, " simulated datasets ",
-                "(Monte-Carlo, one-sided). Adj. p-value: corrected for ",
-                "multiple comparisons across the ", total_pairs,
-                " item pairs using ",
-                correction_label(self$options$correction), "."
-              ))
-            } else {
-              tables[[idx]]$setNote("flag", paste0(
-                "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI ",
-                "of partial gamma values simulated under the fitted ",
-                "unidimensional model (no true local dependence). ",
-                "Flagged = TRUE when Gamma pair (max) falls outside that ",
-                "range. ",
-                pair_clause
-              ))
-            }
-          }
-          if (nrow(d) == 0L) {
-            tables[[idx]]$setNote(
-              "empty",
-              "No item pairs met the filter criteria."
-            )
-          }
-        }
-
-        # 7. Save the simulation cache. The per-pair plot reads the cutoff
+        # 5. Save the simulation cache. The per-pair plot reads the cutoff
         # object and data from here too (via .ldPlot), so nothing is
         # stored twice. On simulation failure the cache is cleared so the
         # plot cannot render from a stale cutoff object.
@@ -373,69 +174,299 @@ locdepgammaClass <- R6::R6Class(
           self$results$simCache$setState(NULL)
         }
 
-        # 8. Caption note
-        filter_clauses <- character(0)
-        if (sig_only) {
-          filter_clauses <- c(filter_clauses, paste0(
-            "Showing only pairs with BH-adjusted p &lt; .05; note that ",
-            "statistical significance depends on sample size (large samples ",
-            "flag trivially small gammas, small samples may miss ",
-            "substantial LD)."
-          ))
+        if (!is.null(sim_fail_msg)) {
+          sim_failure_notice(self, sim_fail_msg,
+                             "the asymptotic p-values instead")
         }
-        if (gamma_thr > 0) {
-          filter_clauses <- c(filter_clauses, paste0(
-            "Showing only pairs with |gamma| ≥ ", gamma_thr, "."
-          ))
-        }
-        if (filter_applied) {
-          filter_clauses <- c(filter_clauses, paste0(
-            "Showing the top ", n_pairs, " of ", total_pairs,
-            " pairs by |gamma| per direction."
-          ))
-        }
-        se_clause <- if (isTRUE(self$options$showSE)) {
-          " Confidence intervals are 95% Wald intervals (gamma ± 1.96 × SE)."
-        } else ""
-        cutoff_clause <- if (!is.null(cutoff_res)) {
-          paste0(
-            " Expected ranges based on ", cutoff_res$actual_iterations,
-            " simulation iterations (", cutoff_res$hdci_width * 100,
-            "% HDCI); results are identical to easyRasch2::RMlocdepGamma() ",
-            "and RMlocdepGammaCutoff() with the same seed.",
-            iteration_note(self$options$iterations, 400L, corrected = TRUE),
-            iteration_attrition_note(cutoff_res$actual_iterations,
-                                     self$options$iterations),
-            if (!use_pvalues) {
-              # Flagging falls back to the expected range, whose width sets a
-              # familywise rate over pairs that the user has not chosen.
-              interval_flagging_note(cutoff_res$hdci_width, total_pairs,
-                                     unit = "item pairs")
-            } else {
-              ""
-            }
-          )
-        } else if (!is.null(sim_fail_msg)) {
-          paste0(" <b>Simulation-based expected ranges unavailable:</b> ",
-                 sim_fail_msg)
-        } else ""
-        self$results$ldNote$setContent(paste0(
-          "<p>Partial gamma LD analysis (n = ", n_complete,
-          " complete cases). Values near 0 indicate no local dependence; ",
-          "large positive values suggest positive LD (items share variance ",
-          "beyond the latent trait), large negative values suggest negative ",
-          "LD. Because it matters which item of a pair is subtracted from ",
-          "the total score, each pair is tested in both rest-score ",
-          "directions.", se_clause, cutoff_clause,
-          if (length(filter_clauses) > 0)
-            paste0(" ", paste(filter_clauses, collapse = " "))
-          else "",
-          "</p>"
-        ))
+        private$.writeNote(n_complete, cutoff_res, use_pvalues, total_pairs,
+                           filtered$top_n_applied)
 
       }, error = function(e) {
         stop(paste("Error in partial gamma LD analysis:", e$message))
       })
+    },
+
+    # ---------------------------------------------------------------------
+    # Partial gamma per pair and direction from easyRasch2::RMlocdepGamma()
+    # (a wrapper around iarm::partgam_LD()). Returns the two directions as
+    # a list of data.frames.
+    # ---------------------------------------------------------------------
+    .pairResults = function(df, cutoff_res, use_pvalues) {
+      result_list <- suppressWarnings(suppressMessages(
+        easyRasch2::RMlocdepGamma(
+          df,
+          cutoff = cutoff_res,
+          p_value = use_pvalues,
+          correction = self$options$correction,
+          output = "dataframe"
+        )
+      ))
+      result_list <- list(result_list$direction1, result_list$direction2)
+
+      # The bundled easyRasch2 release omits the se / lower / upper (95%
+      # Wald CI) columns from the dataframe output (added in a later
+      # version); when absent, source them from the same underlying
+      # iarm::partgam_LD() call and join by pair, so the values are
+      # identical by construction. iarm's console output is sunk; the
+      # finally handler guarantees the sink is removed exactly once.
+      if (!"se" %in% names(result_list[[1L]])) {
+        sink(nullfile())
+        pgam_raw <- tryCatch(
+          iarm::partgam_LD(as.data.frame(df)),
+          finally = sink()
+        )
+        for (idx in seq_along(result_list)) {
+          d   <- result_list[[idx]]
+          raw <- pgam_raw[[idx]]
+          key_d   <- paste(d$Item1, d$Item2, sep = "___")
+          key_raw <- paste(as.character(raw$Item1),
+                           as.character(raw$Item2), sep = "___")
+          m <- match(key_d, key_raw)
+          d$se    <- as.numeric(raw$se)[m]
+          d$lower <- as.numeric(raw$lower)[m]
+          d$upper <- as.numeric(raw$upper)[m]
+          result_list[[idx]] <- d
+        }
+      }
+
+      # Non-finite gammas (degenerate pairs) display as empty cells
+      for (idx in seq_along(result_list)) {
+        d <- result_list[[idx]]
+        d$gamma <- ifelse(is.finite(d$gamma), d$gamma, NA_real_)
+        result_list[[idx]] <- d
+      }
+      result_list
+    },
+
+    # ---------------------------------------------------------------------
+    # Filter / sort pipeline, applied per direction: significance filter ->
+    # |gamma| threshold -> top-N by |gamma| (which sorts) -> otherwise sort
+    # by |gamma| if requested. With filters active the two directions can
+    # keep different numbers of rows (each has its own gammas / p-values).
+    # ---------------------------------------------------------------------
+    .filterPairs = function(result_list, use_pvalues) {
+      sig_only    <- isTRUE(self$options$sigOnly)
+      gamma_thr   <- self$options$gammaThreshold
+      n_pairs     <- self$options$nPairs
+      sort_gamma  <- isTRUE(self$options$sortByGamma)
+
+      filter_applied <- FALSE
+      for (idx in seq_along(result_list)) {
+        d <- result_list[[idx]]
+        if (sig_only) {
+          padj <- if (use_pvalues) d$padj_gamma else d$padj_bh
+          d <- d[!is.na(padj) & padj < 0.05, , drop = FALSE]
+        }
+        if (gamma_thr > 0) {
+          d <- d[!is.na(d$gamma) & abs(d$gamma) >= gamma_thr, , drop = FALSE]
+        }
+        if (n_pairs > 0L && n_pairs < nrow(d)) {
+          filter_applied <- TRUE
+          ord <- order(abs(d$gamma), decreasing = TRUE)
+          d   <- d[ord[seq_len(n_pairs)], , drop = FALSE]
+        } else if (sort_gamma) {
+          d <- d[order(abs(d$gamma), decreasing = TRUE), , drop = FALSE]
+        }
+        rownames(d) <- NULL
+        result_list[[idx]] <- d
+      }
+      list(pairs = result_list, top_n_applied = filter_applied)
+    },
+
+    # ---------------------------------------------------------------------
+    # Rows of both direction tables, then each table's footnotes.
+    # ---------------------------------------------------------------------
+    .fillTables = function(result_list, cutoff_res, use_pvalues,
+                           total_pairs) {
+      # Rows were pre-created in .init() only in the unfiltered case (same
+      # condition as there); with filters active the row count is
+      # result-dependent and rows are added here.
+      rows_pre_created <- !isTRUE(self$options$sigOnly) &&
+        self$options$gammaThreshold == 0
+      tables <- list(self$results$dir1Table, self$results$dir2Table)
+      for (idx in seq_along(tables)) {
+        d <- result_list[[idx]]
+        for (i in seq_len(nrow(d))) {
+          vals <- list(
+            item1  = d$Item1[i],
+            item2  = d$Item2[i],
+            gamma  = d$gamma[i],
+            se     = d$se[i],
+            lower  = d$lower[i],
+            upper  = d$upper[i],
+            # Absent on the bootstrap p-value path, where the package drops
+            # it. NA keeps the row shape stable for the hidden column.
+            padjBH = if (use_pvalues) NA_real_ else d$padj_bh[i]
+          )
+          # Without a cutoff object the package returns no flag, so the
+          # asymptotic rule (BH-adjusted p < .05) is applied here, as in
+          # the Partial Gamma DIF and item-restscore analyses.
+          flag <- if (!is.null(cutoff_res)) {
+            isTRUE(d$flagged[i])
+          } else {
+            isTRUE(d$padj_bh[i] < 0.05)
+          }
+          vals$flagged <- if (flag) "beyond cutoff" else ""
+          if (!is.null(cutoff_res)) {
+            vals$gammaPair <- d$gamma_pair[i]
+            vals$gammaLow  <- d$gamma_low[i]
+            vals$gammaHigh <- d$gamma_high[i]
+          }
+          if (use_pvalues) {
+            vals$pValue     <- d$p_gamma[i]
+            vals$pAdjusted  <- d$padj_gamma[i]
+          }
+          if (rows_pre_created) {
+            tables[[idx]]$setRow(rowNo = i, values = vals)
+          } else {
+            tables[[idx]]$addRow(rowKey = i, values = vals)
+          }
+        }
+        private$.setTableNotes(tables[[idx]], nrow(d), cutoff_res,
+                               use_pvalues, total_pairs)
+      }
+    },
+
+    .setTableNotes = function(table, n_rows, cutoff_res, use_pvalues,
+                              total_pairs) {
+      # Explains the asymptotic column, which the bootstrap p-value
+      # branch hides, so the note goes with it.
+      table$setNote(
+        "bh",
+        if (use_pvalues) {
+          NULL
+        } else {
+          paste0(
+            "BH = Benjamini-Hochberg false-discovery-rate correction ",
+            "for multiple testing.",
+            if (is.null(cutoff_res)) {
+              paste0(" Flagged 'beyond cutoff' when the adjusted p-value ",
+                     "< .05 (positive or negative local dependence; the ",
+                     "asymptotic test is two-sided).")
+            }
+          )
+        }
+      )
+      table$setNote(
+        "direction",
+        paste0(
+          "Partial gamma between Item 1 and Item 2, controlling for ",
+          "the rest score (total score minus Item 2). Each item pair ",
+          "appears in both tables with the two items swapped, so each ",
+          "table shows that pair's coefficient in one of the two ",
+          "rest-score directions."
+        )
+      )
+      if (!is.null(cutoff_res)) {
+        pair_clause <- paste0(
+          "Gamma pair (max) is the larger of the pair's two rest-score ",
+          "directions and is the statistic tested, so each pair is ",
+          "tested once and carries the same result in both tables. ",
+          "Partial gamma is this table's direction alone, which is why ",
+          "the two can differ. For a pair that is negative in both ",
+          "directions the larger value is the one closer to zero, since ",
+          "the test is one-sided and looks for excess positive ",
+          "association."
+        )
+        if (use_pvalues) {
+          table$setNote("flag", paste0(
+            "Flagged 'beyond cutoff' when the adjusted p-value is below ",
+            ".05, indicating stronger association than the model predicts ",
+            "(positive local dependence; the test is one-sided, so only ",
+            "pairs above the expected range are flagged). ",
+            pair_clause,
+            " The expected range remains as the effect-size reference."
+          ))
+          table$setNote("pvalues", paste0(
+            "p-value: probability of a partial gamma at least as large ",
+            "as observed under local independence, computed from the ",
+            cutoff_res$actual_iterations, " simulated datasets ",
+            "(Monte-Carlo, one-sided). Adj. p-value: corrected for ",
+            "multiple comparisons across the ", total_pairs,
+            " item pairs using ",
+            correction_label(self$options$correction), "."
+          ))
+        } else {
+          table$setNote("flag", paste0(
+            "Expected range = ", cutoff_res$hdci_width * 100, "% HDCI ",
+            "of partial gamma values simulated under the fitted ",
+            "unidimensional model (no true local dependence). ",
+            "Flagged 'beyond cutoff' when Gamma pair (max) falls outside ",
+            "that range. ",
+            pair_clause
+          ))
+        }
+      }
+      if (n_rows == 0L) {
+        table$setNote(
+          "empty",
+          "No item pairs met the filter criteria."
+        )
+      }
+    },
+
+    # ---------------------------------------------------------------------
+    # Html note: sample size, CI level, simulation basis and active filters.
+    # ---------------------------------------------------------------------
+    .writeNote = function(n_complete, cutoff_res, use_pvalues, total_pairs,
+                          top_n_applied) {
+      sig_only  <- isTRUE(self$options$sigOnly)
+      gamma_thr <- self$options$gammaThreshold
+      filter_clauses <- character(0)
+      if (sig_only) {
+        filter_clauses <- c(filter_clauses, paste0(
+          "Showing only pairs with BH-adjusted p &lt; .05; note that ",
+          "statistical significance depends on sample size (large samples ",
+          "flag trivially small gammas, small samples may miss ",
+          "substantial LD)."
+        ))
+      }
+      if (gamma_thr > 0) {
+        filter_clauses <- c(filter_clauses, paste0(
+          "Showing only pairs with |gamma| ≥ ", gamma_thr, "."
+        ))
+      }
+      if (top_n_applied) {
+        filter_clauses <- c(filter_clauses, paste0(
+          "Showing the top ", self$options$nPairs, " of ", total_pairs,
+          " pairs by |gamma| per direction."
+        ))
+      }
+      se_clause <- if (isTRUE(self$options$showSE)) {
+        " Confidence intervals are 95% Wald intervals (gamma ± 1.96 × SE)."
+      } else ""
+      cutoff_clause <- if (!is.null(cutoff_res)) {
+        paste0(
+          " Expected ranges based on ", cutoff_res$actual_iterations,
+          " simulation iterations (", cutoff_res$hdci_width * 100,
+          "% HDCI); results are identical to easyRasch2::RMlocdepGamma() ",
+          "and RMlocdepGammaCutoff() with the same seed.",
+          iteration_note(self$options$iterations, 400L, corrected = TRUE),
+          iteration_attrition_note(cutoff_res$actual_iterations,
+                                   self$options$iterations),
+          if (!use_pvalues) {
+            # Flagging falls back to the expected range, whose width sets a
+            # familywise rate over pairs that the user has not chosen.
+            interval_flagging_note(cutoff_res$hdci_width, total_pairs,
+                                   unit = "item pairs")
+          } else {
+            ""
+          }
+        )
+      } else ""
+      self$results$ldNote$setContent(paste0(
+        "<p>Partial gamma LD analysis (n = ", n_complete,
+        " complete cases). Values near 0 indicate no local dependence; ",
+        "large positive values suggest positive LD (items share variance ",
+        "beyond the latent trait), large negative values suggest negative ",
+        "LD. Because it matters which item of a pair is subtracted from ",
+        "the total score, each pair is tested in both rest-score ",
+        "directions.", se_clause, cutoff_clause,
+        if (length(filter_clauses) > 0)
+          paste0(" ", paste(filter_clauses, collapse = " "))
+        else "",
+        "</p>"
+      ))
     },
 
     # ---------------------------------------------------------------------

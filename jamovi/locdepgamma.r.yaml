@@ -59,10 +59,6 @@ items:
             type: number
             format: zto,pvalue
             visible: (computeCutoff == FALSE || pValues == FALSE)
-          - name: sig
-            title: p-value sign.
-            type: text
-            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: gammaLow
             title: Lower
             type: number
@@ -88,7 +84,6 @@ items:
           - name: flagged
             title: Flagged
             type: text
-            visible: (computeCutoff)
 
     - name: dir2Table
       title: 'Direction 2: rest score = total − Item 2'
@@ -144,10 +139,6 @@ items:
             type: number
             format: zto,pvalue
             visible: (computeCutoff == FALSE || pValues == FALSE)
-          - name: sig
-            title: p-value sign.
-            type: text
-            visible: (computeCutoff == FALSE || pValues == FALSE)
           - name: gammaLow
             title: Lower
             type: number
@@ -173,7 +164,6 @@ items:
           - name: flagged
             title: Flagged
             type: text
-            visible: (computeCutoff)
 
     - name: ldPlot
       title: Simulated Partial Gamma Distribution per Item Pair

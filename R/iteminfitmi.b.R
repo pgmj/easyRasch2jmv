@@ -202,39 +202,24 @@ iteminfitmiClass <- R6::R6Class(
         # datasets and stacks the simulated distributions, so the HDCI
         # bounds reflect both sampling and imputation uncertainty. If the
         # simulation cannot deliver reliable cutoffs, degrade gracefully:
-        # pooled estimates are shown without the expected range, and the
-        # note explains why.
-        cutoff_res <- NULL
-        sim_fail_msg <- NULL
-        if (compute_cutoff) {
-          cutoff_res <- tryCatch(
-            suppressWarnings(suppressMessages(
-              easyRasch2::RMitemInfitCutoffMI(
-                mids_items,
-                iterations = sim_iterations,
-                parallel   = FALSE,
-                seed       = as.integer(seed),
-                hdci_width = hdci_width
-              )
-            )),
-            error = function(e) {
-              sim_fail_msg <<- e$message
-              NULL
-            }
-          )
-          # Guard against degenerate cutoffs: with very few successful
-          # iterations in the stacked distribution the HDCI collapses.
-          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-            sim_fail_msg <- paste0(
-              "Only ", cutoff_res$actual_iterations, " of ", sim_iterations,
-              " simulation iterations succeeded across the imputed ",
-              "datasets -- too few to estimate reliable cutoff intervals. ",
-              "This typically happens when items have very low or very ",
-              "high endorsement rates relative to the sample size."
-            )
-            cutoff_res <- NULL
-          }
-        }
+        # pooled estimates are shown without the expected range, and a
+        # notice (sim_failure_notice()) says why.
+        # The whole imputation result is cached further up, so the
+        # simulation itself goes uncached here.
+        sim <- run_cutoff_simulation(
+          compute   = compute_cutoff,
+          simulate  = function() easyRasch2::RMitemInfitCutoffMI(
+            mids_items,
+            iterations = sim_iterations,
+            parallel   = FALSE,
+            seed       = as.integer(seed),
+            hdci_width = hdci_width
+          ),
+          requested = sim_iterations,
+          hint      = sim_rule_hint("positive")
+        )
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # Visibility follows what was computed, not the options: if the
         # simulation failed, the simulation columns would otherwise show
@@ -359,12 +344,12 @@ iteminfitmiClass <- R6::R6Class(
             iteration_attrition_note(cutoff_res$actual_iterations,
                                      sim_iterations)
           )
-        } else if (!is.null(sim_fail_msg)) {
-          paste0(
-            " <b>Simulation-based cutoffs unavailable:</b> ", sim_fail_msg
-          )
         } else {
           ""
+        }
+        if (!is.null(sim_fail_msg)) {
+          sim_failure_notice(self, sim_fail_msg,
+                             "the pooled infit without expected ranges")
         }
 
         note_html <- paste0(

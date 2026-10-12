@@ -102,7 +102,7 @@ diftreeClass <- R6::R6Class(
             effectSize = tbl$EffectSize[i],
             se         = tbl$SE[i],
             class      = tbl$Class[i],
-            flagged    = if (isTRUE(tbl$Flagged[i])) "TRUE" else "",
+            flagged    = if (isTRUE(tbl$Flagged[i])) "beyond cutoff" else "",
             nLeft      = as.integer(tbl$n_left[i]),
             nRight     = as.integer(tbl$n_right[i])
           ))
@@ -135,7 +135,10 @@ diftreeClass <- R6::R6Class(
             )
           }
           table$setNote("class", class_note)
-          table$setNote("flag", "Flagged: Class B or C.")
+          table$setNote("flag", paste0(
+            "Flagged 'beyond cutoff' for Class B or C, which lie beyond ",
+            "the Class A (negligible) boundaries."
+          ))
           table$setNote("caveat", paste0(
             "The A/B/C boundaries are conventions from large-scale ",
             "educational testing, not values calibrated to this sample ",

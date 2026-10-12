@@ -231,11 +231,6 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `format`="zto,pvalue", 
                         `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
-                        `name`="sig", 
-                        `title`="p-value sign.", 
-                        `type`="text", 
-                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
-                    list(
                         `name`="gammaLow", 
                         `title`="Lower", 
                         `type`="number", 
@@ -264,8 +259,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
-                        `type`="text", 
-                        `visible`="(computeCutoff)"))))
+                        `type`="text"))))
             self$add(jmvcore::Table$new(
                 options=options,
                 name="dir2Table",
@@ -330,11 +324,6 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                         `format`="zto,pvalue", 
                         `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
                     list(
-                        `name`="sig", 
-                        `title`="p-value sign.", 
-                        `type`="text", 
-                        `visible`="(computeCutoff == FALSE || pValues == FALSE)"),
-                    list(
                         `name`="gammaLow", 
                         `title`="Lower", 
                         `type`="number", 
@@ -363,8 +352,7 @@ locdepgammaResults <- if (requireNamespace("jmvcore", quietly=TRUE)) R6::R6Class
                     list(
                         `name`="flagged", 
                         `title`="Flagged", 
-                        `type`="text", 
-                        `visible`="(computeCutoff)"))))
+                        `type`="text"))))
             self$add(jmvcore::Image$new(
                 options=options,
                 name="ldPlot",

@@ -118,36 +118,24 @@ cfacutoffClass <- R6::R6Class(
       # with the same seed, iterations, percentile, and estimator. Package
       # warnings are suppressed -- the module surfaces its own footnotes.
       tryCatch({
-        sim_fail_msg <- NULL
-        cutoff_res <- tryCatch(
-          suppressWarnings(suppressMessages(
-            easyRasch2::RMdimCFACutoff(
-              df,
-              iterations = iterations,
-              percentile = percentile,
-              output     = "list",
-              parallel   = FALSE,
-              seed       = as.integer(seed_val),
-              estimator  = estimator
-            )
-          )),
-          error = function(e) {
-            sim_fail_msg <<- e$message
-            NULL
-          }
+        # The simulation is the whole analysis here, so it always runs and
+        # is not cached.
+        sim <- run_cutoff_simulation(
+          compute   = TRUE,
+          simulate  = function() easyRasch2::RMdimCFACutoff(
+            df,
+            iterations = iterations,
+            percentile = percentile,
+            output     = "list",
+            parallel   = FALSE,
+            seed       = as.integer(seed_val),
+            estimator  = estimator
+          ),
+          requested = iterations,
+          hint      = sim_rule_hint("cfa")
         )
-        # Guard against degenerate cutoffs: with very few successful
-        # iterations the percentile cutoffs collapse onto a handful of
-        # values.
-        if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-          sim_fail_msg <- paste0(
-            "Only ", cutoff_res$actual_iterations, " of ", iterations,
-            " simulation iterations succeeded -- too few to estimate ",
-            "reliable cutoffs. Often this indicates very sparse items; ",
-            "inspect the per-item response distribution."
-          )
-          cutoff_res <- NULL
-        }
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # Graceful degradation: the observed lavaan fit is independent of
         # the simulation, so it remains valid and is shown without
@@ -177,10 +165,16 @@ cfacutoffClass <- R6::R6Class(
               flagged  = ""
             ))
           }
+          sim_failure_notice(self, sim_fail_msg,
+                             "the observed fit indices without cutoffs")
           self$results$cfaNote$setContent(paste0(
-            "<p><b>Simulation-based cutoffs unavailable:</b> ",
-            sim_fail_msg,
-            " The observed fit indices are shown without cutoffs.</p>"
+            "<p>Observed one-factor CFA fit (lavaan ", estimator,
+            ", ordered = TRUE) at n = ", n_complete, " complete cases",
+            if (n_excluded > 0L) {
+              paste0(" (", n_excluded, " of ", n_total,
+                     " row(s) excluded due to missing responses)")
+            },
+            ".</p>"
           ))
           return()
         }
@@ -203,13 +197,16 @@ cfacutoffClass <- R6::R6Class(
             index    = fit_df$Index[i],
             observed = fit_df$Observed[i],
             cutoff   = fit_df$Cutoff[i],
-            flagged  = fit_df$Flagged[i]
+            # RMdimCFA() writes "TRUE" / "" here; the module names the
+            # finding instead, as in its other Flagged columns.
+            flagged  = if (isTRUE(as.logical(fit_df$Flagged[i])))
+              "beyond cutoff" else ""
           ))
         }
         table$setNote("flag", paste0(
-          "Flagged = TRUE when the observed value lies beyond the cutoff ",
-          "in the unfavourable direction (CFI below the cutoff; RMSEA ",
-          "and SRMR above)."
+          "Flagged 'beyond cutoff' when the observed value lies beyond ",
+          "the cutoff in the unfavourable direction (CFI below the ",
+          "cutoff; RMSEA and SRMR above)."
         ))
 
         # 5b. Loadings table: observed standardized loadings vs the

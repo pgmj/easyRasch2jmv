@@ -98,60 +98,34 @@ partgamdifClass <- R6::R6Class(
 
         # Optionally compute cutoffs first (they feed RMdifGamma). If the
         # simulation cannot deliver reliable cutoffs, degrade gracefully:
-        # show the observed gammas without the expected range and explain
-        # why in the note below the table.
-        cutoff_res <- NULL
-        sim_fail_msg <- NULL
-
-        # The simulation is the expensive part, and jamovi reruns .run on
-        # every option change -- including changes (tileplot options,
-        # sortByGamma, showSE) that do not affect the simulation. The plot
-        # state carries the cutoff object and jamovi clears it exactly
-        # when a simulation-relevant option changes (its clearWith list),
-        # so a surviving state is a valid cache. The signature check makes
-        # reuse self-validating rather than relying on clearWith alone.
+        # show the observed gammas without the expected range and say why
+        # in a notice (sim_failure_notice()).
+        #
+        # Cached in the plot state (see run_cutoff_simulation()), so changing
+        # the tileplot options, sortByGamma or showSE does not rerun the
+        # simulation. The DIF variable is part of the key.
         sim_sig <- list(
           iterations = self$options$iterations,
           seed       = as.integer(self$options$seed),
           hdci_width = self$options$hdciWidth / 100
         )
-        cached <- self$results$pgdifPlot$state
-        if (isTRUE(self$options$computeCutoff) &&
-            !is.null(cached) && !is.null(cached$cutoff_res) &&
-            identical(cached$sig, sim_sig) &&
-            identical(cached$df, df) && identical(cached$dif, dif_vec)) {
-          cutoff_res <- cached$cutoff_res
-        } else if (isTRUE(self$options$computeCutoff)) {
-          cutoff_res <- tryCatch(
-            suppressWarnings(suppressMessages(
-              easyRasch2::RMdifGammaCutoff(
-                df,
-                dif_var    = dif_vec,
-                iterations = self$options$iterations,
-                parallel   = FALSE,
-                seed       = as.integer(self$options$seed),
-                hdci_width = self$options$hdciWidth / 100
-              )
-            )),
-            error = function(e) {
-              sim_fail_msg <<- e$message
-              NULL
-            }
-          )
-          # Guard against degenerate cutoffs: with very few successful
-          # iterations the HDCI collapses and flagging becomes
-          # meaningless.
-          if (!is.null(cutoff_res) && cutoff_res$actual_iterations < 20L) {
-            sim_fail_msg <- paste0(
-              "Only ", cutoff_res$actual_iterations, " of ",
-              self$options$iterations, " simulation iterations succeeded ",
-              "-- too few to estimate reliable expected ranges. This ",
-              "typically happens when items have very low or very high ",
-              "endorsement rates relative to the sample size."
-            )
-            cutoff_res <- NULL
-          }
-        }
+        sim <- run_cutoff_simulation(
+          compute   = self$options$computeCutoff,
+          cached    = self$results$pgdifPlot$state,
+          sig       = sim_sig,
+          keys      = list(df = df, dif = dif_vec),
+          simulate  = function() easyRasch2::RMdifGammaCutoff(
+            df,
+            dif_var    = dif_vec,
+            iterations = self$options$iterations,
+            parallel   = FALSE,
+            seed       = as.integer(self$options$seed),
+            hdci_width = self$options$hdciWidth / 100
+          ),
+          requested = self$options$iterations
+        )
+        cutoff_res   <- sim$cutoff_res
+        sim_fail_msg <- sim$fail_msg
 
         # `p_value` is passed explicitly rather than left to the package
         # default, which is NULL from easyRasch2 1.3.1.9001 and resolves on
@@ -159,8 +133,8 @@ partgamdifClass <- R6::R6Class(
         # stale TRUE while greyed out (jamovi disables but does not reset
         # nested options), hence the explicit computeCutoff gate, as in the
         # other simulation analyses. The two branches return different
-        # columns: with p-values the asymptotic `padj_bh` and `Significance`
-        # are dropped in favour of `p_gamma` and `padj_gamma`.
+        # columns: with p-values the asymptotic `padj_bh` is dropped in
+        # favour of `p_gamma` and `padj_gamma`.
         use_pvalues <- isTRUE(self$options$computeCutoff) &&
           isTRUE(self$options$pValues) &&
           !is.null(cutoff_res)
@@ -170,9 +144,9 @@ partgamdifClass <- R6::R6Class(
         # empty (see set_columns_visible()).
         sim_ok <- !is.null(cutoff_res)
         tbl <- self$results$pgdifTable
-        set_columns_visible(tbl, c("gammaLow", "gammaHigh", "flagged"), sim_ok)
+        set_columns_visible(tbl, c("gammaLow", "gammaHigh"), sim_ok)
         set_columns_visible(tbl, c("pValue", "pAdjBoot"), use_pvalues)
-        set_columns_visible(tbl, c("padjBH", "sig"), !use_pvalues)
+        set_columns_visible(tbl, "padjBH", !use_pvalues)
         set_elements_visible(list(self$results$pgdifPlot), sim_ok)
 
         pgam_df <- suppressWarnings(suppressMessages(
@@ -209,12 +183,19 @@ partgamdifClass <- R6::R6Class(
             vals$pAdjBoot <- pgam_df$padj_gamma[i]
           } else {
             vals$padjBH <- pgam_df$padj_bh[i]
-            vals$sig    <- pgam_df$Significance[i]
           }
+          # Without a cutoff object the package returns no flag, so the
+          # asymptotic rule (BH-adjusted p < .05) is applied here, as in
+          # the item-restscore analysis.
+          flag <- if (!is.null(cutoff_res)) {
+            isTRUE(pgam_df$flagged[i])
+          } else {
+            isTRUE(pgam_df$padj_bh[i] < 0.05)
+          }
+          vals$flagged <- if (flag) "beyond cutoff" else ""
           if (!is.null(cutoff_res)) {
             vals$gammaLow  <- pgam_df$gamma_low[i]
             vals$gammaHigh <- pgam_df$gamma_high[i]
-            vals$flagged   <- ifelse(isTRUE(pgam_df$flagged[i]), "TRUE", "")
           }
           table$setRow(rowNo = i, values = vals)
         }
@@ -223,8 +204,10 @@ partgamdifClass <- R6::R6Class(
         if (!use_pvalues) {
           table$setNote("sig", paste0(
             "Asymptotic p-values adjusted across items with the ",
-            "Benjamini-Hochberg (BH) false-discovery-rate method. ",
-            "*** p < .001, ** p < .01, * p < .05, . p < .10 (adjusted)."
+            "Benjamini-Hochberg (BH) false-discovery-rate method.",
+            if (is.null(cutoff_res)) {
+              " Flagged 'beyond cutoff' when the adjusted p-value < .05."
+            }
           ))
         }
         if (!is.null(cutoff_res)) {
@@ -236,8 +219,8 @@ partgamdifClass <- R6::R6Class(
           )
           if (use_pvalues) {
             table$setNote("flag", paste0(
-              range_txt, " Flagged = TRUE when the adjusted p-value < .05; ",
-              "the expected range is shown as description."
+              range_txt, " Flagged 'beyond cutoff' when the adjusted ",
+              "p-value < .05; the expected range is shown as description."
             ))
             table$setNote("pvalues", paste0(
               "p-value: two-sided probability of a partial gamma at least ",
@@ -249,8 +232,8 @@ partgamdifClass <- R6::R6Class(
             ))
           } else {
             table$setNote("flag", paste0(
-              range_txt, " Flagged = TRUE when the observed gamma falls ",
-              "outside the expected range."
+              range_txt, " Flagged 'beyond cutoff' when the observed ",
+              "gamma falls outside the expected range."
             ))
           }
         }
@@ -291,10 +274,11 @@ partgamdifClass <- R6::R6Class(
                    interval_flagging_note(cutoff_res$hdci_width,
                                           nrow(pgam_df))
                  })
-        } else if (!is.null(sim_fail_msg)) {
-          paste0(" <b>Simulation-based cutoffs unavailable:</b> ",
-                 sim_fail_msg)
         } else ""
+        if (!is.null(sim_fail_msg)) {
+          sim_failure_notice(self, sim_fail_msg,
+                             "the asymptotic p-values instead")
+        }
         self$results$cutoffNote$setContent(paste0(
           "<p>Partial gamma DIF analysis based on n = ", n_complete_used,
           " complete cases", excluded_clause, ".", se_clause,

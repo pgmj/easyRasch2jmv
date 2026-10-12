@@ -49,10 +49,6 @@ items:
           type: number
           format: zto,pvalue
           visible: (computeCutoff == FALSE || pValues == FALSE)
-        - name: sig
-          title: p-value sign.
-          type: text
-          visible: (computeCutoff == FALSE || pValues == FALSE)
         - name: gammaLow
           title: Lower
           type: number
@@ -78,7 +74,6 @@ items:
         - name: flagged
           title: Flagged
           type: text
-          visible: (computeCutoff)
 
     - name: cutoffNote
       title: ''
